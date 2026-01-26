@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Mirror - Educational Finance App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body class="bg-gray-100">
+    <!-- Main App Container -->
+    <main class="max-w-sm mx-auto bg-white min-h-screen shadow-xl relative overflow-hidden">
+        <!-- Welcome Screen -->
+        <section id="welcome-screen" class="p-6 text-center active">
+            <!-- Header Section -->
+            <header class="mt-20 mb-8">
+                <div class="text-6xl mb-4">
+                    <span class="inline-block  ">🐱</span>
+                </div>
+                <h1
+                    class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                    Money Mirror
+                </h1>
+                <p class="text-gray-600 text-sm px-4">Your Child's Spending Reflects Their Personality</p>
+            </header>
+
+            <!-- Navigation Buttons -->
+            <nav class="space-y-4 mt-20">
+                <a href="parent-signup.html"
+                    class="block w-full bg-blue-500 text-white py-4 rounded-2xl font-semibold text-lg hover:bg-blue-600 transition-colors text-center">
+                    👨‍👩‍👧‍👦 Parent Sign Up
+                </a>
+                <a href="child-login.html"
+                    class="block w-full bg-green-500 text-white py-4 rounded-2xl font-semibold text-lg hover:bg-green-600 transition-colors text-center">
+                    🧒 Child Login
+                </a>
+                <a href="parent-login.html"
+                    class="block w-full bg-red-500 text-white py-4 rounded-2xl font-semibold text-lg hover:bg-red-600 transition-colors text-center">
+                    👤 Parent Login
+                </a>
+            </nav>
+        </section>
+    </main>
+
+    <!-- JavaScript -->
+    <script src="apps/app.js"></script>
+</body>
+
+</html>

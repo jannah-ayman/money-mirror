@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Mirror - Child Login</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">
+    <!-- Main Container -->
+    <main class="max-w-sm mx-auto bg-white min-h-screen shadow-xl relative overflow-hidden p-6 text-center">
+        <!-- Header Section -->
+        <header class="flex items-center mb-6">
+            <a href="index.html" class="text-blue-500 text-2xl">←</a>
+            <h2 class="text-xl font-bold text-center flex-1">Child Login</h2>
+        </header>
+
+        <!-- Mascot and Instruction -->
+        <section class="mt-12 mb-8">
+            <div class="text-8xl mb-4 mascot" id="login-mascot">😸</div>
+            <p class="text-lg text-gray-600">Enter your special code!</p>
+        </section>
+
+        <!-- Login Form -->
+        <form class="space-y-4" action="child-dashboard.html" method="get">
+            <input type="text" id="child-code" name="child-code" placeholder="🔢 Your Code"
+                class="w-full p-4 border-2 border-gray-200 rounded-2xl focus:border-green-500 focus:outline-none text-center text-2xl font-bold">
+            <button type="submit"
+                class="block w-full bg-green-500 text-white py-4 rounded-2xl font-semibold text-lg hover:bg-green-600 transition-colors">
+                Let's Go! 🚀
+            </button>
+        </form>
+
+        <!-- Help Text -->
+        <footer class="mt-6 text-center">
+            <p class="text-sm text-gray-600">Don't have a code?</p>
+            <p class="text-blue-500 font-medium">Ask your parent for one!</p>
+        </footer>
+    </main>
+
+    <!-- JavaScript -->
+    <script src="apps/app.js"></script>
+</body>
+
+</html>

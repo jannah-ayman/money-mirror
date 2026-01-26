@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Mirror - Statistical Analysis</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">
+    <!-- Main Container -->
+    <main class="max-w-sm mx-auto bg-white min-h-screen shadow-xl relative overflow-hidden p-6 pb-20">
+        <!-- Header Section -->
+        <header class="flex items-center mb-6">
+            <a href="parent-dashboard.html" class="text-blue-500 text-2xl">←</a>
+            <h2 class="text-xl font-bold text-center flex-1">Reports</h2>
+        </header>
+
+        <!-- Statistics Content -->
+        <section class="space-y-6">
+            <!-- Quick Select Buttons -->
+            <div class="flex justify-between gap-3">
+                <button id="weekly-btn" onclick="setReportType('weekly')"
+                    class="flex-1 bg-blue-100 text-blue-700 py-3 rounded-xl font-semibold border-2 border-blue-200 hover:bg-blue-100 active:bg-blue-100 transition-colors text-center">
+                    Weekly
+                </button>
+                <button id="monthly-btn" onclick="setReportType('monthly')"
+                    class="flex-1 bg-white text-blue-700 py-3 rounded-xl font-semibold border-2 border-blue-200 hover:bg-blue-100 active:bg-blue-100 transition-colors text-center">
+                    Monthly
+                </button>
+                <button id="all-btn" onclick="setReportType('all')"
+                    class="flex-1 bg-white text-blue-700 py-3 rounded-xl font-semibold border-2 border-blue-200 hover:bg-blue-100 active:bg-blue-100 transition-colors text-center">
+                    All Time
+                </button>
+            </div>
+
+            <!-- Report Generation -->
+            <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
+                <h3 class="font-semibold mb-3 flex items-center">
+                    <span class="text-xl mr-2">📊</span>
+                    Generate Report
+                </h3>
+                <form class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" for="report-type">Report
+                            Type</label>
+                        <select id="report-type" name="report-type"
+                            class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                            onchange="updateSectionVisibility()" required>
+                            <option value="complete">Complete Analysis</option>
+                            <option value="category">Category Breakdown</option>
+                            <option value="mood">Mood Correlation</option>
+                            <option value="trends">Spending Trends</option>
+                            <option value="goals">Goals Progress</option>
+                        </select>
+                    </div>
+                    <div id="date-inputs" class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2" for="from-date">From
+                                Date</label>
+                            <input type="date" id="from-date" name="from-date"
+                                class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                                required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2" for="to-date">To Date</label>
+                            <input type="date" id="to-date" name="to-date"
+                                class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                                required>
+                        </div>
+                    </div>
+                    <!-- <button type="submit" onclick="generateReport()"
+                        class="w-full bg-blue-500 text-white py-3 rounded-xl font-semibold hover:bg-blue-600 transition-colors">
+                        Generate Report 📋
+                    </button> -->
+                </form>
+            </div>
+
+            <!-- Category Breakdown (Pie Chart) -->
+            <div id="category-section" class="bg-white p-4 rounded-xl border-2 border-gray-100">
+                <h3 class="font-semibold mb-3">Category Breakdown</h3>
+                <canvas id="categoryPieChart" class="w-full h-64"></canvas>
+                <p class="text-xs text-gray-600 text-center mt-3">Toys dominate spending at 60%</p>
+            </div>
+
+            <!-- Mood Correlation -->
+            <div id="mood-section" class="bg-white p-4 rounded-xl border-2 border-gray-100 hidden">
+                <h3 class="font-semibold mb-3">Mood vs Spending</h3>
+                <div class="text-center mb-4">
+                    <div class="text-4xl mb-2">📊</div>
+                    <p class="text-sm text-gray-600">60% of toy purchases happen when Emma is happy</p>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-2xl">😊</span>
+                        <div class="flex-1 mx-3">
+                            <div class="bg-gray-200 rounded-full h-3">
+                                <div class="bg-yellow-400 h-3 rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <span class="text-sm">$16.50</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-2xl">😋</span>
+                        <div class="flex-1 mx-3">
+                            <div class="bg-gray-200 rounded-full h-3">
+                                <div class="bg-green-400 h-3 rounded-full" style="width: 20%"></div>
+                            </div>
+                        </div>
+                        <span class="text-sm">$4.75</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-2xl">😐</span>
+                        <div class="flex-1 mx-3">
+                            <div class="bg-gray-200 rounded-full h-3">
+                                <div class="bg-gray-400 h-3 rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+                        <span class="text-sm">$2.25</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spending Trends -->
+            <div id="trends-section" class="bg-white p-4 rounded-xl border-2 border-gray-100 hidden">
+                <h3 class="font-semibold mb-3" id="chart-title">Weekly Spending Trend</h3>
+                <div class="flex items-end justify-between h-32 mb-3" id="spending-chart">
+                    <div class="flex flex-col items-center">
+                        <div class="bg-blue-500 w-6 rounded-t" style="height: 40px"></div>
+                        <span class="text-xs mt-1">Mon</span>
+                        <span class="text-xs text-gray-500">$3.20</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="bg-blue-500 w-6 rounded-t" style="height: 16px"></div>
+                        <span class="text-xs mt-1">Tue</span>
+                        <span class="text-xs text-gray-500">$1.50</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="bg-blue-500 w-6 rounded-t" style="height: 60px"></div>
+                        <span class="text-xs mt-1">Wed</span>
+                        <span class="text-xs text-gray-500">$4.75</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="bg-blue-500 w-6 rounded-t" style="height: 24px"></div>
+                        <span class="text-xs mt-1">Thu</span>
+                        <span class="text-xs text-gray-500">$2.25</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="bg-blue-500 w-6 rounded-t" style="height: 80px"></div>
+                        <span class="text-xs mt-1">Fri</span>
+                        <span class="text-xs text-gray-500">$6.50</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="bg-blue-500 w-6 rounded-t" style="height: 96px"></div>
+                        <span class="text-xs mt-1">Sat</span>
+                        <span class="text-xs text-gray-500">$8.99</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="bg-blue-500 w-6 rounded-t" style="height: 72px"></div>
+                        <span class="text-xs mt-1">Sun</span>
+                        <span class="text-xs text-gray-500">$5.75</span>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 text-center" id="chart-insight">Peak spending on weekends ($14.74 vs
+                    $11.70 weekdays)</p>
+            </div>
+
+            <!-- Goals Progress -->
+            <div id="goals-section" class="bg-white p-4 rounded-xl border-2 border-gray-100 hidden">
+                <h3 class="font-semibold mb-3">Goals Progress</h3>
+                <div class="text-center mb-4">
+                    <div class="text-4xl mb-2">🎯</div>
+                    <p class="text-sm text-gray-600">Progress towards Emma's savings goals</p>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-blue-500 rounded mr-3"></div>
+                            <span class="text-sm">🚲 New Bicycle</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-20 bg-gray-200 rounded-full h-2 mr-3">
+                                <div class="bg-blue-500 h-2 rounded-full" style="width: 75%"></div>
+                            </div>
+                            <span class="text-sm font-semibold">75%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-green-500 rounded mr-3"></div>
+                            <span class="text-sm">🎮 Video Game</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-20 bg-gray-200 rounded-full h-2 mr-3">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: 40%"></div>
+                            </div>
+                            <span class="text-sm font-semibold">40%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-purple-500 rounded mr-3"></div>
+                            <span class="text-sm">🎒 School Trip</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-20 bg-gray-200 rounded-full h-2 mr-3">
+                                <div class="bg-purple-500 h-2 rounded-full" style="width: 20%"></div>
+                            </div>
+                            <span class="text-sm font-semibold">20%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Download Options -->
+            <div class="bg-green-50 p-4 rounded-xl border-2 border-green-200">
+                <h3 class="font-semibold mb-3 flex items-center">
+                    <span class="text-xl mr-2">💾</span>
+                    Download Report
+                </h3>
+                <button onclick="downloadPDF()"
+                    class="w-full bg-red-500 text-white p-3 rounded-xl font-semibold flex items-center justify-center hover:bg-red-600 transition-colors">
+                    <span class="mr-2">📄</span>
+                    Download PDF
+                </button>
+            </div>
+
+            <!-- Recent Reports -->
+            <div class="bg-white p-4 rounded-xl border-2 border-gray-100">
+                <h3 class="font-semibold mb-3">Recent Reports</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <div class="font-medium text-sm">December Monthly Report</div>
+                            <div class="text-xs text-gray-500">Generated Dec 18, 2024</div>
+                        </div>
+                        <button
+                            class="text-blue-500 text-sm font-medium hover:text-blue-600 transition-colors">Download</button>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <div class="font-medium text-sm">Category Analysis - Q4</div>
+                            <div class="text-xs text-gray-500">Generated Dec 15, 2024</div>
+                        </div>
+                        <button
+                            class="text-blue-500 text-sm font-medium hover:text-blue-600 transition-colors">Download</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="space-y-6"></section>
+        <!-- Bottom Navigation -->
+        <nav
+            class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-sm bg-white border-t-2 border-gray-100">
+            <div class="flex justify-around py-3">
+                <a href="parent-dashboard.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">🏠</span>
+                    <span class="text-xs">Home</span>
+                </a>
+                <a href="parent-expenses.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">📊</span>
+                    <span class="text-xs">Expenses</span>
+                </a>
+                <a href="profile-analysis.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">🤖</span>
+                    <span class="text-xs">Analysis</span>
+                </a>
+                <a href="reports.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">📋</span>
+                    <span class="text-xs">Reports</span>
+                </a>
+                <a href="parent-profile.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">👤</span>
+                    <span class="text-xs">Profile</span>
+                </a>
+            </div>
+        </nav>
+    </main>
+
+    <!-- JavaScript -->
+    <script>
+        // Initialize Pie Chart for Category Breakdown
+        const ctx = document.getElementById('categoryPieChart').getContext('2d');
+        const categoryPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Toys', 'Snacks', 'Books'],
+                datasets: [{
+                    data: [60, 25, 15],
+                    backgroundColor: ['#3B82F6', '#10B981', '#8B5CF6'],
+                    borderColor: ['#1E40AF', '#047857', '#6B7280'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                family: 'Fredoka',
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        function generateReport() {
+            const reportType = document.getElementById('report-type').value;
+            const timePeriod = getSelectedTimePeriod();
+            console.log(`Generating ${reportType} report for ${timePeriod}`);
+            updateSectionVisibility();
+        }
+
+        function downloadPDF() {
+            console.log('Downloading PDF');
+        }
+
+        function getSelectedTimePeriod() {
+            if (document.getElementById('weekly-btn').classList.contains('bg-blue-100')) return 'weekly';
+            if (document.getElementById('monthly-btn').classList.contains('bg-blue-100')) return 'monthly';
+            if (document.getElementById('all-btn').classList.contains('bg-blue-100')) return 'all';
+            return 'weekly';
+        }
+
+        function setReportType(type) {
+            // Set the report type in the select dropdown
+            document.getElementById('report-type').value = type;
+
+            // Reset all buttons to white background
+            document.getElementById('weekly-btn').classList.remove('bg-blue-100');
+            document.getElementById('weekly-btn').classList.add('bg-white');
+            document.getElementById('monthly-btn').classList.remove('bg-blue-100');
+            document.getElementById('monthly-btn').classList.add('bg-white');
+            document.getElementById('all-btn').classList.remove('bg-blue-100');
+            document.getElementById('all-btn').classList.add('bg-white');
+
+            // Set the selected button to light blue
+            document.getElementById(`${type}-btn`).classList.remove('bg-white');
+            document.getElementById(`${type}-btn`).classList.add('bg-blue-100');
+
+            // Update section visibility
+            updateSectionVisibility();
+
+            console.log('Selected report type:', type);
+        }
+
+        function updateSectionVisibility() {
+            const reportType = document.getElementById('report-type').value;
+            const sections = {
+                'category': document.getElementById('category-section'),
+                'mood': document.getElementById('mood-section'),
+                'trends': document.getElementById('trends-section'),
+                'goals': document.getElementById('goals-section')
+            };
+
+            // Hide all sections
+            Object.values(sections).forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            // Show relevant section(s)
+            if (reportType === 'complete') {
+                Object.values(sections).forEach(section => {
+                    section.classList.remove('hidden');
+                });
+            } else if (sections[reportType]) {
+                sections[reportType].classList.remove('hidden');
+            }
+        }
+
+        // Set default to Weekly on page load
+        window.onload = function () {
+            setReportType('weekly');
+            document.getElementById('report-type').value = 'complete';
+            updateSectionVisibility();
+        };
+    </script>
+</body>
+
+</html>

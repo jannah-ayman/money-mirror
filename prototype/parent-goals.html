@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Mirror - Goals & Challenges</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">
+    <!-- Main Container -->
+    <main class="max-w-sm mx-auto bg-white min-h-screen shadow-xl relative overflow-hidden p-6 pb-20">
+        <!-- Header Section -->
+        <header class="flex items-center mb-6">
+            <a href="parent-dashboard.html" class="text-blue-500 text-2xl">←</a>
+            <h2 class="text-xl font-bold text-center flex-1">Goals & Challenges</h2>
+        </header>
+
+        <!-- Goals Content -->
+        <section class="space-y-6">
+            <!-- Create Challenge -->
+            <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
+                <h3 class="font-semibold mb-3 flex items-center">
+                    <span class="text-xl mr-2">⭐</span>
+                    Create Challenge for Emma
+                </h3>
+                <form class="space-y-3">
+                    <input type="text" id="challenge-description" name="challenge-description"
+                        placeholder="Challenge description"
+                        class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                        required>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="number" id="target-amount" name="target-amount" placeholder="Target amount"
+                            class="p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                            min="0" step="0.01" required>
+                        <select id="challenge-duration" name="challenge-duration"
+                            class="p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                            required>
+                            <option value="1-week">1 week</option>
+                            <option value="2-weeks">2 weeks</option>
+                            <option value="1-month">1 month</option>
+                        </select>
+                    </div>
+                    <input type="text" id="reward-description" name="reward-description"
+                        placeholder="Reward for completion"
+                        class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                        required>
+                    <button type="submit"
+                        class="w-full bg-blue-500 text-white py-3 rounded-xl font-semibold hover:bg-blue-600 transition-colors">
+                        Create Challenge 🎯
+                    </button>
+                </form>
+            </div>
+
+            <!-- Active Challenges -->
+            <div class="bg-white p-4 rounded-xl border-2 border-gray-100">
+                <h3 class="font-semibold mb-3">Active Challenges</h3>
+                <div class="space-y-3">
+                    <div class="bg-yellow-50 p-3 rounded-xl border border-yellow-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h4 class="font-medium">Save $10 this month</h4>
+                                <p class="text-sm text-gray-600">Reward: Extra $5</p>
+                            </div>
+                            <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">ACTIVE</span>
+                        </div>
+                        <div class="mb-2">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Progress</span>
+                                <span>$7 / $10</span>
+                            </div>
+                            <div class="bg-gray-200 rounded-full h-2">
+                                <div class="bg-yellow-500 h-2 rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500">5 days remaining</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emma's Personal Goals -->
+            <div class="bg-white p-4 rounded-xl border-2 border-gray-100">
+                <h3 class="font-semibold mb-3">Emma's Personal Goals</h3>
+                <div class="space-y-3">
+                    <div class="bg-green-50 p-3 rounded-xl border border-green-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-medium">🎨 New Art Set</h4>
+                            <span class="text-sm font-bold">$15/$25</span>
+                        </div>
+                        <div class="bg-gray-200 rounded-full h-2">
+                            <div class="bg-green-500 h-2 rounded-full" style="width: 60%"></div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">Started 2 weeks ago</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Goal History -->
+            <div class="bg-white p-4 rounded-xl border-2 border-gray-100">
+                <h3 class="font-semibold mb-3">Completed Goals</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="text-xl mr-2">✅</span>
+                            <div>
+                                <div class="font-medium text-sm">Save $5 in one week</div>
+                                <div class="text-xs text-gray-500">Completed Dec 10</div>
+                            </div>
+                        </div>
+                        <span class="text-green-600 font-bold text-sm">Success!</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bottom Navigation -->
+        <nav
+            class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-sm bg-white border-t-2 border-gray-100">
+            <div class="flex justify-around py-3">
+                <a href="parent-dashboard.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">🏠</span>
+                    <span class="text-xs">Home</span>
+                </a>
+                <!-- <a href="statistics.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">📈</span>
+                    <span class="text-xs">Stats</span>
+                </a> -->
+                <a href="parent-expenses.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">📊</span>
+                    <span class="text-xs">Expenses</span>
+                </a>
+                <a href="profile-analysis.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">🤖</span>
+                    <span class="text-xs">Analysis</span>
+                </a>
+                <a href="reports.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">📋</span>
+                    <span class="text-xs">Reports</span>
+                </a>
+                <a href="parent-profile.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">👤</span>
+                    <span class="text-xs">Profile</span>
+                </a>
+            </div>
+        </nav>
+    </main>
+
+    <!-- JavaScript -->
+    <script src="apps/app.js"></script>
+</body>
+
+</html>

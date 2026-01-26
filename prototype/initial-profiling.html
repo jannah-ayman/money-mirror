@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Mirror - Child Profile Setup</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">
+    <!-- Main Container -->
+    <main class="max-w-sm mx-auto bg-white min-h-screen shadowy-xl relative overflow-hidden p-6">
+        <!-- Header Section -->
+        <header class="flex items-center mb-6">
+            <a href="manage-children.html" class="text-blue-500 text-2xl">←</a>
+            <h2 class="text-lg font-bold text-center flex-1">Child Profile Setup</h2>
+        </header>
+
+        <!-- Profiling Content -->
+        <section class="space-y-6">
+            <!-- Intro Banner -->
+            <div class="bg-blue-50 p-4 rounded-xl mb-6">
+                <div class="text-4xl text-center mb-2">🧠✨</div>
+                <p class="text-sm text-center text-gray-600">Help us understand your child's spending personality!</p>
+            </div>
+
+            <!-- Profile Form -->
+            <form action="manage-children.html" method="get" class="space-y-6">
+                <!-- Child's Details -->
+                <div>
+                    <h3 class="font-semibold mb-3">Child's Details</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                for="child-name-input">Name</label>
+                            <input type="text" id="child-name-input" name="child-name"
+                                class="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Enter child's name" aria-label="Child's name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                for="child-age-input">Age</label>
+                            <input type="number" id="child-age-input" name="child-age"
+                                class="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Enter child's age" min="3" max="18" aria-label="Child's age">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                for="child-gender-input">Gender</label>
+                            <select id="child-gender-input" name="child-gender"
+                                class="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                aria-label="Child's gender">
+                                <option value="" disabled selected>Select gender</option>
+                                <option value="male">Boy</option>
+                                <option value="female">Girl</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- Favorite Purchases -->
+                <div>
+                    <h3 class="font-semibold mb-3">What does your child like to buy most?</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="checkbox" name="favorites" class="mr-2" value="toys">
+                            <span>🧸 Toys</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="checkbox" name="favorites" class="mr-2" value="snacks">
+                            <span>🍭 Snacks</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="checkbox" name="favorites" class="mr-2" value="books">
+                            <span>📚 Books</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="checkbox" name="favorites" class="mr-2" value="games">
+                            <span>🎮 Games</span>
+                        </label>
+                    </div>
+                </div>
+
+
+                <div>
+                    <h3 class="font-semibold mb-3">On average, how much do you spend per day? </h3>
+                    <div class="space-y-2">
+                        <input type="number" id="child-age-input" name="child-age"
+                            class="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Enter average daily spending" min="0" aria-label="Average daily spending">
+                    </div>
+                </div>
+
+
+                <div>
+                    <h3 class="font-semibold mb-3">Does your child usually plan their spending before the month starts?
+                    </h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="plan-spending" class="mr-2" value="always">
+                            <span>Always</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="plan-spending" class="mr-2" value="sometimes">
+                            <span>Sometimes</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="plan-spending" class="mr-2" value="never">
+                            <span>Never</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">When your child runs out of money before the end of the month, what
+                        do they do?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="run-out" class="mr-2" value="ask-parents">
+                            <span>Ask parents for more</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="run-out" class="mr-2" value="borrow">
+                            <span>Borrow from friends</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="run-out" class="mr-2" value="stop">
+                            <span>Stop spending</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">Does your child usually keep track of their daily expenses?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="track-expenses" class="mr-2" value="yes">
+                            <span>Yes</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="track-expenses" class="mr-2" value="no">
+                            <span>No</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">How quickly does your child typically spend their allowance or gift
+                        money after receiving it?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="spending-frequency" class="mr-2" value="immediately">
+                            <span>Immediately the same day</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="spending-frequency" class="mr-2" value="few-days">
+                            <span>Within a few days</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="spending-frequency" class="mr-2" value="week">
+                            <span>Over a week</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="spending-frequency" class="mr-2" value="saves-most">
+                            <span>Saves most of it</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="spending-frequency" class="mr-2" value="rarely">
+                            <span>Rarely spends at all</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">Does your child try to save part of their money?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="try-save" class="mr-2" value="yes">
+                            <span>Yes</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="try-save" class="mr-2" value="no">
+                            <span>No</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">If yes, what is your child's main saving goal?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="saving-goal" class="mr-2" value="big-buy">
+                            <span>Buy something big (phone, console)</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="saving-goal" class="mr-2" value="travel">
+                            <span>Travel/outing</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="saving-goal" class="mr-2" value="emergency">
+                            <span>Emergency savings</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="text" name="saving-goal-other"
+                                class="w-full mt-2 p-2 bg-white border border-gray-200 rounded" placeholder="Other:">
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">How much of their allowance does your child usually save?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="save-amount" class="mr-2" value="less-10">
+                            <span>Less than 10%</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="save-amount" class="mr-2" value="10-30">
+                            <span>10–30%</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="save-amount" class="mr-2" value="more-30">
+                            <span>More than 30%</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="save-amount" class="mr-2" value="dont">
+                            <span>I don’t save</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">How often does your child succeed in reaching their saving goals?
+                    </h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="succeed-saving" class="mr-2" value="always">
+                            <span>Always</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="succeed-saving" class="mr-2" value="sometimes">
+                            <span>Sometimes</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-bluekd-50">
+                            <input type="radio" name="succeed-saving" class="mr-2" value="rarely">
+                            <span>Rarely</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="succeed-saving" class="mr-2" value="never">
+                            <span>Never</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">How does your child usually feel after spending money on
+                        non-necessary items?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="feel-after" class="mr-2" value="happy">
+                            <span>Happy</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="feel-after" class="mr-2" value="regretful">
+                            <span>Regretful</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="feel-after" class="mr-2" value="neutral">
+                            <span>Neutral</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">If your child fails to reach their saving goal, what is the main
+                        reason?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="fail-reason" class="mr-2" value="unexpected">
+                            <span>Unexpected expenses</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="fail-reason" class="mr-2" value="self-control">
+                            <span>Lack of self-control</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="fail-reason" class="mr-2" value="low-allowance">
+                            <span>Low allowance</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="text" name="fail-reason-other"
+                                class="w-full mt-2 p-2 bg-white border border-gray-200 rounded" placeholder="Other:">
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">Does your child feel more satisfied when they:</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="satisfied" class="mr-2" value="spend-immediate">
+                            <span>Spend money immediately</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="satisfied" class="mr-2" value="save-later">
+                            <span>Save for later</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="satisfied" class="mr-2" value="balance">
+                            <span>Balance both</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="-font mb-3">Does your child talk with you about how they spend or save money?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="talk-parents" class="mr-2" value="often">
+                            <span>Often</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="talk-parents" class="mr-2" value="sometimes">
+                            <span>Sometimes</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="talk-parents" class="mr-2" value="never">
+                            <span>Never</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">When your child sees their savings grow, how do they feel?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="savings-grow" class="mr-2" value="motivated">
+                            <span>Motivated</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="savings-grow" class="mr-2" value="proud">
+                            <span>Proud</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="savings-grow" class="mr-2" value="neutral">
+                            <span>Doesn’t matter much</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">My child tends to make purchases when they are excited or happy about
+                        something.</h3>
+                    <div class="space-y-2 flex justify-between">
+                        <span class="text-sm text-gray-600">Strongly Disagree</span>
+                        <span class="text-sm text-gray-600">Strongly Agree</span>
+                    </div>
+                    <div class="flex justify-between space-x-2">
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="mood-influences" value="1" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">1</span>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="mood-influences" value="2" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">2</span>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="mood-influences" value="3" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">3</span>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="mood-influences" value="4" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">4</span>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="mood-influences" value="5" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">5</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">If your child gets 100 EGP today, what would they do?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="100-egp" class="mr-2" value="spend-all">
+                            <span>Spend it all now on something fun</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="100-egp" class="mr-2" value="spend-part">
+                            <span>Spend part, save part</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="100-egp" class="mr-2" value="save-all">
+                            <span>Save it all for a future goal</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">What does your child think is more important?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="important" class="mr-2" value="enjoy-now">
+                            <span>Enjoying money now</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="important" class="mr-2" value="balance">
+                            <span>Balancing enjoyment and saving</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="important" class="mr-2" value="save-future">
+                            <span>Saving for the future</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">Your child sees a toy/game they really want but it’s expensive. What
+                        do they do?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="expensive-item" class="mr-2" value="buy-immediate">
+                            <span>Buy it immediately if they have money</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="expensive-item" class="mr-2" value="save-gradually">
+                            <span>Save gradually until they can buy it</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="expensive-item" class="mr-2" value="not-buy">
+                            <span>Decide not to buy and save for something else</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">Imagine you increased your child's allowance. What would they do with
+                        the extra money?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="extra-allowance" class="mr-2" value="spend-more">
+                            <span>Spend more</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="extra-allowance" class="mr-2" value="save-more">
+                            <span>Save more</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="extra-allowance" class="mr-2" value="mix">
+                            <span>Mix both</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">Which sentence best describes your child?</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="describes" class="mr-2" value="enjoy-moment">
+                            <span>“Money is for enjoying the moment.”</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="describes" class="mr-2" value="enjoy-prepare">
+                            <span>“Money is for enjoying but also preparing for later.”</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="describes" class="mr-2" value="secure-future">
+                            <span>“Money is for securing the future.”</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3">My child looks for deals or compares prices before deciding to buy
+                        something.</h3>
+                    <div class="space-y-2 flex justify-between">
+                        <span class="text-sm text-gray-600">Strongly Disagree</span>
+                        <span class="text-sm text-gray-600">Strongly Agree</span>
+                    </div>
+                    <div class="flex justify-between space-x-2">
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="bargain-hunting" value="1" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">1</span>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="bargain-hunting" threefold value="2" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">2</span>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="bargain-hunting" value="3" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">3</span>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="bargain-hunting" value="4" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">4</span>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="bargain-hunting" value="5" class="hidden">
+                            <span class="block p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-blue-50">5</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="button" onclick="generateProfile()"
+                    class="w-full bg-blue-500 text-white py-4 rounded-2xl font-semibold hover:bg-blue-600 transition-colors">
+                    Generate AI Profile 🤖
+                </button>
+            </form>
+
+            <!-- Profile Result -->
+            <div id="ai-profile-result"
+                class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-green-50 p-6 rounded-xl border-2 border-green-200 max-w-xs text-center relative">
+                    <button onclick="closeProfileResult()"
+                        class="absolute top-2 right-2 text-gray-500 text-xl hover:text-gray-700">×</button>
+                    <div class="text-4xl mb-2">🎯</div>
+                    <h3 class="font-bold text-green-800">Emma is a "Thoughtful Spender"!</h3>
+                    <p class="text-sm text-green-700 mt-2">She likes to think before buying and enjoys books and
+                        educational items.</p>
+                    <p class="text-sm text-green-700 mt-2"><b>Emma's Code:</b> A3NDB6</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript -->
+    <script src="apps/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Mirror - Parent Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">
+    <!-- Main Container -->
+    <main class="max-w-sm mx-auto bg-white min-h-screen shadow-xl relative overflow-hidden pb-20">
+        <!-- Header Section -->
+        <header class="bg-blue-500 text-white p-6 pb-4">
+            <div class="flex items-center justify-between mb-4">
+                <h1 class="text-xl font-bold">Parent Dashboard</h1>
+                <div class="relative">
+                    <button onclick="showNotifications()" class="text-2xl">
+                        🔔
+                    </button>
+                    <span
+                        class="absolute -top-1 -right-1 bg-red-500 text-xs rounded-full w-5 h-5 flex items-center justify-center notification-badge">4</span>
+                </div>
+            </div>
+            <!-- Child Switcher -->
+            <div class="flex space-x-3 mb-4">
+                <button onclick="switchChild('emma')"
+                    class="child-btn bg-white bg-opacity-20 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-white hover:bg-opacity-30 hover:scale-105 active:scale-95"
+                    data-child="emma">
+                    👧 Emma
+                </button>
+                <button onclick="switchChild('jake')"
+                    class="child-btn bg-white bg-opacity-10 px-4 py-2 rounded-xl text-sm transition-all duration-200 hover:bg-white hover:bg-opacity-20 hover:scale-105 active:scale-95"
+                    data-child="jake">
+                    👦 Jake
+                </button>
+                <a href="manage-children.html"
+                    class="text-center child-btn bg-white bg-opacity-10 px-4 py-2 rounded-xl text-sm transition-all duration-200 hover:bg-white hover:bg-opacity-20 hover:scale-105 active:scale-95">
+                    ⚙️ Manage Children
+                </a>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <section class="p-6 space-y-6">
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-green-50 p-4 rounded-xl text-center">
+                    <div class="text-2xl font-bold text-green-600" id="current-balance">$47.50</div>
+                    <div class="text-sm text-gray-600">Current Balance</div>
+                </div>
+                <div class="bg-red-50 p-4 rounded-xl text-center">
+                    <div class="text-2xl font-bold text-red-600" id="weekly-spent">$12.30</div>
+                    <div class="text-sm text-gray-600">Spent This Week</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-2 gap-4">
+                <a href="allowance-management.html"
+                    class="bg-blue-500 text-white p-4 rounded-xl font-semibold text-center block hover:bg-blue-600 transition-colors">
+                    💰 Allowance
+                </a>
+                <a href="parent-goals.html"
+                    class="bg-green-500 text-white p-4 rounded-xl font-semibold text-center block hover:bg-green-600 transition-colors">
+                    🎯 Goals
+                </a>
+            </div>
+            <!-- Key Insights -->
+            <div class="bg-yellow-50 p-4 rounded-xl border-2 border-yellow-200">
+                <h3 class="font-semibold mb-3 flex items-center">
+                    <span class="text-xl mr-2">🔍</span>
+                    Key Insights
+                </h3>
+                <div class="space-y-2">
+                    <div class="flex items-start">
+                        <span class="text-green-500 mr-2">•</span>
+                        <span class="text-sm">Emma spends 3x more on weekends than weekdays</span>
+                    </div>
+                    <div class="flex items-start">
+                        <span class="text-green-500 mr-2">•</span>
+                        <span class="text-sm">Happy mood correlates with 70% higher spending</span>
+                    </div>
+                    <div class="flex items-start">
+                        <span class="text-green-500 mr-2">•</span>
+                        <span class="text-sm">Toy purchases average $8.50, snacks average $2.75</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Bottom Navigation -->
+        <nav
+            class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-sm bg-white border-t-2 border-gray-100">
+            <div class="flex justify-around py-3">
+                <a href="parent-dashboard.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">🏠</span>
+                    <span class="text-xs">Home</span>
+                </a>
+                <!-- <a href="statistics.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">📈</span>
+                    <span class="text-xs">Stats</span>
+                </a> -->
+                <a href="parent-expenses.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">📊</span>
+                    <span class="text-xs">Expenses</span>
+                </a>
+                <a href="profile-analysis.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">🤖</span>
+                    <span class="text-xs">Analysis</span>
+                </a>
+                <a href="reports.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">📋</span>
+                    <span class="text-xs">Reports</span>
+                </a>
+                <a href="parent-profile.html"
+                    class="flex flex-col items-center text-gray-400 hover:text-blue-500 transition-colors">
+                    <span class="text-xl">👤</span>
+                    <span class="text-xs">Profile</span>
+                </a>
+            </div>
+        </nav>
+    </main>
+
+    <!-- JavaScript -->
+    <script src="apps/app.js"></script>
+</body>
+
+</html>
