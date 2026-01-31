@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -62,6 +62,62 @@ namespace MoneyMirror.Core.Models
         /// </summary>
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // ==================== AUTHENTICATION FIELDS ====================
+
+        /// <summary>
+        /// Indicates whether the parent's email has been confirmed.
+        /// Parents cannot log in until email is verified.
+        /// Set to true after clicking email confirmation link.
+        /// </summary>
+        [Required]
+        public bool IsEmailConfirmed { get; set; } = false;
+
+        /// <summary>
+        /// Token sent to parent's email for email confirmation.
+        /// Generated as GUID when account is created.
+        /// Null after email is confirmed.
+        /// </summary>
+        [MaxLength(500)]
+        public string? EmailConfirmationToken { get; set; }
+
+        /// <summary>
+        /// Expiration timestamp for email confirmation token.
+        /// Tokens are valid for 24 hours after generation.
+        /// Null after email is confirmed.
+        /// </summary>
+        public DateTime? EmailConfirmationTokenExpiry { get; set; }
+
+        /// <summary>
+        /// Token sent to parent's email for password reset.
+        /// Generated as GUID when password reset is requested.
+        /// Null after password is successfully reset or token expires.
+        /// </summary>
+        [MaxLength(500)]
+        public string? PasswordResetToken { get; set; }
+
+        /// <summary>
+        /// Expiration timestamp for password reset token.
+        /// Tokens are valid for 1 hour after generation.
+        /// Null when no active reset request exists.
+        /// </summary>
+        public DateTime? PasswordResetTokenExpiry { get; set; }
+
+        /// <summary>
+        /// Long-lived refresh token for obtaining new access tokens.
+        /// Generated during login, valid for 7 days.
+        /// Used to refresh expired access tokens without re-login.
+        /// Stored as hashed value for security.
+        /// </summary>
+        [MaxLength(500)]
+        public string? RefreshToken { get; set; }
+
+        /// <summary>
+        /// Expiration timestamp for refresh token.
+        /// Refresh tokens expire after 7 days.
+        /// User must log in again after expiration.
+        /// </summary>
+        public DateTime? RefreshTokenExpiry { get; set; }
 
         // ==================== NAVIGATION PROPERTIES ====================
 

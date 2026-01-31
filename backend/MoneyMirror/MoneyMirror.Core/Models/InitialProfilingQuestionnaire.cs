@@ -80,7 +80,6 @@ namespace MoneyMirror.Core.Models
         /// AI-calculated personality type based on questionnaire responses.
         /// Used as initial personality classification before spending data is available.
         /// </summary>
-        [Required]
         public int CalculatedTypeID { get; set; }
 
         /// <summary>
