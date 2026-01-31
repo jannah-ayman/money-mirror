@@ -1,0 +1,61 @@
+using MoneyMirror.Core.DTOs.Auth;
+
+namespace MoneyMirror.Core.Interfaces
+{
+    /// <summary>
+    /// Interface for authentication and authorization operations.
+    /// Handles parent registration, login, email confirmation, and token refresh.
+    /// </summary>
+    public interface IAuthService
+    {
+        /// <summary>
+        /// Registers a new parent account.
+        /// Creates parent record, generates email confirmation token, sends confirmation email.
+        /// Parent cannot login until email is confirmed.
+        /// </summary>
+        /// <param name="registerDto">Registration data from parent</param>
+        /// <returns>Tuple: (success flag, message, parentId if successful)</returns>
+        Task<(bool success, string message, int? parentId)> RegisterParentAsync(RegisterParentDto registerDto);
+
+        /// <summary>
+        /// Authenticates a parent and generates JWT tokens.
+        /// Verifies email/password, checks email confirmation status, generates access + refresh tokens.
+        /// </summary>
+        /// <param name="loginDto">Login credentials from parent</param>
+        /// <returns>AuthResponseDto if successful, null if failed</returns>
+        Task<AuthResponseDto?> LoginAsync(LoginDto loginDto);
+
+        /// <summary>
+        /// Confirms a parent's email address using the token sent via email.
+        /// Activates the account so parent can login.
+        /// </summary>
+        /// <param name="email">Parent's email address</param>
+        /// <param name="token">Email confirmation token from URL</param>
+        /// <returns>Tuple: (success flag, message)</returns>
+        Task<(bool success, string message)> ConfirmEmailAsync(string email, string token);
+
+        /// <summary>
+        /// Generates new access token using a valid refresh token.
+        /// Allows user to stay logged in without re-entering credentials.
+        /// </summary>
+        /// <param name="refreshTokenDto">Current tokens from client</param>
+        /// <returns>New AuthResponseDto with fresh tokens if successful, null if failed</returns>
+        Task<AuthResponseDto?> RefreshTokenAsync(RefreshTokenDto refreshTokenDto);
+
+        /// <summary>
+        /// Revokes a refresh token (logout functionality).
+        /// Marks the refresh token as invalid in the database.
+        /// </summary>
+        /// <param name="parentId">ID of the parent logging out</param>
+        /// <returns>True if successfully revoked, False otherwise</returns>
+        Task<bool> RevokeRefreshTokenAsync(int parentId);
+
+        /// <summary>
+        /// Checks if an email is already registered in the system.
+        /// Used to prevent duplicate registrations.
+        /// </summary>
+        /// <param name="email">Email address to check</param>
+        /// <returns>True if email exists, False if available</returns>
+        Task<bool> EmailExistsAsync(string email);
+    }
+}
