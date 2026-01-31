@@ -1,90 +1,222 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MoneyMirror.Core.Enums;
 
 namespace MoneyMirror.Core.Models
 {
     /// <summary>
-    /// Stores responses to the initial profiling questionnaire completed by parents
-    /// when adding a new child. Establishes preliminary financial personality profile
-    /// before the child starts using the app. One-to-one relationship with Child.
+    /// Stores the 28-feature survey completed by parents when adding a new child.
+    /// Establishes preliminary financial personality profile before the child starts using the app.
+    /// One-to-one relationship with Child.
     /// </summary>
     public class InitialProfilingQuestionnaire
     {
         /// <summary>
-        /// Primary key for the InitialProfilingQuestionnaire entity
+        /// Primary key for the InitialProfilingQuestionnaire entity.
         /// </summary>
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int QuestionnaireID { get; set; }
 
-        /// <summary>
-        /// Response to Question 1.
-        /// Example question: "How does your child typically react when they receive money?"
-        /// Stores parent's selected answer text or answer ID.
-        /// </summary>
-        [Required]
-        [MaxLength(500)]
-        public string Question1Response { get; set; }
+        // ==================== Section 1 – Child Profile ====================
 
         /// <summary>
-        /// Response to Question 2.
-        /// Example question: "When shopping, does your child usually..."
+        /// The child's age group.
         /// </summary>
         [Required]
-        [MaxLength(500)]
-        public string Question2Response { get; set; }
+        public ChildAgeGroup ChildAgeGroup { get; set; }
 
         /// <summary>
-        /// Response to Question 3.
-        /// Example question: "How often does your child save money they receive?"
+        /// The child's gender.
         /// </summary>
         [Required]
-        [MaxLength(500)]
-        public string Question3Response { get; set; }
+        public ChildGender ChildGender { get; set; }
 
         /// <summary>
-        /// Response to Question 4.
-        /// Example question: "When your child wants something, do they..."
+        /// Whether the child receives a regular allowance.
         /// </summary>
         [Required]
-        [MaxLength(500)]
-        public string Question4Response { get; set; }
+        public bool HasAllowance { get; set; }
+
+        // ==================== Section 2 – Allowance Details (Conditional) ====================
+        // These fields are nullable — they only appear if HasAllowance = true.
 
         /// <summary>
-        /// Response to Question 5.
-        /// Example question: "How does your child feel after making a purchase?"
+        /// How often the child receives allowance.
+        /// Nullable: only filled if HasAllowance = true.
+        /// </summary>
+        public AllowanceFrequency? AllowanceFrequency { get; set; }
+
+        /// <summary>
+        /// Average allowance amount.
+        /// Nullable: only filled if HasAllowance = true.
+        /// </summary>
+        [Column(TypeName = "DECIMAL(10,2)")]
+        public decimal? AllowanceAmount { get; set; }
+
+        // ==================== Section 3 – Expenses ====================
+
+        /// <summary>
+        /// Categories the child spends on (multi-select).
+        /// Stored as comma-separated values in the DB.
         /// </summary>
         [Required]
-        [MaxLength(500)]
-        public string Question5Response { get; set; }
+        [Column(TypeName = "NVARCHAR(500)")]
+        public string SpendingCategoriesJson { get; set; }
 
         /// <summary>
-        /// Response to Question 6.
-        /// Example question: "Does your child compare prices before buying?"
+        /// Average amount the child spends.
         /// </summary>
         [Required]
-        [MaxLength(500)]
-        public string Question6Response { get; set; }
+        [Column(TypeName = "DECIMAL(10,2)")]
+        public decimal AverageSpendingAmount { get; set; }
 
         /// <summary>
-        /// Additional optional field for storing all responses as JSON if needed.
-        /// Can be used for flexibility if questionnaire changes over time.
-        /// Example: {"q1": "answer1", "q2": "answer2", ...}
+        /// How often the child plans before spending.
         /// </summary>
-        [Column(TypeName = "NVARCHAR(MAX)")]
-        public string? QuestionResponse { get; set; } // JSON for flexibility
+        [Required]
+        public SpendingPlanning SpendingPlanning { get; set; }
+
+        /// <summary>
+        /// What the child does when the allowance runs out.
+        /// </summary>
+        [Required]
+        public OutOfMoneyBehavior OutOfMoneyBehavior { get; set; }
+
+        /// <summary>
+        /// How much spending affects the child's saving habits.
+        /// </summary>
+        [Required]
+        public SpendingAffectsSaving SpendingAffectsSaving { get; set; }
+
+        /// <summary>
+        /// Whether the child tracks their expenses.
+        /// </summary>
+        [Required]
+        public bool TracksExpenses { get; set; }
+
+        /// <summary>
+        /// How fast the child spends their money.
+        /// </summary>
+        [Required]
+        public SpendingPace SpendingPace { get; set; }
+
+        // ==================== Section 4 – Savings ====================
+
+        /// <summary>
+        /// Whether the child tries to save.
+        /// </summary>
+        [Required]
+        public bool TriesToSave { get; set; }
+
+        /// <summary>
+        /// What the child saves for.
+        /// Nullable: only filled if TriesToSave = true.
+        /// </summary>
+        public SavingGoal? SavingGoal { get; set; }
+
+        /// <summary>
+        /// Percentage of allowance the child saves.
+        /// Nullable: only filled if TriesToSave = true.
+        /// </summary>
+        public SavingPercentage? SavingPercentage { get; set; }
+
+        /// <summary>
+        /// How often the child successfully saves.
+        /// Nullable: only filled if TriesToSave = true.
+        /// </summary>
+        public SavingSuccessRate? SavingSuccessRate { get; set; }
+
+        // ==================== Section 5 – Moods & Habits ====================
+
+        /// <summary>
+        /// How the child feels after spending.
+        /// </summary>
+        [Required]
+        public FeelingAfterSpending FeelingAfterSpending { get; set; }
+
+        /// <summary>
+        /// Why the child fails to save.
+        /// </summary>
+        [Required]
+        public SavingFailureReason SavingFailureReason { get; set; }
+
+        /// <summary>
+        /// The child's preference — spend now or save for later.
+        /// </summary>
+        [Required]
+        public SatisfactionPreference SatisfactionPreference { get; set; }
+
+        /// <summary>
+        /// How often the child talks about money.
+        /// </summary>
+        [Required]
+        public TalksAboutMoney TalksAboutMoney { get; set; }
+
+        /// <summary>
+        /// How the child feels when their savings grow.
+        /// </summary>
+        [Required]
+        public FeelingWhenSavingGrows FeelingWhenSavingGrows { get; set; }
+
+        /// <summary>
+        /// Likert scale (1–5): how emotional the child gets when buying something.
+        /// </summary>
+        [Required]
+        [Range(1, 5)]
+        public int EmotionalSpendingScore { get; set; }
+
+        // ==================== Section 6 – Financial Personality ====================
+
+        /// <summary>
+        /// What the child would do with 100 pounds.
+        /// </summary>
+        [Required]
+        public ReactionTo100 ReactionTo100 { get; set; }
+
+        /// <summary>
+        /// What matters most to the child regarding money.
+        /// </summary>
+        [Required]
+        public MoneyPriority MoneyPriority { get; set; }
+
+        /// <summary>
+        /// How the child reacts to an expensive item they want.
+        /// </summary>
+        [Required]
+        public ReactionToExpensiveItem ReactionToExpensiveItem { get; set; }
+
+        /// <summary>
+        /// How the child reacts when they get more allowance.
+        /// </summary>
+        [Required]
+        public ReactionToMoreAllowance ReactionToMoreAllowance { get; set; }
+
+        /// <summary>
+        /// The child's overall money mindset.
+        /// </summary>
+        [Required]
+        public MoneyMindset MoneyMindset { get; set; }
+
+        /// <summary>
+        /// Likert scale (1–5): how often the child looks for deals/bargains.
+        /// </summary>
+        [Required]
+        [Range(1, 5)]
+        public int BargainHuntingScore { get; set; }
+
+        // ==================== Metadata ====================
 
         /// <summary>
         /// Foreign key to PersonalityType table.
         /// AI-calculated personality type based on questionnaire responses.
-        /// Used as initial personality classification before spending data is available.
         /// </summary>
-        public int CalculatedTypeID { get; set; }
+        public int? CalculatedTypeID { get; set; }
 
         /// <summary>
-        /// Indicates whether the questionnaire has been completed.
-        /// False = in progress, True = submitted and processed
+        /// Indicates whether the questionnaire has been completed and processed.
         /// </summary>
         [Required]
         public bool IsCompleted { get; set; } = false;
@@ -97,24 +229,17 @@ namespace MoneyMirror.Core.Models
 
         /// <summary>
         /// Foreign key to Child table (unique constraint).
-        /// One questionnaire per child, one child per questionnaire.
+        /// One questionnaire per child.
         /// </summary>
         [Required]
         public int ChildID { get; set; }
 
-        // ==================== NAVIGATION PROPERTIES ====================
+        // ==================== Navigation Properties ====================
 
-        /// <summary>
-        /// Reference to the child this questionnaire is about.
-        /// One-to-one relationship.
-        /// </summary>
         [ForeignKey("ChildID")]
-        public virtual Child Child { get; set; }
+        public virtual Child  Child { get; set; }
 
-        /// <summary>
-        /// Reference to the calculated personality type from questionnaire responses
-        /// </summary>
         [ForeignKey("CalculatedTypeID")]
-        public virtual PersonalityType CalculatedPersonalityType { get; set; }
+        public virtual PersonalityType  CalculatedPersonalityType { get; set; }
     }
 }
