@@ -118,7 +118,14 @@ namespace MoneyMirror.Core.Models
         /// User must log in again after expiration.
         /// </summary>
         public DateTime? RefreshTokenExpiry { get; set; }
+        // Soft delete fields
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
 
+        // Email change fields
+        public string? NewEmail { get; set; }
+        public string? EmailChangeToken { get; set; }
+        public DateTime? EmailChangeTokenExpiry { get; set; }
         // ==================== NAVIGATION PROPERTIES ====================
 
         /// <summary>
