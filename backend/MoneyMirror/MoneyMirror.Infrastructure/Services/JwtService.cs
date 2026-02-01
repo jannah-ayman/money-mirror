@@ -9,10 +9,8 @@ using System.Text;
 
 namespace MoneyMirror.Infrastructure.Services
 {
-    /// <summary>
     /// Service for JWT token generation and validation.
     /// Implements secure token creation using HS256 algorithm.
-    /// </summary>
     public class JwtService : IJwtService
     {
         private readonly IConfiguration _configuration;
@@ -20,11 +18,8 @@ namespace MoneyMirror.Infrastructure.Services
         private readonly string _issuer;
         private readonly string _audience;
         private readonly int _accessTokenExpirationMinutes;
-
-        /// <summary>
         /// Constructor - dependency injection provides configuration.
         /// Reads JWT settings from appsettings.json.
-        /// </summary>
         public JwtService(IConfiguration configuration)
         {
             _configuration = configuration;
@@ -40,10 +35,8 @@ namespace MoneyMirror.Infrastructure.Services
                 _configuration["Jwt:AccessTokenExpirationMinutes"] ?? "15");
         }
 
-        /// <summary>
         /// Generates a JWT access token for an authenticated parent.
         /// Token contains claims (user info) and is signed with secret key.
-        /// </summary>
         public string GenerateAccessToken(Parent parent)
         {
             // Claims are pieces of information about the user stored in the token
@@ -85,10 +78,8 @@ namespace MoneyMirror.Infrastructure.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        /// <summary>
         /// Generates a cryptographically secure refresh token.
         /// Returns a random GUID that will be stored in the database.
-        /// </summary>
         public string GenerateRefreshToken()
         {
             // Generate a random 32-byte array
@@ -102,10 +93,8 @@ namespace MoneyMirror.Infrastructure.Services
             return Convert.ToBase64String(randomBytes);
         }
 
-        /// <summary>
         /// Extracts claims from a JWT token without validating expiration.
         /// Useful for refresh token flow where we need to get user info from expired token.
-        /// </summary>
         public ClaimsPrincipal? GetPrincipalFromToken(string token)
         {
             try
@@ -145,10 +134,8 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// Validates a JWT token including expiration check.
-        /// Returns true only if token is valid and not expired.
-        /// </summary>
+        // Validates a JWT token including expiration check.
+        // Returns true only if token is valid and not expired.
         public bool ValidateToken(string token)
         {
             try

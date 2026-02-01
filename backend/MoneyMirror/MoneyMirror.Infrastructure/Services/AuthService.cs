@@ -140,7 +140,11 @@ namespace MoneyMirror.Infrastructure.Services
                     _logger.LogWarning($"Login attempt with non-existent email: {loginDto.Email}");
                     return null; // Don't reveal if email exists or not (security)
                 }
-
+                if (parent.IsDeleted)
+                {
+                    _logger.LogWarning($"Login attempt on deleted account: {loginDto.Email} (ID: {parent.ParentID})");
+                    return null;  // or throw exception, or return special result – see options below
+                }
                 // STEP 2: Verify password using BCrypt
                 // BCrypt.Verify compares plain text password with hashed password
                 bool passwordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, parent.HashedPassword);
@@ -601,6 +605,301 @@ namespace MoneyMirror.Infrastructure.Services
             {
                 _logger.LogError($"Error during resend confirmation: {ex.Message}");
                 return (false, "An error occurred while sending confirmation email. Please try again later.");
+            }
+        }
+        // ==================== ADD THESE METHODS TO AuthService.cs ====================
+        // Place them at the end of the class, before the closing brace
+
+        /// <summary>
+        /// Updates parent profile information (name, phone).
+        /// Steps:
+        /// 1. Find parent by ID
+        /// 2. Verify account is not deleted
+        /// 3. Update fields
+        /// 4. Save changes
+        /// </summary>
+        public async Task<(bool success, string message)> UpdateParentProfileAsync(int parentId, UpdateParentProfileDto updateDto)
+        {
+            try
+            {
+                // STEP 1: Find parent
+                var parent = await _context.Parents.FindAsync(parentId);
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Profile update attempt for non-existent parent ID: {parentId}");
+                    return (false, "Parent account not found");
+                }
+
+                // STEP 2: Check if account is deleted
+                if (parent.IsDeleted)
+                {
+                    _logger.LogWarning($"Profile update attempt for deleted parent: {parent.Email}");
+                    return (false, "Account has been deleted");
+                }
+
+                // STEP 3: Update fields
+                parent.FName = updateDto.FirstName.Trim();
+                parent.LName = updateDto.LastName.Trim();
+                parent.PhoneNum = string.IsNullOrWhiteSpace(updateDto.PhoneNumber)
+                    ? null
+                    : updateDto.PhoneNumber.Trim();
+
+                // STEP 4: Save changes
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Profile updated successfully for parent: {parent.Email}");
+
+                return (true, "Profile updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating parent profile: {ex.Message}");
+                return (false, "An error occurred while updating your profile. Please try again later.");
+            }
+        }
+
+        /// <summary>
+        /// Initiates email change process.
+        /// Steps:
+        /// 1. Find parent by ID
+        /// 2. Verify current password
+        /// 3. Check if new email is already in use
+        /// 4. Generate email change token
+        /// 5. Send verification email to NEW email address
+        /// </summary>
+        public async Task<(bool success, string message)> ChangeEmailAsync(int parentId, ChangeEmailDto changeEmailDto)
+        {
+            try
+            {
+                // STEP 1: Find parent
+                var parent = await _context.Parents.FindAsync(parentId);
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Email change attempt for non-existent parent ID: {parentId}");
+                    return (false, "Parent account not found");
+                }
+
+                // Check if account is deleted
+                if (parent.IsDeleted)
+                {
+                    _logger.LogWarning($"Email change attempt for deleted parent: {parent.Email}");
+                    return (false, "Account has been deleted");
+                }
+
+                // STEP 2: Verify current password
+                bool passwordValid = BCrypt.Net.BCrypt.Verify(changeEmailDto.CurrentPassword, parent.HashedPassword);
+
+                if (!passwordValid)
+                {
+                    _logger.LogWarning($"Email change attempt with invalid password for: {parent.Email}");
+                    return (false, "Current password is incorrect");
+                }
+
+                // STEP 3: Check if new email is already in use
+                string normalizedNewEmail = changeEmailDto.NewEmail.ToLower().Trim();
+
+                bool emailExists = await _context.Parents
+                    .AnyAsync(p => p.Email.ToLower() == normalizedNewEmail && p.ParentID != parentId);
+
+                if (emailExists)
+                {
+                    _logger.LogWarning($"Email change attempt to already registered email: {normalizedNewEmail}");
+                    return (false, "This email address is already registered");
+                }
+
+                // STEP 4: Generate email change token
+                string emailChangeToken = Guid.NewGuid().ToString();
+                int tokenExpirationHours = int.Parse(
+                    _configuration["EmailConfirmation:TokenExpirationHours"] ?? "24");
+                DateTime tokenExpiry = DateTime.UtcNow.AddHours(tokenExpirationHours);
+
+                // Store new email and token (don't update actual email yet!)
+                parent.NewEmail = normalizedNewEmail;
+                parent.EmailChangeToken = emailChangeToken;
+                parent.EmailChangeTokenExpiry = tokenExpiry;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Email change initiated for parent: {parent.Email} to {normalizedNewEmail}");
+
+                // STEP 5: Send verification email to NEW email address
+                string frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:19006";
+                string confirmationLink = $"{frontendUrl}/auth/confirm-email-change?oldEmail={parent.Email}&newEmail={normalizedNewEmail}&token={emailChangeToken}";
+
+                // Use existing email confirmation template but customize message
+                bool emailSent = await _emailService.SendEmailConfirmationAsync(
+                    normalizedNewEmail,
+                    $"{parent.FName} {parent.LName}",
+                    confirmationLink
+                );
+
+                if (!emailSent)
+                {
+                    _logger.LogWarning($"Failed to send email change confirmation to {normalizedNewEmail}");
+                    return (false, "Failed to send confirmation email. Please try again later.");
+                }
+
+                return (true, "A confirmation link has been sent to your new email address. Please verify it to complete the change.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error during email change: {ex.Message}");
+                return (false, "An error occurred while changing your email. Please try again later.");
+            }
+        }
+
+        /// <summary>
+        /// Confirms email change using token.
+        /// Steps:
+        /// 1. Find parent by old email
+        /// 2. Verify token and new email match
+        /// 3. Update email to new address
+        /// 4. Clear email change tokens
+        /// 5. Revoke all refresh tokens (force re-login with new email)
+        /// </summary>
+        public async Task<(bool success, string message)> ConfirmEmailChangeAsync(ConfirmEmailChangeDto confirmDto)
+        {
+            try
+            {
+                // STEP 1: Find parent by old email
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == confirmDto.OldEmail.ToLower().Trim());
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Email change confirmation attempt with non-existent old email: {confirmDto.OldEmail}");
+                    return (false, "Invalid email change link");
+                }
+
+                // STEP 2: Verify token and new email
+                if (parent.EmailChangeToken != confirmDto.Token)
+                {
+                    _logger.LogWarning($"Email change confirmation with invalid token for: {parent.Email}");
+                    return (false, "Invalid email change link");
+                }
+
+                if (parent.NewEmail?.ToLower() != confirmDto.NewEmail.ToLower().Trim())
+                {
+                    _logger.LogWarning($"Email change confirmation with mismatched new email for: {parent.Email}");
+                    return (false, "Invalid email change link");
+                }
+
+                // Check if token has expired
+                if (parent.EmailChangeTokenExpiry == null ||
+                    parent.EmailChangeTokenExpiry < DateTime.UtcNow)
+                {
+                    _logger.LogWarning($"Email change confirmation with expired token for: {parent.Email}");
+                    return (false, "Email change link has expired. Please request a new one.");
+                }
+
+                // Check if new email was taken while waiting for confirmation
+                string normalizedNewEmail = confirmDto.NewEmail.ToLower().Trim();
+                bool emailNowTaken = await _context.Parents
+                    .AnyAsync(p => p.Email.ToLower() == normalizedNewEmail && p.ParentID != parent.ParentID);
+
+                if (emailNowTaken)
+                {
+                    _logger.LogWarning($"Email change confirmation but email now taken: {normalizedNewEmail}");
+                    return (false, "This email address has been registered by another user. Please choose a different email.");
+                }
+
+                // STEP 3: Update email
+                string oldEmail = parent.Email;
+                parent.Email = normalizedNewEmail;
+                parent.IsEmailConfirmed = true; // New email is now confirmed
+
+                // STEP 4: Clear email change tokens
+                parent.NewEmail = null;
+                parent.EmailChangeToken = null;
+                parent.EmailChangeTokenExpiry = null;
+
+                // STEP 5: Revoke all refresh tokens (force re-login with new email)
+                parent.RefreshToken = null;
+                parent.RefreshTokenExpiry = null;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Email changed successfully from {oldEmail} to {normalizedNewEmail}");
+
+                return (true, "Email changed successfully! Please log in again with your new email address.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error confirming email change: {ex.Message}");
+                return (false, "An error occurred while confirming email change. Please try again later.");
+            }
+        }
+
+        /// <summary>
+        /// Soft deletes a parent account.
+        /// Steps:
+        /// 1. Find parent by ID
+        /// 2. Verify password
+        /// 3. Mark account as deleted
+        /// 4. Remove all ParentChild relationships
+        /// 5. Revoke refresh tokens
+        /// Children are preserved - only relationships are removed
+        /// </summary>
+        public async Task<(bool success, string message)> DeleteParentAccountAsync(int parentId, string currentPassword)
+        {
+            try
+            {
+                // STEP 1: Find parent
+                var parent = await _context.Parents
+                    .Include(p => p.ParentChildren) // Load relationships to remove them
+                    .FirstOrDefaultAsync(p => p.ParentID == parentId);
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Delete attempt for non-existent parent ID: {parentId}");
+                    return (false, "Parent account not found");
+                }
+
+                // Check if already deleted
+                if (parent.IsDeleted)
+                {
+                    _logger.LogInformation($"Delete attempt for already deleted parent: {parent.Email}");
+                    return (false, "Account has already been deleted");
+                }
+
+                // STEP 2: Verify password
+                bool passwordValid = BCrypt.Net.BCrypt.Verify(currentPassword, parent.HashedPassword);
+
+                if (!passwordValid)
+                {
+                    _logger.LogWarning($"Delete attempt with invalid password for: {parent.Email}");
+                    return (false, "Password is incorrect");
+                }
+
+                // STEP 3: Mark as deleted (soft delete)
+                parent.IsDeleted = true;
+                parent.DeletedAt = DateTime.UtcNow;
+
+                // STEP 4: Remove all ParentChild relationships
+                // Children are NOT deleted - only the relationships are removed
+                _context.ParentChildren.RemoveRange(parent.ParentChildren);
+
+                // STEP 5: Revoke refresh tokens (prevent login)
+                parent.RefreshToken = null;
+                parent.RefreshTokenExpiry = null;
+
+                // Save changes
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Parent account soft deleted: {parent.Email} (ID: {parentId})");
+
+                return (true, "Account deleted successfully. Your children's accounts have been preserved.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error deleting parent account: {ex.Message}");
+                return (false, "An error occurred while deleting your account. Please try again later.");
             }
         }
     }

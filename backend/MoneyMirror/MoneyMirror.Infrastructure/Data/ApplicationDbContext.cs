@@ -3,17 +3,13 @@ using MoneyMirror.Core.Models;
 
 namespace MoneyMirror.Infrastructure.Data
 {
-    /// <summary>
     /// Main database context for Money Mirror application.
     /// Manages all entities and their relationships in SQL Server.
     /// Configured for use with Entity Framework Core 8.0 and SQL Server 2019+.
-    /// </summary>
     public class ApplicationDbContext : DbContext
     {
-        /// <summary>
         /// Constructor that receives database configuration from dependency injection.
         /// Called automatically by ASP.NET Core when DbContext is requested.
-        /// </summary>
         /// <param name="options">Configuration options including connection string</param>
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -24,101 +20,63 @@ namespace MoneyMirror.Infrastructure.Data
         // Each DbSet<T> represents a table in the database
         // Table name matches the property name by convention
 
-        /// <summary>
         /// Parents table - stores parent/guardian accounts with authentication
-        /// </summary>
         public DbSet<Parent> Parents { get; set; }
 
-        /// <summary>
         /// Children table - stores child user accounts
-        /// </summary>
         public DbSet<Child> Children { get; set; }
 
-        /// <summary>
         /// ParentChild junction table - many-to-many relationship between parents and children
         /// Allows one parent to manage multiple children, and one child to have multiple parents
-        /// </summary>
         public DbSet<ParentChild> ParentChildren { get; set; }
 
-        /// <summary>
         /// Expenses table - logs of purchases made by children
-        /// </summary>
         public DbSet<Expense> Expenses { get; set; }
 
-        /// <summary>
         /// ExpenseCategory table - predefined categories for classifying expenses
-        /// </summary>
         public DbSet<ExpenseCategory> ExpenseCategories { get; set; }
 
-        /// <summary>
         /// SavingsGoals table - goals set by children or parents
-        /// </summary>
         public DbSet<SavingsGoal> SavingsGoals { get; set; }
 
-        /// <summary>
         /// Allowances table - recurring or one-time money given to children
-        /// </summary>
         public DbSet<Allowance> Allowances { get; set; }
 
-        /// <summary>
         /// Notifications table - alerts sent to parents and children
-        /// </summary>
         public DbSet<Notification> Notifications { get; set; }
 
-        /// <summary>
         /// PersonalityTypes table - financial personality classifications
-        /// </summary>
         public DbSet<PersonalityType> PersonalityTypes { get; set; }
 
-        /// <summary>
         /// InitialProfilingQuestionnaire table - parent responses for child setup
-        /// </summary>
         public DbSet<InitialProfilingQuestionnaire> InitialProfilingQuestionnaires { get; set; }
 
-        /// <summary>
         /// QuizLogs table - child responses to story quizzes
-        /// </summary>
         public DbSet<QuizLog> QuizLogs { get; set; }
 
-        /// <summary>
         /// StoryQuizTemplate table - predefined story scenarios for quizzes
-        /// </summary>
         public DbSet<StoryQuizTemplate> StoryQuizTemplates { get; set; }
 
-        /// <summary>
         /// ChildAchievements junction table - tracks which achievements each child has earned
-        /// </summary>
         public DbSet<ChildAchievement> ChildAchievements { get; set; }
 
-        /// <summary>
         /// AchievementTypes table - predefined achievement/badge definitions
-        /// </summary>
         public DbSet<AchievementType> AchievementTypes { get; set; }
 
-        /// <summary>
         /// CharacterStats table - predefined character animation states
-        /// </summary>
         public DbSet<CharacterStats> CharacterStats { get; set; }
 
-        /// <summary>
         /// ChildCharacterStats table - logs of character reactions shown to children
-        /// </summary>
         public DbSet<ChildCharacterStats> ChildCharacterStats { get; set; }
 
-        /// <summary>
         /// Moods table - predefined mood emojis for expense logging
-        /// </summary>
         public DbSet<Mood> Moods { get; set; }
 
-        /// <summary>
         /// Advice table - AI-generated personalized financial tips
-        /// </summary>
         public DbSet<Advice> Advices { get; set; }
 
-        /// <summary>
         /// Configure entity relationships, indexes, constraints, and default values.
         /// Called automatically by Entity Framework when creating migrations.
-        /// </summary>
         /// <param name="modelBuilder">Fluent API builder for model configuration</param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

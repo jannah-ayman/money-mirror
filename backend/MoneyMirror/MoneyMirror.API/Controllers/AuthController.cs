@@ -18,19 +18,15 @@ namespace MoneyMirror.API.Controllers
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
 
-        /// <summary>
         /// Constructor - dependency injection provides services.
-        /// </summary>
         public AuthController(IAuthService authService, ILogger<AuthController> logger)
         {
             _authService = authService;
             _logger = logger;
         }
 
-        /// <summary>
         /// Registers a new parent account.
         /// POST /api/auth/register
-        /// </summary>
         /// <param name="registerDto">Registration data from client</param>
         /// <returns>Success message or error</returns>
         [HttpPost("register")]
@@ -55,10 +51,8 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
         /// Authenticates a parent and returns JWT tokens.
         /// POST /api/auth/login
-        /// </summary>
         /// <param name="loginDto">Login credentials from client</param>
         /// <returns>JWT tokens and parent info, or error</returns>
         [HttpPost("login")]
@@ -95,11 +89,9 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
         /// Confirms a parent's email address.
         /// GET /api/auth/confirm-email?email=xxx&token=xxx
         /// This endpoint is called when user clicks the link in their email.
-        /// </summary>
         /// <param name="email">Parent's email address</param>
         /// <param name="token">Email confirmation token</param>
         /// <returns>Success or error message</returns>
@@ -288,6 +280,133 @@ namespace MoneyMirror.API.Controllers
         public async Task<ActionResult<ApiResponse<object>>> ResendConfirmation([FromBody] ResendConfirmationDto resendConfirmationDto)
         {
             var (success, message) = await _authService.ResendConfirmationEmailAsync(resendConfirmationDto.Email);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+        // ==================== ADD THESE ENDPOINTS TO AuthController.cs ====================
+        // Place them at the end of the class, before the closing brace
+
+        /// <summary>
+        /// Updates parent profile information (name, phone).
+        /// PUT /api/auth/profile
+        /// Requires authentication.
+        /// </summary>
+        /// <param name="updateDto">Updated profile data</param>
+        /// <returns>Success or error message</returns>
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<object>>> UpdateProfile([FromBody] UpdateParentProfileDto updateDto)
+        {
+            // Get parent ID from JWT token
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, message) = await _authService.UpdateParentProfileAsync(parentId, updateDto);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+
+        /// <summary>
+        /// Initiates email change process by sending verification to new email.
+        /// POST /api/auth/change-email
+        /// Requires authentication.
+        /// </summary>
+        /// <param name="changeEmailDto">New email and current password</param>
+        /// <returns>Success or error message</returns>
+        [HttpPost("change-email")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<object>>> ChangeEmail([FromBody] ChangeEmailDto changeEmailDto)
+        {
+            // Get parent ID from JWT token
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, message) = await _authService.ChangeEmailAsync(parentId, changeEmailDto);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+
+        /// <summary>
+        /// Confirms email change using token from verification email.
+        /// GET /api/auth/confirm-email-change?oldEmail=xxx&newEmail=xxx&token=xxx
+        /// </summary>
+        /// <param name="oldEmail">Current email address</param>
+        /// <param name="newEmail">New email address being confirmed</param>
+        /// <param name="token">Email change confirmation token</param>
+        /// <returns>Success or error message</returns>
+        [HttpGet("confirm-email-change")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<object>>> ConfirmEmailChange(
+            [FromQuery] string oldEmail,
+            [FromQuery] string newEmail,
+            [FromQuery] string token)
+        {
+            var confirmDto = new ConfirmEmailChangeDto
+            {
+                OldEmail = oldEmail,
+                NewEmail = newEmail,
+                Token = token
+            };
+
+            var (success, message) = await _authService.ConfirmEmailChangeAsync(confirmDto);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+
+        /// <summary>
+        /// Soft deletes parent account (marks as deleted).
+        /// DELETE /api/auth/account
+        /// Requires authentication and current password.
+        /// </summary>
+        /// <param name="currentPassword">Parent's password for verification</param>
+        /// <returns>Success or error message</returns>
+        [HttpDelete("account")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<object>>> DeleteAccount([FromBody] string currentPassword)
+        {
+            // Validate password provided
+            if (string.IsNullOrWhiteSpace(currentPassword))
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse("Current password is required"));
+            }
+
+            // Get parent ID from JWT token
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, message) = await _authService.DeleteParentAccountAsync(parentId, currentPassword);
 
             if (!success)
             {

@@ -83,5 +83,43 @@ namespace MoneyMirror.Core.Interfaces
         /// <param name="email">Parent's email address</param>
         /// <returns>Tuple: (success flag, message)</returns>
         Task<(bool success, string message)> ResendConfirmationEmailAsync(string email);
+
+        /// <summary>
+        /// Updates parent profile information (name, phone).
+        /// Email and password updates handled separately for security.
+        /// </summary>
+        /// <param name="parentId">ID of parent to update</param>
+        /// <param name="updateDto">Updated profile data</param>
+        /// <returns>Tuple: (success flag, message)</returns>
+        Task<(bool success, string message)> UpdateParentProfileAsync(int parentId, UpdateParentProfileDto updateDto);
+
+        /// <summary>
+        /// Initiates email change process by sending verification to new email.
+        /// Verifies current password before proceeding.
+        /// Old email remains active until new email is confirmed.
+        /// </summary>
+        /// <param name="parentId">ID of parent changing email</param>
+        /// <param name="changeEmailDto">New email and current password</param>
+        /// <returns>Tuple: (success flag, message)</returns>
+        Task<(bool success, string message)> ChangeEmailAsync(int parentId, ChangeEmailDto changeEmailDto);
+
+        /// <summary>
+        /// Confirms email change using token from verification email.
+        /// Applies the email change after successful verification.
+        /// Revokes all refresh tokens to force re-login with new email.
+        /// </summary>
+        /// <param name="confirmDto">Old email, new email, and token</param>
+        /// <returns>Tuple: (success flag, message)</returns>
+        Task<(bool success, string message)> ConfirmEmailChangeAsync(ConfirmEmailChangeDto confirmDto);
+
+        /// <summary>
+        /// Soft deletes a parent account (marks as deleted, doesn't remove data).
+        /// Removes all ParentChild relationships but preserves child accounts.
+        /// Requires current password for security verification.
+        /// </summary>
+        /// <param name="parentId">ID of parent to delete</param>
+        /// <param name="currentPassword">Parent's password for verification</param>
+        /// <returns>Tuple: (success flag, message)</returns>
+        Task<(bool success, string message)> DeleteParentAccountAsync(int parentId, string currentPassword);
     }
 }

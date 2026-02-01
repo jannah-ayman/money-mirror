@@ -6,10 +6,8 @@ using SendGrid.Helpers.Mail;
 
 namespace MoneyMirror.Infrastructure.Services
 {
-    /// <summary>
     /// Service for sending emails using SendGrid API.
     /// Handles all email communications for the Money Mirror application.
-    /// </summary>
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _configuration;
@@ -18,9 +16,7 @@ namespace MoneyMirror.Infrastructure.Services
         private readonly string _senderEmail;
         private readonly string _senderName;
 
-        /// <summary>
         /// Constructor - dependency injection provides configuration and logging.
-        /// </summary>
         public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
         {
             _configuration = configuration;
@@ -35,9 +31,7 @@ namespace MoneyMirror.Infrastructure.Services
                 ?? "Money Mirror";
         }
 
-        /// <summary>
         /// Sends an email confirmation message to newly registered parents.
-        /// </summary>
         public async Task<bool> SendEmailConfirmationAsync(string toEmail, string toName, string confirmationLink)
         {
             var subject = "Welcome to Money Mirror - Confirm Your Email";
@@ -89,9 +83,7 @@ namespace MoneyMirror.Infrastructure.Services
             return await SendEmailAsync(toEmail, toName, subject, htmlContent);
         }
 
-        /// <summary>
         /// Sends a password reset email.
-        /// </summary>
         public async Task<bool> SendPasswordResetEmailAsync(string toEmail, string toName, string resetLink)
         {
             var subject = "Money Mirror - Reset Your Password";
@@ -141,9 +133,7 @@ namespace MoneyMirror.Infrastructure.Services
             return await SendEmailAsync(toEmail, toName, subject, htmlContent);
         }
 
-        /// <summary>
         /// Sends a weekly summary report email.
-        /// </summary>
         public async Task<bool> SendWeeklyReportAsync(string toEmail, string toName, string reportContent)
         {
             var subject = "Your Weekly Money Mirror Report";
@@ -181,18 +171,14 @@ namespace MoneyMirror.Infrastructure.Services
             return await SendEmailAsync(toEmail, toName, subject, htmlContent);
         }
 
-        /// <summary>
         /// Sends a generic notification email.
-        /// </summary>
         public async Task<bool> SendNotificationEmailAsync(string toEmail, string toName, string subject, string htmlContent)
         {
             return await SendEmailAsync(toEmail, toName, subject, htmlContent);
         }
 
-        /// <summary>
         /// Private helper method that actually sends the email via SendGrid.
         /// All other methods use this internally.
-        /// </summary>
         private async Task<bool> SendEmailAsync(string toEmail, string toName, string subject, string htmlContent)
         {
             try
