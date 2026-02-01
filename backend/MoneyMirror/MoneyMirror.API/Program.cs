@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Infrastructure.Data;
 using MoneyMirror.Infrastructure.Services;
+using FluentValidation;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -93,7 +95,19 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // ==================== CONTROLLERS ====================
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    // Add FluentValidation filter for automatic validation
+    options.Filters.Add<MoneyMirror.API.Filters.FluentValidationFilter>();
+});
+
+// ==================== FLUENTVALIDATION CONFIGURATION ====================
+// Register all FluentValidation validators from the API assembly
+// This scans the API project and automatically registers all validators
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+// Register the FluentValidation filter as a service
+builder.Services.AddScoped<MoneyMirror.API.Filters.FluentValidationFilter>();
 
 // ==================== SWAGGER / OPENAPI CONFIGURATION ====================
 // Swagger provides interactive API documentation at /swagger

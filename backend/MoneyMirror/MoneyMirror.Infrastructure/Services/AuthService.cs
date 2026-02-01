@@ -65,7 +65,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                 // STEP 3: Generate email confirmation token (a unique GUID)
                 string confirmationToken = Guid.NewGuid().ToString();
-                
+
                 // Token expires in 24 hours (configurable)
                 int tokenExpirationHours = int.Parse(
                     _configuration["EmailConfirmation:TokenExpirationHours"] ?? "24");
@@ -144,7 +144,7 @@ namespace MoneyMirror.Infrastructure.Services
                 // STEP 2: Verify password using BCrypt
                 // BCrypt.Verify compares plain text password with hashed password
                 bool passwordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, parent.HashedPassword);
-                
+
                 if (!passwordValid)
                 {
                     _logger.LogWarning($"Login attempt with invalid password for: {loginDto.Email}");
@@ -236,7 +236,7 @@ namespace MoneyMirror.Infrastructure.Services
                 }
 
                 // Check if token has expired
-                if (parent.EmailConfirmationTokenExpiry == null || 
+                if (parent.EmailConfirmationTokenExpiry == null ||
                     parent.EmailConfirmationTokenExpiry < DateTime.UtcNow)
                 {
                     _logger.LogWarning($"Email confirmation attempt with expired token for: {email}");
@@ -277,7 +277,7 @@ namespace MoneyMirror.Infrastructure.Services
             {
                 // STEP 1: Extract claims from expired access token
                 var principal = _jwtService.GetPrincipalFromToken(refreshTokenDto.AccessToken);
-                
+
                 if (principal == null)
                 {
                     _logger.LogWarning("Refresh token attempt with invalid access token");
@@ -294,7 +294,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                 // STEP 2: Find parent in database
                 var parent = await _context.Parents.FindAsync(parentId);
-                
+
                 if (parent == null)
                 {
                     _logger.LogWarning($"Refresh token attempt for non-existent parent ID: {parentId}");
@@ -310,7 +310,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                 // Verify refresh token matches database (compare hashed)
                 bool refreshTokenValid = BCrypt.Net.BCrypt.Verify(
-                    refreshTokenDto.RefreshToken, 
+                    refreshTokenDto.RefreshToken,
                     parent.RefreshToken);
 
                 if (!refreshTokenValid)
@@ -375,7 +375,7 @@ namespace MoneyMirror.Infrastructure.Services
             try
             {
                 var parent = await _context.Parents.FindAsync(parentId);
-                
+
                 if (parent == null)
                 {
                     _logger.LogWarning($"Revoke token attempt for non-existent parent ID: {parentId}");
@@ -408,6 +408,200 @@ namespace MoneyMirror.Infrastructure.Services
         {
             return await _context.Parents
                 .AnyAsync(p => p.Email.ToLower() == email.ToLower().Trim());
+        }
+
+        /// <summary>
+        /// Initiates password reset flow.
+        /// Steps:
+        /// 1. Find parent by email (if doesn't exist, still return success for security)
+        /// 2. Generate password reset token
+        /// 3. Store token with 1-hour expiration
+        /// 4. Send password reset email
+        /// </summary>
+        public async Task<(bool success, string message)> ForgotPasswordAsync(string email)
+        {
+            try
+            {
+                // STEP 1: Find parent by email
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == email.ToLower().Trim());
+
+                // For security, always return success even if email doesn't exist
+                // (prevents email enumeration attacks)
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Password reset requested for non-existent email: {email}");
+                    return (true, "If that email address is registered, you will receive a password reset link shortly.");
+                }
+
+                // STEP 2: Generate reset token
+                string resetToken = Guid.NewGuid().ToString();
+                DateTime tokenExpiry = DateTime.UtcNow.AddHours(1); // 1 hour expiration
+
+                // STEP 3: Store token in database
+                parent.PasswordResetToken = resetToken;
+                parent.PasswordResetTokenExpiry = tokenExpiry;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Password reset token generated for: {parent.Email}");
+
+                // STEP 4: Send reset email
+                string frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:19006";
+                string resetLink = $"{frontendUrl}/auth/reset-password?email={parent.Email}&token={resetToken}";
+
+                bool emailSent = await _emailService.SendPasswordResetEmailAsync(
+                    parent.Email,
+                    $"{parent.FName} {parent.LName}",
+                    resetLink
+                );
+
+                if (!emailSent)
+                {
+                    _logger.LogWarning($"Failed to send password reset email to {parent.Email}");
+                }
+
+                return (true, "If that email address is registered, you will receive a password reset link shortly.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error during forgot password: {ex.Message}");
+                return (false, "An error occurred while processing your request. Please try again later.");
+            }
+        }
+
+        /// <summary>
+        /// Resets a parent's password using reset token.
+        /// Steps:
+        /// 1. Find parent by email
+        /// 2. Verify token matches and hasn't expired
+        /// 3. Hash new password
+        /// 4. Update password and clear reset token
+        /// 5. Optionally revoke refresh tokens (force re-login on all devices)
+        /// </summary>
+        public async Task<(bool success, string message)> ResetPasswordAsync(string email, string token, string newPassword)
+        {
+            try
+            {
+                // STEP 1: Find parent by email
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == email.ToLower().Trim());
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Password reset attempt with non-existent email: {email}");
+                    return (false, "Invalid password reset link");
+                }
+
+                // STEP 2: Verify token
+                if (parent.PasswordResetToken != token)
+                {
+                    _logger.LogWarning($"Password reset attempt with invalid token for: {email}");
+                    return (false, "Invalid password reset link");
+                }
+
+                // Check if token has expired
+                if (parent.PasswordResetTokenExpiry == null ||
+                    parent.PasswordResetTokenExpiry < DateTime.UtcNow)
+                {
+                    _logger.LogWarning($"Password reset attempt with expired token for: {email}");
+                    return (false, "Password reset link has expired. Please request a new one.");
+                }
+
+                // STEP 3: Hash new password
+                string hashedPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+                // STEP 4: Update password and clear reset token
+                parent.HashedPassword = hashedPassword;
+                parent.PasswordResetToken = null;
+                parent.PasswordResetTokenExpiry = null;
+
+                // STEP 5: Revoke refresh tokens (force re-login on all devices for security)
+                parent.RefreshToken = null;
+                parent.RefreshTokenExpiry = null;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Password reset successfully for: {email}");
+
+                return (true, "Password has been reset successfully. Please log in with your new password.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error during password reset: {ex.Message}");
+                return (false, "An error occurred while resetting your password. Please try again later.");
+            }
+        }
+
+        /// <summary>
+        /// Resends email confirmation link to a parent.
+        /// Steps:
+        /// 1. Find parent by email
+        /// 2. Check if already confirmed
+        /// 3. Generate new confirmation token
+        /// 4. Send new confirmation email
+        /// </summary>
+        public async Task<(bool success, string message)> ResendConfirmationEmailAsync(string email)
+        {
+            try
+            {
+                // STEP 1: Find parent by email
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == email.ToLower().Trim());
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Resend confirmation requested for non-existent email: {email}");
+                    // For security, don't reveal if email exists or not
+                    return (true, "If that email address is registered and not yet confirmed, you will receive a confirmation link shortly.");
+                }
+
+                // STEP 2: Check if already confirmed
+                if (parent.IsEmailConfirmed)
+                {
+                    _logger.LogInformation($"Resend confirmation requested for already confirmed email: {email}");
+                    return (false, "This email address is already confirmed. You can log in now.");
+                }
+
+                // STEP 3: Generate new confirmation token
+                string confirmationToken = Guid.NewGuid().ToString();
+                int tokenExpirationHours = int.Parse(
+                    _configuration["EmailConfirmation:TokenExpirationHours"] ?? "24");
+                DateTime tokenExpiry = DateTime.UtcNow.AddHours(tokenExpirationHours);
+
+                parent.EmailConfirmationToken = confirmationToken;
+                parent.EmailConfirmationTokenExpiry = tokenExpiry;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"New confirmation token generated for: {email}");
+
+                // STEP 4: Send confirmation email
+                string frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:19006";
+                string confirmationLink = $"{frontendUrl}/auth/confirm-email?email={parent.Email}&token={confirmationToken}";
+
+                bool emailSent = await _emailService.SendEmailConfirmationAsync(
+                    parent.Email,
+                    $"{parent.FName} {parent.LName}",
+                    confirmationLink
+                );
+
+                if (!emailSent)
+                {
+                    _logger.LogWarning($"Failed to resend confirmation email to {parent.Email}");
+                    return (false, "Failed to send confirmation email. Please try again later.");
+                }
+
+                return (true, "A new confirmation link has been sent to your email address.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error during resend confirmation: {ex.Message}");
+                return (false, "An error occurred while sending confirmation email. Please try again later.");
+            }
         }
     }
 }

@@ -57,5 +57,31 @@ namespace MoneyMirror.Core.Interfaces
         /// <param name="email">Email address to check</param>
         /// <returns>True if email exists, False if available</returns>
         Task<bool> EmailExistsAsync(string email);
+
+        /// <summary>
+        /// Initiates password reset flow by generating a reset token and sending email.
+        /// Token is valid for 1 hour.
+        /// </summary>
+        /// <param name="email">Parent's email address</param>
+        /// <returns>Tuple: (success flag, message)</returns>
+        Task<(bool success, string message)> ForgotPasswordAsync(string email);
+
+        /// <summary>
+        /// Resets a parent's password using the token from the reset email.
+        /// Verifies token validity before updating password.
+        /// </summary>
+        /// <param name="email">Parent's email address</param>
+        /// <param name="token">Password reset token from email</param>
+        /// <param name="newPassword">New password to set</param>
+        /// <returns>Tuple: (success flag, message)</returns>
+        Task<(bool success, string message)> ResetPasswordAsync(string email, string token, string newPassword);
+
+        /// <summary>
+        /// Resends email confirmation link to a parent.
+        /// Generates new confirmation token and sends new email.
+        /// </summary>
+        /// <param name="email">Parent's email address</param>
+        /// <returns>Tuple: (success flag, message)</returns>
+        Task<(bool success, string message)> ResendConfirmationEmailAsync(string email);
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MoneyMirror.Core.DTOs.Auth;
 using MoneyMirror.Core.DTOs.Common;
 using MoneyMirror.Core.Interfaces;
+
 namespace MoneyMirror.API.Controllers
 {
     /// <summary>
@@ -16,6 +17,7 @@ namespace MoneyMirror.API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
+
         /// <summary>
         /// Constructor - dependency injection provides services.
         /// </summary>
@@ -24,6 +26,7 @@ namespace MoneyMirror.API.Controllers
             _authService = authService;
             _logger = logger;
         }
+
         /// <summary>
         /// Registers a new parent account.
         /// POST /api/auth/register
@@ -34,27 +37,24 @@ namespace MoneyMirror.API.Controllers
         [AllowAnonymous] // Anyone can access this endpoint (not logged in)
         public async Task<ActionResult<ApiResponse<object>>> Register([FromBody] RegisterParentDto registerDto)
         {
-            // ModelState automatically validates the DTO based on data annotations
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToList();
-                return BadRequest(ApiResponse<object>.ValidationErrorResponse(errors));
-            }
+            // Validation happens automatically via FluentValidationFilter
+            // If we reach here, validation passed
+
             // Call service to register parent
             var (success, message, parentId) = await _authService.RegisterParentAsync(registerDto);
+
             if (!success)
             {
                 return BadRequest(ApiResponse<object>.ErrorResponse(message));
             }
+
             // Return success response
             return Ok(ApiResponse<object>.SuccessResponse(
                 new { ParentId = parentId },
                 message
             ));
         }
+
         /// <summary>
         /// Authenticates a parent and returns JWT tokens.
         /// POST /api/auth/login
@@ -65,16 +65,11 @@ namespace MoneyMirror.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ApiResponse<AuthResponseDto>>> Login([FromBody] LoginDto loginDto)
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToList();
-                return BadRequest(ApiResponse<AuthResponseDto>.ValidationErrorResponse(errors));
-            }
+            // Validation happens automatically via FluentValidationFilter
+
             // Call service to authenticate
             var authResponse = await _authService.LoginAsync(loginDto);
+
             if (authResponse == null)
             {
                 // Check if it's because email is not confirmed
@@ -88,15 +83,18 @@ namespace MoneyMirror.API.Controllers
                         "Invalid email or password, or email not confirmed"
                     ));
                 }
+
                 return Unauthorized(ApiResponse<AuthResponseDto>.ErrorResponse(
                     "Invalid email or password"
                 ));
             }
+
             return Ok(ApiResponse<AuthResponseDto>.SuccessResponse(
                 authResponse,
                 "Login successful"
             ));
         }
+
         /// <summary>
         /// Confirms a parent's email address.
         /// GET /api/auth/confirm-email?email=xxx&token=xxx
@@ -116,14 +114,18 @@ namespace MoneyMirror.API.Controllers
                     "Email and token are required"
                 ));
             }
+
             // Call service to confirm email
             var (success, message) = await _authService.ConfirmEmailAsync(email, token);
+
             if (!success)
             {
                 return BadRequest(ApiResponse<object>.ErrorResponse(message));
             }
+
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
+
         /// <summary>
         /// Refreshes JWT tokens using a valid refresh token.
         /// POST /api/auth/refresh-token
@@ -135,27 +137,24 @@ namespace MoneyMirror.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ApiResponse<AuthResponseDto>>> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToList();
-                return BadRequest(ApiResponse<AuthResponseDto>.ValidationErrorResponse(errors));
-            }
+            // Validation happens automatically via FluentValidationFilter
+
             // Call service to refresh tokens
             var authResponse = await _authService.RefreshTokenAsync(refreshTokenDto);
+
             if (authResponse == null)
             {
                 return Unauthorized(ApiResponse<AuthResponseDto>.ErrorResponse(
                     "Invalid or expired refresh token. Please log in again."
                 ));
             }
+
             return Ok(ApiResponse<AuthResponseDto>.SuccessResponse(
                 authResponse,
                 "Token refreshed successfully"
             ));
         }
+
         /// <summary>
         /// Logs out a parent by revoking their refresh token.
         /// POST /api/auth/logout
@@ -175,19 +174,23 @@ namespace MoneyMirror.API.Controllers
                     "Invalid token claims"
                 ));
             }
+
             // Call service to revoke refresh token
             var success = await _authService.RevokeRefreshTokenAsync(parentId);
+
             if (!success)
             {
                 return BadRequest(ApiResponse<object>.ErrorResponse(
                     "Logout failed"
                 ));
             }
+
             return Ok(ApiResponse<object>.SuccessResponse(
                 null,
                 "Logged out successfully"
             ));
         }
+
         /// <summary>
         /// Checks if an email is available for registration.
         /// GET /api/auth/check-email?email=xxx
@@ -205,12 +208,15 @@ namespace MoneyMirror.API.Controllers
                     "Email is required"
                 ));
             }
+
             var exists = await _authService.EmailExistsAsync(email);
+
             return Ok(ApiResponse<bool>.SuccessResponse(
                 !exists, // Return true if available (doesn't exist)
                 exists ? "Email is already registered" : "Email is available"
             ));
         }
+
         /// <summary>
         /// Test endpoint to verify authentication is working.
         /// GET /api/auth/test-protected
@@ -224,10 +230,71 @@ namespace MoneyMirror.API.Controllers
             var parentId = User.FindFirst("ParentId")?.Value;
             var email = User.FindFirst("email")?.Value;
             var name = User.FindFirst("name")?.Value;
+
             return Ok(ApiResponse<object>.SuccessResponse(
                 new { ParentId = parentId, Email = email, Name = name },
                 "You are authenticated!"
             ));
+        }
+
+        /// <summary>
+        /// Initiates password reset flow by sending reset link to email.
+        /// POST /api/auth/forgot-password
+        /// </summary>
+        /// <param name="forgotPasswordDto">Email address to send reset link to</param>
+        /// <returns>Success message (always returns success for security)</returns>
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<object>>> ForgotPassword([FromBody] ForgotPasswordDto forgotPasswordDto)
+        {
+            var (success, message) = await _authService.ForgotPasswordAsync(forgotPasswordDto.Email);
+
+            // Always return 200 OK even if email doesn't exist (prevents email enumeration)
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+
+        /// <summary>
+        /// Resets password using token from email link.
+        /// POST /api/auth/reset-password
+        /// </summary>
+        /// <param name="resetPasswordDto">Email, token, and new password</param>
+        /// <returns>Success or error message</returns>
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<object>>> ResetPassword([FromBody] ResetPasswordDto resetPasswordDto)
+        {
+            var (success, message) = await _authService.ResetPasswordAsync(
+                resetPasswordDto.Email,
+                resetPasswordDto.Token,
+                resetPasswordDto.NewPassword
+            );
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+
+        /// <summary>
+        /// Resends email confirmation link.
+        /// POST /api/auth/resend-confirmation
+        /// </summary>
+        /// <param name="resendConfirmationDto">Email address to resend confirmation to</param>
+        /// <returns>Success or error message</returns>
+        [HttpPost("resend-confirmation")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<object>>> ResendConfirmation([FromBody] ResendConfirmationDto resendConfirmationDto)
+        {
+            var (success, message) = await _authService.ResendConfirmationEmailAsync(resendConfirmationDto.Email);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
     }
 }
