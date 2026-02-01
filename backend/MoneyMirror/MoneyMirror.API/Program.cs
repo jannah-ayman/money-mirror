@@ -8,6 +8,8 @@ using MoneyMirror.Infrastructure.Data;
 using MoneyMirror.Infrastructure.Services;
 using FluentValidation;
 using System.Text;
+using Hangfire;
+using Hangfire.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +37,28 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         )
     )
 );
+
+// ==================== HANGFIRE CONFIGURATION ====================
+// Hangfire for background jobs (account cleanup, scheduled tasks)
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        new SqlServerStorageOptions
+        {
+            CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+            SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+            QueuePollInterval = TimeSpan.Zero,
+            UseRecommendedIsolationLevel = true,
+            DisableGlobalLocks = true
+        }
+    )
+);
+
+// Add Hangfire server
+builder.Services.AddHangfireServer();
 
 // ==================== DEPENDENCY INJECTION - REGISTER SERVICES ====================
 // These tell ASP.NET Core: "When someone asks for IAuthService, give them AuthService"
@@ -181,10 +205,44 @@ app.UseAuthentication();
 // 5. AUTHORIZATION (checks if user has permission)
 app.UseAuthorization();
 
-// 6. MAP CONTROLLERS (route requests to controller actions)
+// 6. HANGFIRE DASHBOARD (optional - for monitoring background jobs)
+// Access at: https://localhost:7XXX/hangfire
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAuthorizationFilter() }
+});
+
+// 7. MAP CONTROLLERS (route requests to controller actions)
 app.MapControllers();
+
+// ==================== CONFIGURE BACKGROUND JOBS ====================
+// Schedule recurring job to permanently delete expired accounts daily at 3 AM
+RecurringJob.AddOrUpdate<IAuthService>(
+    "permanent-deletion-job",
+    service => service.PermanentlyDeleteExpiredAccountsAsync(),
+    Cron.Daily(3)); // Runs daily at 3:00 AM server time
 
 // ==================== RUN THE APPLICATION ====================
 Console.WriteLine("Money Mirror API is starting...");
 Console.WriteLine("Swagger documentation available at: https://localhost:7XXX/swagger");
+Console.WriteLine("Hangfire dashboard available at: https://localhost:7XXX/hangfire");
 app.Run();
+
+// ==================== HANGFIRE AUTHORIZATION FILTER ====================
+// Simple authorization filter for Hangfire dashboard (development only)
+// In production, implement proper authentication
+public class HangfireAuthorizationFilter : Hangfire.Dashboard.IDashboardAuthorizationFilter
+{
+    public bool Authorize(Hangfire.Dashboard.DashboardContext context)
+    {
+        // For development: allow all access to Hangfire dashboard
+        // For production: implement proper authorization (check user roles, etc.)
+#if DEBUG
+        return true;
+#else
+            // Production: only allow authenticated admin users
+            // You would need to implement user role checking here
+            return false;
+#endif
+    }
+}

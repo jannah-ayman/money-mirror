@@ -1,18 +1,17 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MoneyMirror.Core.DTOs.Auth;
+using MoneyMirror.Core.Enums;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Core.Models;
 using MoneyMirror.Infrastructure.Data;
 
 namespace MoneyMirror.Infrastructure.Services
 {
-    /// <summary>
     /// Service implementing authentication and authorization logic.
     /// Handles parent registration, login, email confirmation, and token refresh.
     /// Uses BCrypt for password hashing and JWT for token-based authentication.
-    /// </summary>
     public class AuthService : IAuthService
     {
         private readonly ApplicationDbContext _context;
@@ -21,9 +20,7 @@ namespace MoneyMirror.Infrastructure.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
 
-        /// <summary>
         /// Constructor - dependency injection provides all required services.
-        /// </summary>
         public AuthService(
             ApplicationDbContext context,
             IJwtService jwtService,
@@ -38,7 +35,6 @@ namespace MoneyMirror.Infrastructure.Services
             _logger = logger;
         }
 
-        /// <summary>
         /// Registers a new parent account.
         /// Steps:
         /// 1. Check if email already exists
@@ -46,17 +42,45 @@ namespace MoneyMirror.Infrastructure.Services
         /// 3. Create parent record in database
         /// 4. Generate email confirmation token
         /// 5. Send confirmation email
-        /// </summary>
         public async Task<(bool success, string message, int? parentId)> RegisterParentAsync(RegisterParentDto registerDto)
         {
             try
             {
+                // Replace the email exists check (around line 40) with this enhanced version:
+
                 // STEP 1: Check if email already exists
-                var emailExists = await EmailExistsAsync(registerDto.Email);
-                if (emailExists)
+                var existingParent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == registerDto.Email.ToLower().Trim());
+
+                if (existingParent != null)
                 {
-                    _logger.LogWarning($"Registration attempt with existing email: {registerDto.Email}");
-                    return (false, "Email is already registered", null);
+                    // Account exists - check deletion status
+                    if (!existingParent.IsDeleted)
+                    {
+                        _logger.LogWarning($"Registration attempt with existing email: {registerDto.Email}");
+                        return (false, "Email is already registered", null);
+                    }
+                    else if (existingParent.IsPermanentlyDeleted)
+                    {
+                        _logger.LogWarning($"Registration attempt with permanently deleted email: {registerDto.Email}");
+                        return (false, "This email address cannot be used. Please use a different email or contact support.", null);
+                    }
+                    else if (existingParent.PermanentDeletionDate != null && existingParent.PermanentDeletionDate > DateTime.UtcNow)
+                    {
+                        // Account is soft-deleted and within grace period
+                        _logger.LogWarning($"Registration attempt with soft-deleted email: {registerDto.Email}");
+                        return (false,
+                                $"This email is associated with a deleted account scheduled for permanent deletion on " +
+                                $"{existingParent.PermanentDeletionDate:yyyy-MM-dd}. " +
+                                "If this is your account, you can recover it from the login page.",
+                                null);
+                    }
+                    else
+                    {
+                        // Soft-deleted but grace period expired (should be cleaned up by background job)
+                        _logger.LogWarning($"Registration attempt with expired soft-deleted email: {registerDto.Email}");
+                        return (false, "This email address cannot be used. Please contact support.", null);
+                    }
                 }
 
                 // STEP 2: Hash the password using BCrypt
@@ -117,7 +141,6 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Authenticates a parent and generates JWT tokens.
         /// Steps:
         /// 1. Find parent by email
@@ -126,8 +149,7 @@ namespace MoneyMirror.Infrastructure.Services
         /// 4. Generate access token and refresh token
         /// 5. Store refresh token in database
         /// 6. Return tokens and parent info
-        /// </summary>
-        public async Task<AuthResponseDto?> LoginAsync(LoginDto loginDto)
+        public async Task<(AuthResponseDto? auth, LoginFailureReason? failure)> LoginAsync(LoginDto loginDto)
         {
             try
             {
@@ -138,35 +160,46 @@ namespace MoneyMirror.Infrastructure.Services
                 if (parent == null)
                 {
                     _logger.LogWarning($"Login attempt with non-existent email: {loginDto.Email}");
-                    return null; // Don't reveal if email exists or not (security)
+                    return (null, LoginFailureReason.InvalidCredentials);
                 }
+
+                // STEP 2: Check deletion status
                 if (parent.IsDeleted)
                 {
-                    _logger.LogWarning($"Login attempt on deleted account: {loginDto.Email} (ID: {parent.ParentID})");
-                    return null;  // or throw exception, or return special result � see options below
+                    // Soft-deleted and within grace period → recoverable
+                    if (!parent.IsPermanentlyDeleted &&
+                        parent.PermanentDeletionDate != null &&
+                        parent.PermanentDeletionDate > DateTime.UtcNow)
+                    {
+                        _logger.LogWarning($"Login attempt on soft-deleted account within grace period: {loginDto.Email}");
+                        return (null, LoginFailureReason.SoftDeletedRecoverable);
+                    }
+
+                    // Permanently deleted or grace period expired
+                    _logger.LogWarning($"Login attempt on permanently deleted or expired account: {loginDto.Email}");
+                    return (null, LoginFailureReason.PermanentlyDeleted);
                 }
-                // STEP 2: Verify password using BCrypt
-                // BCrypt.Verify compares plain text password with hashed password
+
+                // STEP 3: Verify password using BCrypt
                 bool passwordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, parent.HashedPassword);
 
                 if (!passwordValid)
                 {
                     _logger.LogWarning($"Login attempt with invalid password for: {loginDto.Email}");
-                    return null;
+                    return (null, LoginFailureReason.InvalidCredentials);
                 }
 
-                // STEP 3: Check if email is confirmed
+                // STEP 4: Check if email is confirmed
                 if (!parent.IsEmailConfirmed)
                 {
                     _logger.LogWarning($"Login attempt with unconfirmed email: {loginDto.Email}");
-                    return null; // Return null - controller will send specific message
+                    return (null, LoginFailureReason.EmailNotConfirmed);
                 }
 
-                // STEP 4: Generate tokens
+                // STEP 5: Generate tokens
                 string accessToken = _jwtService.GenerateAccessToken(parent);
                 string refreshToken = _jwtService.GenerateRefreshToken();
 
-                // Calculate expiration times
                 int accessTokenExpirationMinutes = int.Parse(
                     _configuration["Jwt:AccessTokenExpirationMinutes"] ?? "15");
                 int refreshTokenExpirationDays = int.Parse(
@@ -175,7 +208,7 @@ namespace MoneyMirror.Infrastructure.Services
                 DateTime accessTokenExpiry = DateTime.UtcNow.AddMinutes(accessTokenExpirationMinutes);
                 DateTime refreshTokenExpiry = DateTime.UtcNow.AddDays(refreshTokenExpirationDays);
 
-                // STEP 5: Store refresh token in database (hashed for security)
+                // STEP 6: Store refresh token in database (hashed)
                 parent.RefreshToken = BCrypt.Net.BCrypt.HashPassword(refreshToken);
                 parent.RefreshTokenExpiry = refreshTokenExpiry;
 
@@ -184,33 +217,35 @@ namespace MoneyMirror.Infrastructure.Services
 
                 _logger.LogInformation($"Parent logged in successfully: {parent.Email}");
 
-                // STEP 6: Return authentication response
-                return new AuthResponseDto
-                {
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken, // Send plain text refresh token to client
-                    AccessTokenExpiration = accessTokenExpiry,
-                    RefreshTokenExpiration = refreshTokenExpiry,
-                    ParentId = parent.ParentID,
-                    Email = parent.Email,
-                    FullName = $"{parent.FName} {parent.LName}"
-                };
+                // STEP 7: Return authentication response
+                return (
+                    new AuthResponseDto
+                    {
+                        AccessToken = accessToken,
+                        RefreshToken = refreshToken,
+                        AccessTokenExpiration = accessTokenExpiry,
+                        RefreshTokenExpiration = refreshTokenExpiry,
+                        ParentId = parent.ParentID,
+                        Email = parent.Email,
+                        FullName = $"{parent.FName} {parent.LName}"
+                    },
+                    null
+                );
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error during parent login: {ex.Message}");
-                return null;
+                return (null, LoginFailureReason.InvalidCredentials);
             }
         }
 
-        /// <summary>
+
         /// Confirms a parent's email address using the token from the confirmation link.
         /// Steps:
         /// 1. Find parent by email
         /// 2. Verify token matches and hasn't expired
         /// 3. Mark email as confirmed
         /// 4. Clear confirmation token
-        /// </summary>
         public async Task<(bool success, string message)> ConfirmEmailAsync(string email, string token)
         {
             try
@@ -266,7 +301,6 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Refreshes JWT tokens using a valid refresh token.
         /// Steps:
         /// 1. Extract parent ID from expired access token
@@ -274,7 +308,6 @@ namespace MoneyMirror.Infrastructure.Services
         /// 3. Verify refresh token matches database and hasn't expired
         /// 4. Generate new access token and refresh token
         /// 5. Store new refresh token in database
-        /// </summary>
         public async Task<AuthResponseDto?> RefreshTokenAsync(RefreshTokenDto refreshTokenDto)
         {
             try
@@ -370,10 +403,8 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Revokes a parent's refresh token (logout).
         /// Clears the stored refresh token so it can't be used again.
-        /// </summary>
         public async Task<bool> RevokeRefreshTokenAsync(int parentId)
         {
             try
@@ -404,24 +435,20 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Checks if an email address is already registered.
         /// Used to prevent duplicate registrations.
-        /// </summary>
         public async Task<bool> EmailExistsAsync(string email)
         {
             return await _context.Parents
                 .AnyAsync(p => p.Email.ToLower() == email.ToLower().Trim());
         }
 
-        /// <summary>
         /// Initiates password reset flow.
         /// Steps:
         /// 1. Find parent by email (if doesn't exist, still return success for security)
         /// 2. Generate password reset token
         /// 3. Store token with 1-hour expiration
         /// 4. Send password reset email
-        /// </summary>
         public async Task<(bool success, string message)> ForgotPasswordAsync(string email)
         {
             try
@@ -475,7 +502,6 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Resets a parent's password using reset token.
         /// Steps:
         /// 1. Find parent by email
@@ -483,7 +509,6 @@ namespace MoneyMirror.Infrastructure.Services
         /// 3. Hash new password
         /// 4. Update password and clear reset token
         /// 5. Optionally revoke refresh tokens (force re-login on all devices)
-        /// </summary>
         public async Task<(bool success, string message)> ResetPasswordAsync(string email, string token, string newPassword)
         {
             try
@@ -539,14 +564,12 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Resends email confirmation link to a parent.
         /// Steps:
         /// 1. Find parent by email
         /// 2. Check if already confirmed
         /// 3. Generate new confirmation token
         /// 4. Send new confirmation email
-        /// </summary>
         public async Task<(bool success, string message)> ResendConfirmationEmailAsync(string email)
         {
             try
@@ -610,14 +633,12 @@ namespace MoneyMirror.Infrastructure.Services
         // ==================== ADD THESE METHODS TO AuthService.cs ====================
         // Place them at the end of the class, before the closing brace
 
-        /// <summary>
         /// Updates parent profile information (name, phone).
         /// Steps:
         /// 1. Find parent by ID
         /// 2. Verify account is not deleted
         /// 3. Update fields
         /// 4. Save changes
-        /// </summary>
         public async Task<(bool success, string message)> UpdateParentProfileAsync(int parentId, UpdateParentProfileDto updateDto)
         {
             try
@@ -660,7 +681,6 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Initiates email change process.
         /// Steps:
         /// 1. Find parent by ID
@@ -668,7 +688,6 @@ namespace MoneyMirror.Infrastructure.Services
         /// 3. Check if new email is already in use
         /// 4. Generate email change token
         /// 5. Send verification email to NEW email address
-        /// </summary>
         public async Task<(bool success, string message)> ChangeEmailAsync(int parentId, ChangeEmailDto changeEmailDto)
         {
             try
@@ -752,7 +771,6 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Confirms email change using token.
         /// Steps:
         /// 1. Find parent by old email
@@ -760,7 +778,6 @@ namespace MoneyMirror.Infrastructure.Services
         /// 3. Update email to new address
         /// 4. Clear email change tokens
         /// 5. Revoke all refresh tokens (force re-login with new email)
-        /// </summary>
         public async Task<(bool success, string message)> ConfirmEmailChangeAsync(ConfirmEmailChangeDto confirmDto)
         {
             try
@@ -835,7 +852,6 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Soft deletes a parent account.
         /// Steps:
         /// 1. Find parent by ID
@@ -844,6 +860,15 @@ namespace MoneyMirror.Infrastructure.Services
         /// 4. Remove all ParentChild relationships
         /// 5. Revoke refresh tokens
         /// Children are preserved - only relationships are removed
+        /// <summary>
+        /// Soft deletes a parent account with 30-day recovery grace period.
+        /// Steps:
+        /// 1. Find parent by ID
+        /// 2. Verify password
+        /// 3. Mark account as soft-deleted
+        /// 4. Set 30-day grace period
+        /// 5. Remove all ParentChild relationships (children preserved)
+        /// 6. Revoke refresh tokens
         /// </summary>
         public async Task<(bool success, string message)> DeleteParentAccountAsync(int parentId, string currentPassword)
         {
@@ -851,7 +876,7 @@ namespace MoneyMirror.Infrastructure.Services
             {
                 // STEP 1: Find parent
                 var parent = await _context.Parents
-                    .Include(p => p.ParentChildren) // Load relationships to remove them
+                    .Include(p => p.ParentChildren) // Load relationships
                     .FirstOrDefaultAsync(p => p.ParentID == parentId);
 
                 if (parent == null)
@@ -861,10 +886,16 @@ namespace MoneyMirror.Infrastructure.Services
                 }
 
                 // Check if already deleted
-                if (parent.IsDeleted)
+                if (parent.IsDeleted && !parent.IsPermanentlyDeleted)
                 {
                     _logger.LogInformation($"Delete attempt for already deleted parent: {parent.Email}");
-                    return (false, "Account has already been deleted");
+                    return (false, $"Account already scheduled for deletion on {parent.PermanentDeletionDate:yyyy-MM-dd}. Contact support to recover.");
+                }
+
+                if (parent.IsPermanentlyDeleted)
+                {
+                    _logger.LogInformation($"Delete attempt for permanently deleted parent ID: {parentId}");
+                    return (false, "Account has been permanently deleted and cannot be modified.");
                 }
 
                 // STEP 2: Verify password
@@ -876,9 +907,11 @@ namespace MoneyMirror.Infrastructure.Services
                     return (false, "Password is incorrect");
                 }
 
-                // STEP 3: Mark as deleted (soft delete)
+                // STEP 3: Mark as soft-deleted with grace period
                 parent.IsDeleted = true;
                 parent.DeletedAt = DateTime.UtcNow;
+                parent.IsPermanentlyDeleted = false;
+                parent.PermanentDeletionDate = DateTime.UtcNow.AddDays(30); // 30-day grace period
 
                 // STEP 4: Remove all ParentChild relationships
                 // Children are NOT deleted - only the relationships are removed
@@ -892,14 +925,159 @@ namespace MoneyMirror.Infrastructure.Services
                 _context.Parents.Update(parent);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"Parent account soft deleted: {parent.Email} (ID: {parentId})");
+                _logger.LogInformation($"Parent account soft deleted: {parent.Email} (ID: {parentId}). " +
+                                      $"Permanent deletion scheduled for: {parent.PermanentDeletionDate:yyyy-MM-dd HH:mm}");
 
-                return (true, "Account deleted successfully. Your children's accounts have been preserved.");
+                return (true, $"Account scheduled for deletion. You have until {parent.PermanentDeletionDate:yyyy-MM-dd} to recover your account. " +
+                             "Your children's learning data has been preserved.");
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error deleting parent account: {ex.Message}");
                 return (false, "An error occurred while deleting your account. Please try again later.");
+            }
+        }
+        /// <summary>
+        /// Recovers a soft-deleted parent account within grace period.
+        /// Steps:
+        /// 1. Find parent by email
+        /// 2. Verify password
+        /// 3. Check if within grace period
+        /// 4. Restore account status
+        /// 5. DO NOT restore ParentChild relationships (parents must re-link children)
+        /// </summary>
+        public async Task<(bool success, string message)> RecoverDeletedAccountAsync(string email, string password)
+        {
+            try
+            {
+                // STEP 1: Find parent by email
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == email.ToLower().Trim());
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Recovery attempt for non-existent email: {email}");
+                    return (false, "Account not found");
+                }
+
+                // STEP 2: Check deletion status
+                if (!parent.IsDeleted)
+                {
+                    _logger.LogInformation($"Recovery attempt for active account: {email}");
+                    return (false, "Account is not deleted");
+                }
+
+                if (parent.IsPermanentlyDeleted)
+                {
+                    _logger.LogWarning($"Recovery attempt for permanently deleted account: {email}");
+                    return (false, "Account has been permanently deleted and cannot be recovered");
+                }
+
+                // STEP 3: Check if within grace period
+                if (parent.PermanentDeletionDate == null || parent.PermanentDeletionDate <= DateTime.UtcNow)
+                {
+                    _logger.LogWarning($"Recovery attempt after grace period for: {email}");
+                    return (false, "Recovery period has expired. Account cannot be recovered");
+                }
+
+                // STEP 4: Verify password
+                bool passwordValid = BCrypt.Net.BCrypt.Verify(password, parent.HashedPassword);
+
+                if (!passwordValid)
+                {
+                    _logger.LogWarning($"Recovery attempt with invalid password for: {email}");
+                    return (false, "Password is incorrect");
+                }
+
+                // STEP 5: Restore account
+                parent.IsDeleted = false;
+                parent.DeletedAt = null;
+                parent.IsPermanentlyDeleted = false;
+                parent.PermanentDeletionDate = null;
+
+                // NOTE: ParentChild relationships are NOT automatically restored
+                // Parent must re-link their children through the app
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Parent account recovered successfully: {email}");
+
+                return (true, "Account recovered successfully! Please log in and re-link your children.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error recovering account: {ex.Message}");
+                return (false, "An error occurred while recovering your account. Please try again later.");
+            }
+        }
+        /// <summary>
+        /// Permanently deletes accounts past grace period by anonymizing PII.
+        /// This should be called by a scheduled background service.
+        /// Steps:
+        /// 1. Find all accounts where PermanentDeletionDate has passed
+        /// 2. Anonymize personal information
+        /// 3. Mark as permanently deleted
+        /// 4. Keep database record for audit trail
+        /// </summary>
+        public async Task<int> PermanentlyDeleteExpiredAccountsAsync()
+        {
+            try
+            {
+                // STEP 1: Find expired accounts
+                var expiredAccounts = await _context.Parents
+                    .Where(p => p.IsDeleted
+                             && !p.IsPermanentlyDeleted
+                             && p.PermanentDeletionDate != null
+                             && p.PermanentDeletionDate <= DateTime.UtcNow)
+                    .ToListAsync();
+
+                if (!expiredAccounts.Any())
+                {
+                    _logger.LogInformation("No expired accounts to permanently delete");
+                    return 0;
+                }
+
+                // STEP 2: Anonymize each account
+                foreach (var parent in expiredAccounts)
+                {
+                    // Anonymize PII
+                    parent.Email = $"deleted_{parent.ParentID}@deleted.local";
+                    parent.FName = "Deleted";
+                    parent.LName = "User";
+                    parent.PhoneNum = null;
+                    parent.HashedPassword = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()); // Random unusable password
+
+                    // Clear all tokens
+                    parent.RefreshToken = null;
+                    parent.RefreshTokenExpiry = null;
+                    parent.EmailConfirmationToken = null;
+                    parent.EmailConfirmationTokenExpiry = null;
+                    parent.PasswordResetToken = null;
+                    parent.PasswordResetTokenExpiry = null;
+                    parent.EmailChangeToken = null;
+                    parent.EmailChangeTokenExpiry = null;
+                    parent.NewEmail = null;
+
+                    // Mark as permanently deleted
+                    parent.IsPermanentlyDeleted = true;
+                    parent.PermanentDeletionDate = null; // Clear since deletion is now complete
+
+                    _logger.LogInformation($"Permanently deleted parent account ID: {parent.ParentID}");
+                }
+
+                // STEP 3: Save changes
+                _context.Parents.UpdateRange(expiredAccounts);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Permanently deleted {expiredAccounts.Count} expired accounts");
+
+                return expiredAccounts.Count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error during permanent deletion of expired accounts: {ex.Message}");
+                return 0;
             }
         }
     }

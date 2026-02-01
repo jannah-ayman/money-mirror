@@ -1,16 +1,15 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoneyMirror.Core.DTOs.Auth;
 using MoneyMirror.Core.DTOs.Common;
+using MoneyMirror.Core.Enums;
 using MoneyMirror.Core.Interfaces;
 
 namespace MoneyMirror.API.Controllers
 {
-    /// <summary>
     /// Controller handling authentication endpoints.
     /// Routes: /api/auth/*
     /// Provides registration, login, email confirmation, and token refresh.
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
@@ -61,26 +60,32 @@ namespace MoneyMirror.API.Controllers
         {
             // Validation happens automatically via FluentValidationFilter
 
-            // Call service to authenticate
-            var authResponse = await _authService.LoginAsync(loginDto);
+            var (authResponse, failure) = await _authService.LoginAsync(loginDto);
 
             if (authResponse == null)
             {
-                // Check if it's because email is not confirmed
-                var emailExists = await _authService.EmailExistsAsync(loginDto.Email);
-
-                if (emailExists)
+                return failure switch
                 {
-                    // Email exists but login failed - could be wrong password or unconfirmed email
-                    // For security, we don't specify which one
-                    return Unauthorized(ApiResponse<AuthResponseDto>.ErrorResponse(
-                        "Invalid email or password, or email not confirmed"
-                    ));
-                }
+                    LoginFailureReason.SoftDeletedRecoverable =>
+                        Unauthorized(ApiResponse<AuthResponseDto>.ErrorResponse(
+                            "This account is deleted but recoverable. Please use the 'Recover Account' option to restore access."
+                        )),
 
-                return Unauthorized(ApiResponse<AuthResponseDto>.ErrorResponse(
-                    "Invalid email or password"
-                ));
+                    LoginFailureReason.PermanentlyDeleted =>
+                        Unauthorized(ApiResponse<AuthResponseDto>.ErrorResponse(
+                            "This account has been permanently deleted and cannot be recovered. Please register with a different email."
+                        )),
+
+                    LoginFailureReason.EmailNotConfirmed =>
+                        Unauthorized(ApiResponse<AuthResponseDto>.ErrorResponse(
+                            "Email not confirmed. Please check your inbox and confirm your email before logging in."
+                        )),
+
+                    LoginFailureReason.InvalidCredentials or null =>
+                        Unauthorized(ApiResponse<AuthResponseDto>.ErrorResponse(
+                            "Invalid email or password"
+                        ))
+                };
             }
 
             return Ok(ApiResponse<AuthResponseDto>.SuccessResponse(
@@ -88,6 +93,8 @@ namespace MoneyMirror.API.Controllers
                 "Login successful"
             ));
         }
+
+
 
         /// Confirms a parent's email address.
         /// GET /api/auth/confirm-email?email=xxx&token=xxx
@@ -118,11 +125,9 @@ namespace MoneyMirror.API.Controllers
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
-        /// <summary>
         /// Refreshes JWT tokens using a valid refresh token.
         /// POST /api/auth/refresh-token
         /// Called by client when access token expires.
-        /// </summary>
         /// <param name="refreshTokenDto">Current access token and refresh token</param>
         /// <returns>New JWT tokens or error</returns>
         [HttpPost("refresh-token")]
@@ -147,11 +152,9 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
         /// Logs out a parent by revoking their refresh token.
         /// POST /api/auth/logout
         /// Requires authentication (must have valid access token).
-        /// </summary>
         /// <returns>Success or error message</returns>
         [HttpPost("logout")]
         [Authorize] // Must be logged in to access this endpoint
@@ -183,11 +186,9 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
         /// Checks if an email is available for registration.
         /// GET /api/auth/check-email?email=xxx
         /// Used by frontend to show real-time validation.
-        /// </summary>
         /// <param name="email">Email address to check</param>
         /// <returns>True if available, False if already registered</returns>
         [HttpGet("check-email")]
@@ -209,11 +210,9 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
         /// Test endpoint to verify authentication is working.
         /// GET /api/auth/test-protected
         /// Requires valid JWT token in Authorization header.
-        /// </summary>
         /// <returns>Success message with parent info</returns>
         [HttpGet("test-protected")]
         [Authorize]
@@ -229,10 +228,8 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
         /// Initiates password reset flow by sending reset link to email.
         /// POST /api/auth/forgot-password
-        /// </summary>
         /// <param name="forgotPasswordDto">Email address to send reset link to</param>
         /// <returns>Success message (always returns success for security)</returns>
         [HttpPost("forgot-password")]
@@ -245,10 +242,8 @@ namespace MoneyMirror.API.Controllers
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
-        /// <summary>
         /// Resets password using token from email link.
         /// POST /api/auth/reset-password
-        /// </summary>
         /// <param name="resetPasswordDto">Email, token, and new password</param>
         /// <returns>Success or error message</returns>
         [HttpPost("reset-password")]
@@ -269,10 +264,8 @@ namespace MoneyMirror.API.Controllers
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
-        /// <summary>
         /// Resends email confirmation link.
         /// POST /api/auth/resend-confirmation
-        /// </summary>
         /// <param name="resendConfirmationDto">Email address to resend confirmation to</param>
         /// <returns>Success or error message</returns>
         [HttpPost("resend-confirmation")]
@@ -291,11 +284,9 @@ namespace MoneyMirror.API.Controllers
         // ==================== ADD THESE ENDPOINTS TO AuthController.cs ====================
         // Place them at the end of the class, before the closing brace
 
-        /// <summary>
         /// Updates parent profile information (name, phone).
         /// PUT /api/auth/profile
         /// Requires authentication.
-        /// </summary>
         /// <param name="updateDto">Updated profile data</param>
         /// <returns>Success or error message</returns>
         [HttpPut("profile")]
@@ -320,11 +311,9 @@ namespace MoneyMirror.API.Controllers
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
-        /// <summary>
         /// Initiates email change process by sending verification to new email.
         /// POST /api/auth/change-email
         /// Requires authentication.
-        /// </summary>
         /// <param name="changeEmailDto">New email and current password</param>
         /// <returns>Success or error message</returns>
         [HttpPost("change-email")]
@@ -349,10 +338,8 @@ namespace MoneyMirror.API.Controllers
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
-        /// <summary>
         /// Confirms email change using token from verification email.
         /// GET /api/auth/confirm-email-change?oldEmail=xxx&newEmail=xxx&token=xxx
-        /// </summary>
         /// <param name="oldEmail">Current email address</param>
         /// <param name="newEmail">New email address being confirmed</param>
         /// <param name="token">Email change confirmation token</param>
@@ -382,13 +369,13 @@ namespace MoneyMirror.API.Controllers
         }
 
         /// <summary>
-        /// Soft deletes parent account (marks as deleted).
-        /// DELETE /api/auth/account
+        /// Soft deletes parent account with 30-day recovery grace period.
+        /// DELETE /api/auth/delete-parent-account
         /// Requires authentication and current password.
         /// </summary>
         /// <param name="currentPassword">Parent's password for verification</param>
-        /// <returns>Success or error message</returns>
-        [HttpDelete("account")]
+        /// <returns>Success message with recovery deadline, or error</returns>
+        [HttpDelete("delete-parent-account")]  // Changed from "account"
         [Authorize]
         public async Task<ActionResult<ApiResponse<object>>> DeleteAccount([FromBody] string currentPassword)
         {
@@ -407,6 +394,28 @@ namespace MoneyMirror.API.Controllers
             }
 
             var (success, message) = await _authService.DeleteParentAccountAsync(parentId, currentPassword);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+        /// <summary>
+        /// Recovers a soft-deleted parent account within the 30-day grace period.
+        /// POST /api/auth/recover-account
+        /// </summary>
+        /// <param name="loginDto">Email and password for verification</param>
+        /// <returns>Success or error message</returns>
+        [HttpPost("recover-account")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<object>>> RecoverAccount([FromBody] LoginDto loginDto)
+        {
+            var (success, message) = await _authService.RecoverDeletedAccountAsync(
+                loginDto.Email,
+                loginDto.Password
+            );
 
             if (!success)
             {
