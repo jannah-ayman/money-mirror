@@ -14,6 +14,13 @@ namespace MoneyMirror.Core.Interfaces
         /// <returns>JWT token string (e.g., "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")</returns>
         string GenerateAccessToken(Parent parent);
 
+        /// Generates a JWT access token for an authenticated child.
+        /// Token contains child's ID, name, and role as claims.
+        /// Token is short-lived (15 minutes) for security.
+        /// <param name="child">The authenticated child user</param>
+        /// <returns>JWT token string</returns>
+        string GenerateAccessToken(Child child);
+
         /// Generates a cryptographically secure refresh token.
         /// Refresh token is a random GUID stored in database.
         /// Used to obtain new access tokens without re-login.
