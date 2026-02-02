@@ -18,6 +18,7 @@ namespace MoneyMirror.Core.Models
         [Required]
         [MaxLength(100)]
         public string FName { get; set; }
+
         [Required]
         [MaxLength(100)]
         public string LName { get; set; }
@@ -47,6 +48,20 @@ namespace MoneyMirror.Core.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int? TypeID { get; set; }
+
+        // ==================== AUTHENTICATION FIELDS ====================
+
+        /// Long-lived refresh token for obtaining new access tokens.
+        /// Generated during login, valid for 7 days.
+        /// Used to refresh expired access tokens without re-login.
+        /// Stored as hashed value for security.
+        [MaxLength(500)]
+        public string? RefreshToken { get; set; }
+
+        /// Expiration timestamp for refresh token.
+        /// Refresh tokens expire after 7 days.
+        /// Child must log in again after expiration.
+        public DateTime? RefreshTokenExpiry { get; set; }
 
         // ==================== NAVIGATION PROPERTIES ====================
 

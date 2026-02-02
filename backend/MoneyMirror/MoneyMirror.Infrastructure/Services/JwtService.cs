@@ -11,6 +11,7 @@ namespace MoneyMirror.Infrastructure.Services
 {
     /// Service for JWT token generation and validation.
     /// Implements secure token creation using HS256 algorithm.
+    /// Supports both parent and child authentication.
     public class JwtService : IJwtService
     {
         private readonly IConfiguration _configuration;
@@ -18,18 +19,19 @@ namespace MoneyMirror.Infrastructure.Services
         private readonly string _issuer;
         private readonly string _audience;
         private readonly int _accessTokenExpirationMinutes;
+
         /// Constructor - dependency injection provides configuration.
         /// Reads JWT settings from appsettings.json.
         public JwtService(IConfiguration configuration)
         {
             _configuration = configuration;
-            
+
             // Load JWT settings from configuration
-            _secretKey = _configuration["Jwt:SecretKey"] 
+            _secretKey = _configuration["Jwt:SecretKey"]
                 ?? throw new InvalidOperationException("JWT SecretKey not configured");
-            _issuer = _configuration["Jwt:Issuer"] 
+            _issuer = _configuration["Jwt:Issuer"]
                 ?? throw new InvalidOperationException("JWT Issuer not configured");
-            _audience = _configuration["Jwt:Audience"] 
+            _audience = _configuration["Jwt:Audience"]
                 ?? throw new InvalidOperationException("JWT Audience not configured");
             _accessTokenExpirationMinutes = int.Parse(
                 _configuration["Jwt:AccessTokenExpirationMinutes"] ?? "15");
@@ -59,6 +61,49 @@ namespace MoneyMirror.Infrastructure.Services
                 
                 // Custom claim for parent ID (easier to access than "sub")
                 new Claim("ParentId", parent.ParentID.ToString())
+            };
+
+            // Create signing key from secret
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            // Create the token
+            var token = new JwtSecurityToken(
+                issuer: _issuer,
+                audience: _audience,
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(_accessTokenExpirationMinutes),
+                signingCredentials: credentials
+            );
+
+            // Serialize token to string
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        /// Generates a JWT access token for an authenticated child.
+        /// Token contains child-specific claims and is signed with secret key.
+        public string GenerateAccessToken(Child child)
+        {
+            // Claims are pieces of information about the child stored in the token
+            var claims = new[]
+            {
+                // "sub" (subject) = unique child identifier
+                new Claim(JwtRegisteredClaimNames.Sub, child.ChildID.ToString()),
+                
+                // "name" = child's full name
+                new Claim(JwtRegisteredClaimNames.Name, $"{child.FName} {child.LName}"),
+                
+                // "jti" (JWT ID) = unique identifier for this token
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                
+                // Custom claim for user role
+                new Claim(ClaimTypes.Role, "Child"),
+                
+                // Custom claim for child ID (easier to access than "sub")
+                new Claim("ChildId", child.ChildID.ToString()),
+                
+                // Custom claim for login code (useful for debugging/logging)
+                new Claim("LoginCode", child.LoginCode)
             };
 
             // Create signing key from secret
