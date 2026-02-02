@@ -39,13 +39,14 @@ namespace MoneyMirror.Infrastructure.Services
         // ==================== ALLOWANCE CONFIGURATION ====================
 
         public async Task<(bool success, string message)> UpdateAllowanceAsync(
-            int parentId,
-            int childId,
-            UpdateAllowanceDto dto)
+    int parentId,
+    int childId,
+    UpdateAllowanceDto dto)
         {
             try
             {
                 // STEP 1: Verify parent-child relationship
+                // This makes sure the parent is allowed to manage this child's allowance
                 bool isLinked = await IsParentLinkedToChildAsync(parentId, childId);
 
                 if (!isLinked)
@@ -55,38 +56,71 @@ namespace MoneyMirror.Infrastructure.Services
                 }
 
                 // STEP 2: Find existing active recurring allowance (if any)
+                // We search for an allowance that:
+                // - Belongs to this child (ChildID == childId)
+                // - Is a recurring allowance (IsRecurring == true)
+                // - Is currently active (IsActive == true)
                 var existingAllowance = await _context.Allowances
                     .FirstOrDefaultAsync(a => a.ChildID == childId && a.IsRecurring && a.IsActive);
 
-                // STEP 3: Deactivate old allowance (only one active recurring allowance at a time)
+                // STEP 3: Decide what to do based on whether allowance exists
                 if (existingAllowance != null)
                 {
-                    existingAllowance.IsActive = false;
+                    // ✅ ALLOWANCE EXISTS → UPDATE IT
+                    // Instead of creating a new one, we update the existing record
+                    _logger.LogInformation($"Updating existing allowance {existingAllowance.AllowanceID} for child {childId}");
+
+                    // Update all the fields with new values from the DTO
+                    existingAllowance.Type = dto.Type;
+                    existingAllowance.Amount = dto.Amount;
+                    existingAllowance.IsActive = dto.IsActive;
+
+                    // Update schedule fields based on the new type
+                    // Important: Clear old schedule fields that don't apply to new type
+                    existingAllowance.DailyHour = dto.Type == "Daily" ? dto.DailyHour : null;
+                    existingAllowance.WeeklyDay = dto.Type == "Weekly" ? dto.WeeklyDay : null;
+                    existingAllowance.MonthlyDay = dto.Type == "Monthly" ? dto.MonthlyDay : null;
+
+                    // Update the SetDate to show when it was last modified
+                    existingAllowance.SetDate = DateTime.UtcNow;
+
+                    // Don't reset LastCreditedDate - keep the history of when it was last credited
+
+                    // Tell Entity Framework to update this record
                     _context.Allowances.Update(existingAllowance);
 
-                    _logger.LogInformation($"Deactivated old allowance {existingAllowance.AllowanceID} for child {childId}");
+                    _logger.LogInformation($"Updated {dto.Type} allowance for child {childId}: {dto.Amount}");
+                }
+                else
+                {
+                    // ✅ NO ALLOWANCE EXISTS → CREATE NEW ONE
+                    // This is the first time setting up allowance for this child
+                    _logger.LogInformation($"Creating new allowance for child {childId} (first time setup)");
+
+                    var newAllowance = new Allowance
+                    {
+                        Type = dto.Type,
+                        Amount = dto.Amount,
+                        IsRecurring = true,
+                        IsActive = dto.IsActive,
+                        DailyHour = dto.Type == "Daily" ? dto.DailyHour : null,
+                        WeeklyDay = dto.Type == "Weekly" ? dto.WeeklyDay : null,
+                        MonthlyDay = dto.Type == "Monthly" ? dto.MonthlyDay : null,
+                        SetDate = DateTime.UtcNow,
+                        LastCreditedDate = null, // Not credited yet
+                        ChildID = childId,
+                        ParentID = parentId
+                    };
+
+                    // Tell Entity Framework to add this new record
+                    _context.Allowances.Add(newAllowance);
+
+                    _logger.LogInformation($"Created new {dto.Type} allowance for child {childId}: {dto.Amount}");
                 }
 
-                // STEP 4: Create new allowance record
-                var newAllowance = new Allowance
-                {
-                    Type = dto.Type,
-                    Amount = dto.Amount,
-                    IsRecurring = true,
-                    IsActive = dto.IsActive,
-                    DailyHour = dto.Type == "Daily" ? dto.DailyHour : null,
-                    WeeklyDay = dto.Type == "Weekly" ? dto.WeeklyDay : null,
-                    MonthlyDay = dto.Type == "Monthly" ? dto.MonthlyDay : null,
-                    SetDate = DateTime.UtcNow,
-                    LastCreditedDate = null, // Not credited yet
-                    ChildID = childId,
-                    ParentID = parentId
-                };
-
-                _context.Allowances.Add(newAllowance);
+                // STEP 4: Save changes to database
+                // This actually executes the UPDATE or INSERT in the database
                 await _context.SaveChangesAsync();
-
-                _logger.LogInformation($"Created new {dto.Type} allowance {newAllowance.AllowanceID} for child {childId}: {dto.Amount}");
 
                 return (true, "Allowance settings updated successfully");
             }
