@@ -6,6 +6,7 @@ using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Core.Models;
 using MoneyMirror.Infrastructure.Data;
 using System.Text;
+using System.Text.Json;
 
 namespace MoneyMirror.Infrastructure.Services
 {
@@ -13,7 +14,7 @@ namespace MoneyMirror.Infrastructure.Services
     /// Handles full child onboarding flow, authentication, and management:
     /// - Creates child
     /// - Links parent-child
-    /// - Saves questionnaire
+    /// - Saves questionnaire (with JSON serialization for multi-select fields)
     /// - Assigns personality profile
     /// - Generates login code
     /// - Authenticates child with code
@@ -44,11 +45,9 @@ namespace MoneyMirror.Infrastructure.Services
             _logger = logger;
         }
 
-        /// <summary>
         /// Completes initial onboarding in ONE request.
         /// The client does NOT send ChildID.
         /// The backend creates everything safely.
-        /// </summary>
         public async Task<(bool success, QuestionnaireCompletionResponseDto? response, string errorMessage)>
             CompleteInitialProfilingAsync(int parentId, CompleteInitialProfilingDto dto)
         {
@@ -61,9 +60,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                 try
                 {
-                    // ============================================================
                     // STEP 1: CREATE CHILD
-                    // ============================================================
 
                     var child = new Child
                     {
@@ -83,51 +80,51 @@ namespace MoneyMirror.Infrastructure.Services
                         "Created child {FirstName} {LastName} (ID: {ChildID})",
                         child.FName, child.LName, child.ChildID);
 
-                    // ============================================================
                     // STEP 2: LINK PARENT ↔ CHILD
-                    // ============================================================
-
                     _context.ParentChildren.Add(new ParentChild
                     {
                         ParentID = parentId,
                         ChildID = child.ChildID
                     });
 
-                    // ============================================================
                     // STEP 3: SAVE QUESTIONNAIRE
-                    // ============================================================
+  
+                    // Serialize SpendingCategories list to JSON
+                    string spendingCategoriesJson = JsonSerializer.Serialize(dto.SpendingCategories);
 
                     var questionnaire = new InitialProfilingQuestionnaire
                     {
                         ChildID = child.ChildID,
 
+                        // Question 1: Age Group
                         ChildAgeGroup = dto.ChildAgeGroup,
-                        ChildGender = dto.ChildGender,
 
-                        AllowanceFrequency = dto.AllowanceFrequency,
-                        AllowanceAmount = dto.AllowanceAmount,
+                        // Question 2: Has Allowance
+                        HasAllowance = dto.HasAllowance,
 
-                        PrimarySpendingCategory = dto.PrimarySpendingCategory,
-                        SpendingPlanning = dto.SpendingPlanning,
-                        OutOfMoneyBehavior = dto.OutOfMoneyBehavior,
-                        SpendingAffectsSaving = dto.SpendingAffectsSaving,
+                        // Question 3: Spending Pace
                         SpendingPace = dto.SpendingPace,
 
-                        SavingGoal = dto.SavingGoal,
-                        SavingPercentage = dto.SavingPercentage,
-                        SavingSuccessRate = dto.SavingSuccessRate,
+                        // Question 4: Spending Categories (JSON)
+                        SpendingCategories = spendingCategoriesJson,
 
+                        // Question 5: Out of Money Behavior
+                        OutOfMoneyBehavior = dto.OutOfMoneyBehavior,
+
+                        // Question 6: Tries to Save
+                        TriesToSave = dto.TriesToSave,
+
+                        // Question 7: Money Mindset
+                        MoneyMindset = dto.MoneyMindset,
+
+                        // Question 8: Feeling After Spending
                         FeelingAfterSpending = dto.FeelingAfterSpending,
-                        SavingFailureReason = dto.SavingFailureReason,
-                        SatisfactionPreference = dto.SatisfactionPreference,
-                        TalksAboutMoney = dto.TalksAboutMoney,
+
+                        // Question 9: Feeling When Saving Grows
                         FeelingWhenSavingGrows = dto.FeelingWhenSavingGrows,
 
+                        // Question 10: Reaction to 100 EGP
                         ReactionTo100 = dto.ReactionTo100,
-                        MoneyPriority = dto.MoneyPriority,
-                        ReactionToExpensiveItem = dto.ReactionToExpensiveItem,
-                        ReactionToMoreAllowance = dto.ReactionToMoreAllowance,
-                        MoneyMindset = dto.MoneyMindset,
 
                         IsCompleted = true,
                         CompletedDate = DateTime.UtcNow
@@ -135,9 +132,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                     _context.InitialProfilingQuestionnaires.Add(questionnaire);
 
-                    // ============================================================
                     // STEP 4: ASSIGN TEMP PERSONALITY PROFILE
-                    // ============================================================
 
                     var (profileSuccess, assignedType) =
                         await _personalityService.AssignTemporaryProfileAsync(child.ChildID);
@@ -148,10 +143,7 @@ namespace MoneyMirror.Infrastructure.Services
                             "Failed to assign personality profile");
                     }
 
-                    // ============================================================
                     // STEP 5: SAVE + COMMIT
-                    // ============================================================
-
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
@@ -159,10 +151,7 @@ namespace MoneyMirror.Infrastructure.Services
                         "Onboarding completed for child ID {ChildID}",
                         child.ChildID);
 
-                    // ============================================================
                     // STEP 6: BUILD RESPONSE
-                    // ============================================================
-
                     var response = new QuestionnaireCompletionResponseDto
                     {
                         ChildID = child.ChildID,
@@ -191,11 +180,9 @@ namespace MoneyMirror.Infrastructure.Services
             });
         }
 
-        /// <summary>
         /// Authenticates a child using their unique login code.
         /// Generates JWT tokens similar to parent login.
         /// Stores refresh token in database.
-        /// </summary>
         public async Task<(bool success, ChildAuthResponseDto? authResponse, string errorMessage)>
             LoginWithCodeAsync(string code)
         {
@@ -266,10 +253,8 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Refreshes JWT tokens using a valid refresh token.
         /// Allows child to stay logged in without re-entering code.
-        /// </summary>
         public async Task<(bool success, ChildAuthResponseDto? authResponse, string errorMessage)>
             RefreshTokenAsync(ChildRefreshTokenDto refreshTokenDto)
         {
@@ -380,10 +365,8 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Revokes a child's refresh token (logout functionality).
         /// Clears the stored refresh token so it can't be used again.
-        /// </summary>
         public async Task<bool> RevokeRefreshTokenAsync(int childId)
         {
             try
@@ -414,10 +397,8 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Adds an existing child to a parent's account using the child's login code.
         /// Supports shared custody - multiple parents can manage the same child.
-        /// </summary>
         public async Task<(bool success, string message, string errorMessage)>
             AddExistingChildAsync(int parentId, string code)
         {
@@ -467,10 +448,8 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Gets all children linked to a specific parent.
         /// Returns basic information needed for the "Manage Children" tab.
-        /// </summary>
         public async Task<List<ChildSummaryDto>> GetMyChildrenAsync(int parentId)
         {
             try
@@ -490,7 +469,7 @@ namespace MoneyMirror.Infrastructure.Services
                         CreatedAt = pc.Child.CreatedAt,
                         IsPersonalityFinalized = pc.Child.IsPersonalityFinalized,
                         PersonalityTypeName = pc.Child.PersonalityType != null
-                            ? pc.Child.PersonalityType.ChildName
+                            ? pc.Child.PersonalityType.ParentName
                             : "Pending Analysis"
                     })
                     .ToListAsync();
@@ -507,10 +486,7 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        // ============================================================
         // HELPER METHODS
-        // ============================================================
-
         private int CalculateAge(DateTime dob)
         {
             var today = DateTime.UtcNow;

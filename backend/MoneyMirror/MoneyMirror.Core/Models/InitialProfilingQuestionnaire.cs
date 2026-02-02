@@ -5,204 +5,99 @@ using MoneyMirror.Core.Enums;
 
 namespace MoneyMirror.Core.Models
 {
-    /// <summary>
     /// Represents the initial profiling questionnaire filled out by parents when creating a child account.
-    /// Contains all 25 questions about the child's financial behavior, habits, and personality.
+    /// Contains 10 questions about the child's financial behavior, habits, and personality.
     /// Used to establish baseline personality insights before AI analysis.
-    /// </summary>
     public class InitialProfilingQuestionnaire
     {
-        /// <summary>
-        /// Primary key for the InitialProfilingQuestionnaire entity
-        /// </summary>
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int QuestionnaireID { get; set; }
 
-        /// <summary>
-        /// Indicates whether the questionnaire has been completed.
-        /// True = all questions answered and submitted
-        /// </summary>
         [Required]
         public bool IsCompleted { get; set; } = false;
 
-        /// <summary>
-        /// Timestamp when the questionnaire was completed
-        /// </summary>
         public DateTime? CompletedDate { get; set; }
 
-        // ==================== Section 1: Child Profile ====================
+        // ==================== Question 1: How old is your child? ====================
 
-        /// <summary>
-        /// Child's age group category (Age_6_8, Age_9_11, Age_12_14)
-        /// </summary>
+        // Child's age group category (Age_6_8, Age_9_11, Age_12_14)
         [Required]
         public ChildAgeGroup ChildAgeGroup { get; set; }
 
-        /// <summary>
-        /// Child's gender (Male, Female)
-        /// </summary>
+        // ==================== Question 2: Does your child receive a regular allowance or income? ====================
+
+        // Whether the child receives regular allowance (Yes, No)
         [Required]
-        public ChildGender ChildGender { get; set; }
+        public HasAllowance HasAllowance { get; set; }
 
-        // ==================== Section 2: Allowance Details ====================
+        // ==================== Question 3: How does your child usually spend their allowance? ====================
 
-        /// <summary>
-        /// How often the child receives allowance (Daily, Weekly, Monthly)
-        /// </summary>
-        [Required]
-        public AllowanceFrequency AllowanceFrequency { get; set; }
-
-        /// <summary>
-        /// Amount of allowance the child receives per period
-        /// </summary>
-        [Required]
-        [Column(TypeName = "decimal(10,2)")]
-        public decimal AllowanceAmount { get; set; }
-
-        // ==================== Section 3: Expenses ====================
-
-        /// <summary>
-        /// Primary category where child spends money
-        /// </summary>
-        [Required]
-        public SpendingCategory PrimarySpendingCategory { get; set; }
-
-        /// <summary>
-        /// How often child plans purchases before spending
-        /// </summary>
-        [Required]
-        public SpendingPlanning SpendingPlanning { get; set; }
-
-        /// <summary>
-        /// Child's behavior when money runs out
-        /// </summary>
-        [Required]
-        public OutOfMoneyBehavior OutOfMoneyBehavior { get; set; }
-
-        /// <summary>
-        /// Whether spending prevents saving
-        /// </summary>
-        [Required]
-        public SpendingAffectsSaving SpendingAffectsSaving { get; set; }
-
-        /// <summary>
-        /// Pace at which child spends allowance
-        /// </summary>
+        // (Spends_Right_Away, Spends_Gradually, Saves_Part_Of_It)
         [Required]
         public SpendingPace SpendingPace { get; set; }
 
-        // ==================== Section 4: Savings ====================
+        // ==================== Question 4: What does your child usually spend their allowance on? (Multi-select) ====================
 
-        /// <summary>
-        /// What child typically saves for
-        /// </summary>
+        // JSON array of spending categories the child typically spends on.
+        // Multiple selections allowed: Food_And_Drinks, Entertainment, Clothes_And_Accessories, School_Supplies
+        // Stored as JSON string in database, deserialized to List<SpendingCategory> in application.
+        // Example: ["Food_And_Drinks", "Entertainment"]
         [Required]
-        public SavingGoal SavingGoal { get; set; }
+        [Column(TypeName = "NVARCHAR(MAX)")]
+        public string SpendingCategories { get; set; } // JSON array
 
-        /// <summary>
-        /// Percentage of allowance typically saved
-        /// </summary>
+        // ==================== Question 5: When your child runs out of allowance before the next payment, what do they usually do? ====================
+
+        /// (Ask_For_More, Stop_Spending, Postpone_Purchases)
         [Required]
-        public SavingPercentage SavingPercentage { get; set; }
+        public OutOfMoneyBehavior OutOfMoneyBehavior { get; set; }
 
-        /// <summary>
-        /// How often child reaches savings goals
-        /// </summary>
+        // ==================== Question 6: Does your child try to save part of their allowance? ====================
+
+        /// Whether child attempts to save (Yes, No)
         [Required]
-        public SavingSuccessRate SavingSuccessRate { get; set; }
+        public TriesToSave TriesToSave { get; set; }
 
-        // ==================== Section 5: Moods & Habits ====================
+        // ==================== Question 7: Which statement best describes your child's attitude toward money? ====================
 
-        /// <summary>
-        /// Child's typical feeling after spending
-        /// </summary>
-        [Required]
-        public FeelingAfterSpending FeelingAfterSpending { get; set; }
-
-        /// <summary>
-        /// Main reason child fails to save
-        /// </summary>
-        [Required]
-        public SavingFailureReason SavingFailureReason { get; set; }
-
-        /// <summary>
-        /// Child's preference between immediate vs delayed gratification
-        /// </summary>
-        [Required]
-        public SatisfactionPreference SatisfactionPreference { get; set; }
-
-        /// <summary>
-        /// How often child talks about money matters
-        /// </summary>
-        [Required]
-        public TalksAboutMoney TalksAboutMoney { get; set; }
-
-        /// <summary>
-        /// Child's emotional response to growing savings
-        /// </summary>
-        [Required]
-        public FeelingWhenSavingGrows FeelingWhenSavingGrows { get; set; }
-
-        // ==================== Section 6: Financial Personality ====================
-
-        /// <summary>
-        /// What child would do with unexpected $100
-        /// </summary>
-        [Required]
-        public ReactionTo100 ReactionTo100 { get; set; }
-
-        /// <summary>
-        /// Child's overall money priority
-        /// </summary>
-        [Required]
-        public MoneyPriority MoneyPriority { get; set; }
-
-        /// <summary>
-        /// Child's approach to expensive desired items
-        /// </summary>
-        [Required]
-        public ReactionToExpensiveItem ReactionToExpensiveItem { get; set; }
-
-        /// <summary>
-        /// What child would do if allowance increased
-        /// </summary>
-        [Required]
-        public ReactionToMoreAllowance ReactionToMoreAllowance { get; set; }
-
-        /// <summary>
-        /// Child's overall money mindset
-        /// </summary>
+        // Child's overall money mindset
+        // (Enjoys_Spending_Immediately, Balances_Spending_And_Saving, Saves_For_The_Future)
         [Required]
         public MoneyMindset MoneyMindset { get; set; }
 
+        // ==================== Question 8: How does your child usually feel after spending money on non-essential items? ====================
+
+        /// Child's typical feeling after spending
+        /// (Happy, Regretful, Neutral)
+        [Required]
+        public FeelingAfterSpending FeelingAfterSpending { get; set; }
+
+        // ==================== Question 9: How does your child feel when they see their savings grow? ====================
+
+        /// Child's emotional response to growing savings
+        /// (Motivated, Proud, Doesnt_Matter_Much)
+        [Required]
+        public FeelingWhenSavingGrows FeelingWhenSavingGrows { get; set; }
+
+        // ==================== Question 10: If your child receives 100 EGP today, what would they do? ====================
+
+        // (Spend_All_Now, Spend_Part_Save_Part, Save_All_For_Future)
+        [Required]
+        public ReactionTo100 ReactionTo100 { get; set; }
+
         // ==================== Foreign Keys ====================
 
-        /// <summary>
-        /// Foreign key to Child table.
-        /// The child this questionnaire is about.
-        /// </summary>
         [Required]
         public int ChildID { get; set; }
 
-        /// <summary>
-        /// Foreign key to PersonalityType table (nullable).
-        /// The personality type calculated from this questionnaire.
-        /// Null until AI analysis is performed.
-        /// </summary>
         public int? CalculatedTypeID { get; set; }
 
         // ==================== NAVIGATION PROPERTIES ====================
 
-        /// <summary>
-        /// Reference to the child this questionnaire is about
-        /// </summary>
         [ForeignKey("ChildID")]
         public virtual Child Child { get; set; }
 
-        /// <summary>
-        /// Reference to the calculated personality type (if analysis has been performed)
-        /// </summary>
         [ForeignKey("CalculatedTypeID")]
         public virtual PersonalityType? CalculatedPersonalityType { get; set; }
     }

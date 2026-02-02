@@ -1,118 +1,121 @@
 using FluentValidation;
+using MoneyMirror.Core.DTOs.Child;
 
 namespace MoneyMirror.API.Validators.Child
 {
     /// <summary>
     /// FluentValidation validator for CompleteInitialProfilingDto.
-    /// Validates all questionnaire fields to ensure data integrity.
+    /// Validates all 10 questionnaire fields to ensure data integrity.
     /// </summary>
     public class CompleteInitialProfilingDtoValidator : AbstractValidator<CompleteInitialProfilingDto>
     {
         public CompleteInitialProfilingDtoValidator()
         {
+            // ==================== Child Identity Validation ====================
+
             RuleFor(x => x.ChildFirstName)
-    .NotEmpty()
-    .MaximumLength(100);
+                .NotEmpty()
+                .WithMessage("Child's first name is required")
+                .MaximumLength(100)
+                .WithMessage("First name cannot exceed 100 characters")
+                .Matches(@"^[a-zA-Z\s'-]+$")
+                .WithMessage("First name can only contain letters, spaces, hyphens, and apostrophes");
 
             RuleFor(x => x.ChildLastName)
                 .NotEmpty()
-                .MaximumLength(100);
+                .WithMessage("Child's last name is required")
+                .MaximumLength(100)
+                .WithMessage("Last name cannot exceed 100 characters")
+                .Matches(@"^[a-zA-Z\s'-]+$")
+                .WithMessage("Last name can only contain letters, spaces, hyphens, and apostrophes");
 
             RuleFor(x => x.DOB)
+                .NotEmpty()
+                .WithMessage("Date of birth is required")
                 .LessThan(DateTime.UtcNow)
-                .WithMessage("DOB must be in the past");
+                .WithMessage("Date of birth must be in the past")
+                .Must(BeValidChildAge)
+                .WithMessage("Child must be between 6 and 14 years old");
 
-            // Allowance amount validation
-            RuleFor(x => x.AllowanceAmount)
-                .GreaterThanOrEqualTo(0)
-                .WithMessage("Allowance amount must be zero or positive")
-                .LessThanOrEqualTo(10000)
-                .WithMessage("Allowance amount seems unreasonably high");
+            // ==================== Question 1: Age Group ====================
 
-            // Enum validations (ensure they're defined values)
             RuleFor(x => x.ChildAgeGroup)
                 .IsInEnum()
-                .WithMessage("Invalid age group");
+                .WithMessage("Invalid age group selection");
 
-            RuleFor(x => x.ChildGender)
-                .IsInEnum()
-                .WithMessage("Invalid gender");
+            // ==================== Question 2: Has Allowance ====================
 
-            RuleFor(x => x.AllowanceFrequency)
+            RuleFor(x => x.HasAllowance)
                 .IsInEnum()
-                .WithMessage("Invalid allowance frequency");
+                .WithMessage("Please indicate if child receives allowance");
 
-            RuleFor(x => x.PrimarySpendingCategory)
-                .IsInEnum()
-                .WithMessage("Invalid spending category");
-
-            RuleFor(x => x.SpendingPlanning)
-                .IsInEnum()
-                .WithMessage("Invalid spending planning value");
-
-            RuleFor(x => x.OutOfMoneyBehavior)
-                .IsInEnum()
-                .WithMessage("Invalid out of money behavior");
-
-            RuleFor(x => x.SpendingAffectsSaving)
-                .IsInEnum()
-                .WithMessage("Invalid spending affects saving value");
+            // ==================== Question 3: Spending Pace ====================
 
             RuleFor(x => x.SpendingPace)
                 .IsInEnum()
-                .WithMessage("Invalid spending pace");
+                .WithMessage("Invalid spending pace selection");
 
-            RuleFor(x => x.SavingGoal)
-                .IsInEnum()
-                .WithMessage("Invalid saving goal");
+            // ==================== Question 4: Spending Categories (Multi-select) ====================
 
-            RuleFor(x => x.SavingPercentage)
-                .IsInEnum()
-                .WithMessage("Invalid saving percentage");
+            RuleFor(x => x.SpendingCategories)
+                .NotEmpty()
+                .WithMessage("Please select at least one spending category")
+                .Must(categories => categories != null && categories.Count > 0)
+                .WithMessage("Please select at least one spending category")
+                .Must(categories => categories != null && categories.Count <= 4)
+                .WithMessage("Cannot select more than 4 categories")
+                .Must(categories => categories != null && categories.All(c => Enum.IsDefined(typeof(MoneyMirror.Core.Enums.SpendingCategory), c)))
+                .WithMessage("One or more invalid spending categories selected");
 
-            RuleFor(x => x.SavingSuccessRate)
-                .IsInEnum()
-                .WithMessage("Invalid saving success rate");
+            // ==================== Question 5: Out of Money Behavior ====================
 
-            RuleFor(x => x.FeelingAfterSpending)
+            RuleFor(x => x.OutOfMoneyBehavior)
                 .IsInEnum()
-                .WithMessage("Invalid feeling after spending");
+                .WithMessage("Invalid out of money behavior selection");
 
-            RuleFor(x => x.SavingFailureReason)
-                .IsInEnum()
-                .WithMessage("Invalid saving failure reason");
+            // ==================== Question 6: Tries to Save ====================
 
-            RuleFor(x => x.SatisfactionPreference)
+            RuleFor(x => x.TriesToSave)
                 .IsInEnum()
-                .WithMessage("Invalid satisfaction preference");
+                .WithMessage("Please indicate if child tries to save");
 
-            RuleFor(x => x.TalksAboutMoney)
-                .IsInEnum()
-                .WithMessage("Invalid talks about money value");
-
-            RuleFor(x => x.FeelingWhenSavingGrows)
-                .IsInEnum()
-                .WithMessage("Invalid feeling when saving grows");
-
-            RuleFor(x => x.ReactionTo100)
-                .IsInEnum()
-                .WithMessage("Invalid reaction to $100");
-
-            RuleFor(x => x.MoneyPriority)
-                .IsInEnum()
-                .WithMessage("Invalid money priority");
-
-            RuleFor(x => x.ReactionToExpensiveItem)
-                .IsInEnum()
-                .WithMessage("Invalid reaction to expensive item");
-
-            RuleFor(x => x.ReactionToMoreAllowance)
-                .IsInEnum()
-                .WithMessage("Invalid reaction to more allowance");
+            // ==================== Question 7: Money Mindset ====================
 
             RuleFor(x => x.MoneyMindset)
                 .IsInEnum()
-                .WithMessage("Invalid money mindset");
+                .WithMessage("Invalid money mindset selection");
+
+            // ==================== Question 8: Feeling After Spending ====================
+
+            RuleFor(x => x.FeelingAfterSpending)
+                .IsInEnum()
+                .WithMessage("Invalid feeling after spending selection");
+
+            // ==================== Question 9: Feeling When Saving Grows ====================
+
+            RuleFor(x => x.FeelingWhenSavingGrows)
+                .IsInEnum()
+                .WithMessage("Invalid feeling when saving grows selection");
+
+            // ==================== Question 10: Reaction to 100 EGP ====================
+
+            RuleFor(x => x.ReactionTo100)
+                .IsInEnum()
+                .WithMessage("Invalid reaction to 100 EGP selection");
+        }
+
+        /// <summary>
+        /// Custom validator to ensure child is between 6 and 14 years old
+        /// </summary>
+        private bool BeValidChildAge(DateTime dob)
+        {
+            var today = DateTime.UtcNow;
+            var age = today.Year - dob.Year;
+
+            if (dob.Date > today.AddYears(-age))
+                age--;
+
+            return age >= 6 && age <= 14;
         }
     }
 }

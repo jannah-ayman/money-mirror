@@ -1,7 +1,6 @@
 ﻿namespace MoneyMirror.Core.Enums
 {
-    // ==================== Section 1 – Child Profile ====================
-
+    // ==================== Question 1: Child Age Group ====================
     public enum ChildAgeGroup
     {
         Age_6_8,
@@ -9,93 +8,55 @@
         Age_12_14
     }
 
-    public enum ChildGender
+    // ==================== Question 2: Has Allowance ====================
+    public enum HasAllowance
     {
-        Male,
-        Female
-    }
-
-    // ==================== Section 2 – Allowance Details ====================
-
-    public enum AllowanceFrequency
-    {
-        Daily,
-        Weekly,
-        Monthly
-    }
-
-    // ==================== Section 3 – Expenses ====================
-
-    public enum SpendingCategory
-    {
-        Food_Drinks,
-        Entertainment,
-        Clothes_Accessories,
-        School_Supplies,
-        Other
-    }
-
-    public enum SpendingPlanning
-    {
-        Always,
-        Sometimes,
-        Never
-    }
-
-    public enum OutOfMoneyBehavior
-    {
-        Ask_More,
-        Stop_Spending,
-        Postpone_Purchases,
-        Other
-    }
-
-    public enum SpendingAffectsSaving
-    {
-        Yes_Often,
-        Sometimes,
-        Rarely,
+        Yes,
         No
     }
 
+    // ==================== Question 3: Spending Pace ====================
     public enum SpendingPace
     {
         Spends_Right_Away,
         Spends_Gradually,
-        Spreads_Over_Time,
-        Saves_Most,
-        Rarely_Spends
+        Saves_Part_Of_It
     }
 
-    // ==================== Section 4 – Savings ====================
-
-    public enum SavingGoal
+    // ==================== Question 4: Spending Categories (Multi-select) ====================
+    // This will be stored as a JSON array in the database
+    public enum SpendingCategory
     {
-        Toy_Or_Game,
-        Something_Big,
-        Trip_Or_Outing,
-        Emergencies,
-        Other
+        Food_And_Drinks,
+        Entertainment,
+        Clothes_And_Accessories,
+        School_Supplies
     }
 
-    public enum SavingPercentage
+    // ==================== Question 5: Out of Money Behavior ====================
+    public enum OutOfMoneyBehavior
     {
-        Less_Than_10,
-        Between_10_30,
-        More_Than_30,
-        Does_Not_Save
+        Ask_For_More,
+        Stop_Spending,
+        Postpone_Purchases
     }
 
-    public enum SavingSuccessRate
+    // ==================== Question 6: Tries to Save ====================
+    public enum TriesToSave
     {
-        Always,
-        Sometimes,
-        Rarely,
-        Never
+        Yes,
+        No
     }
 
-    // ==================== Section 5 – Moods & Habits ====================
+    // ==================== Question 7: Money Mindset ====================
+    public enum MoneyMindset
+    {
+        Enjoys_Spending_Immediately,
+        Balances_Spending_And_Saving,
+        Saves_For_The_Future
+    }
 
+    // ==================== Question 8: Feeling After Spending ====================
     public enum FeelingAfterSpending
     {
         Happy,
@@ -103,69 +64,19 @@
         Neutral
     }
 
-    public enum SavingFailureReason
-    {
-        Unexpected_Expenses,
-        Lack_Self_Control,
-        Low_Allowance,
-        Other
-    }
-
-    public enum SatisfactionPreference
-    {
-        Spend_Immediately,
-        Save_For_Later,
-        Balance_Both
-    }
-
-    public enum TalksAboutMoney
-    {
-        Often,
-        Sometimes,
-        Never
-    }
-
+    // ==================== Question 9: Feeling When Saving Grows ====================
     public enum FeelingWhenSavingGrows
     {
         Motivated,
         Proud,
-        Doesnt_Matter
+        Doesnt_Matter_Much
     }
 
-    // ==================== Section 6 – Financial Personality ====================
-
+    // ==================== Question 10: Reaction to 100 EGP ====================
     public enum ReactionTo100
     {
-        Spend_All,
-        Spend_And_Save,
-        Save_All
-    }
-
-    public enum MoneyPriority
-    {
-        Enjoy_Now,
-        Balance_Enjoy_Save,
-        Save_For_Future
-    }
-
-    public enum ReactionToExpensiveItem
-    {
-        Buy_Immediately,
-        Save_Gradually,
-        Skip_And_Save
-    }
-
-    public enum ReactionToMoreAllowance
-    {
-        Spend_More,
-        Save_More,
-        Mix_Both
-    }
-
-    public enum MoneyMindset
-    {
-        Enjoy_Moment,
-        Enjoy_And_Prepare,
-        Secure_Future
+        Spend_All_Now,
+        Spend_Part_Save_Part,
+        Save_All_For_Future
     }
 }
