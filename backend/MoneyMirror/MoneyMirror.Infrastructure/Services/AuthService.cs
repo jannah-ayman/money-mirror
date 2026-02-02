@@ -36,18 +36,10 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         /// Registers a new parent account.
-        /// Steps:
-        /// 1. Check if email already exists
-        /// 2. Hash the password using BCrypt
-        /// 3. Create parent record in database
-        /// 4. Generate email confirmation token
-        /// 5. Send confirmation email
         public async Task<(bool success, string message, int? parentId)> RegisterParentAsync(RegisterParentDto registerDto)
         {
             try
             {
-                // Replace the email exists check (around line 40) with this enhanced version:
-
                 // STEP 1: Check if email already exists
                 var existingParent = await _context.Parents
                     .FirstOrDefaultAsync(p => p.Email.ToLower() == registerDto.Email.ToLower().Trim());
@@ -142,13 +134,6 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         /// Authenticates a parent and generates JWT tokens.
-        /// Steps:
-        /// 1. Find parent by email
-        /// 2. Verify password using BCrypt
-        /// 3. Check if email is confirmed
-        /// 4. Generate access token and refresh token
-        /// 5. Store refresh token in database
-        /// 6. Return tokens and parent info
         public async Task<(AuthResponseDto? auth, LoginFailureReason? failure)> LoginAsync(LoginDto loginDto)
         {
             try
@@ -241,11 +226,6 @@ namespace MoneyMirror.Infrastructure.Services
 
 
         /// Confirms a parent's email address using the token from the confirmation link.
-        /// Steps:
-        /// 1. Find parent by email
-        /// 2. Verify token matches and hasn't expired
-        /// 3. Mark email as confirmed
-        /// 4. Clear confirmation token
         public async Task<(bool success, string message)> ConfirmEmailAsync(string email, string token)
         {
             try
@@ -302,12 +282,6 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         /// Refreshes JWT tokens using a valid refresh token.
-        /// Steps:
-        /// 1. Extract parent ID from expired access token
-        /// 2. Find parent in database
-        /// 3. Verify refresh token matches database and hasn't expired
-        /// 4. Generate new access token and refresh token
-        /// 5. Store new refresh token in database
         public async Task<AuthResponseDto?> RefreshTokenAsync(RefreshTokenDto refreshTokenDto)
         {
             try
@@ -444,11 +418,6 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         /// Initiates password reset flow.
-        /// Steps:
-        /// 1. Find parent by email (if doesn't exist, still return success for security)
-        /// 2. Generate password reset token
-        /// 3. Store token with 1-hour expiration
-        /// 4. Send password reset email
         public async Task<(bool success, string message)> ForgotPasswordAsync(string email)
         {
             try
@@ -503,12 +472,6 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         /// Resets a parent's password using reset token.
-        /// Steps:
-        /// 1. Find parent by email
-        /// 2. Verify token matches and hasn't expired
-        /// 3. Hash new password
-        /// 4. Update password and clear reset token
-        /// 5. Optionally revoke refresh tokens (force re-login on all devices)
         public async Task<(bool success, string message)> ResetPasswordAsync(string email, string token, string newPassword)
         {
             try
@@ -565,11 +528,6 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         /// Resends email confirmation link to a parent.
-        /// Steps:
-        /// 1. Find parent by email
-        /// 2. Check if already confirmed
-        /// 3. Generate new confirmation token
-        /// 4. Send new confirmation email
         public async Task<(bool success, string message)> ResendConfirmationEmailAsync(string email)
         {
             try
@@ -630,15 +588,7 @@ namespace MoneyMirror.Infrastructure.Services
                 return (false, "An error occurred while sending confirmation email. Please try again later.");
             }
         }
-        // ==================== ADD THESE METHODS TO AuthService.cs ====================
-        // Place them at the end of the class, before the closing brace
-
         /// Updates parent profile information (name, phone).
-        /// Steps:
-        /// 1. Find parent by ID
-        /// 2. Verify account is not deleted
-        /// 3. Update fields
-        /// 4. Save changes
         public async Task<(bool success, string message)> UpdateParentProfileAsync(int parentId, UpdateParentProfileDto updateDto)
         {
             try
@@ -682,12 +632,6 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         /// Initiates email change process.
-        /// Steps:
-        /// 1. Find parent by ID
-        /// 2. Verify current password
-        /// 3. Check if new email is already in use
-        /// 4. Generate email change token
-        /// 5. Send verification email to NEW email address
         public async Task<(bool success, string message)> ChangeEmailAsync(int parentId, ChangeEmailDto changeEmailDto)
         {
             try
@@ -772,12 +716,6 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         /// Confirms email change using token.
-        /// Steps:
-        /// 1. Find parent by old email
-        /// 2. Verify token and new email match
-        /// 3. Update email to new address
-        /// 4. Clear email change tokens
-        /// 5. Revoke all refresh tokens (force re-login with new email)
         public async Task<(bool success, string message)> ConfirmEmailChangeAsync(ConfirmEmailChangeDto confirmDto)
         {
             try
@@ -852,24 +790,7 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// Soft deletes a parent account.
-        /// Steps:
-        /// 1. Find parent by ID
-        /// 2. Verify password
-        /// 3. Mark account as deleted
-        /// 4. Remove all ParentChild relationships
-        /// 5. Revoke refresh tokens
-        /// Children are preserved - only relationships are removed
-        /// <summary>
         /// Soft deletes a parent account with 30-day recovery grace period.
-        /// Steps:
-        /// 1. Find parent by ID
-        /// 2. Verify password
-        /// 3. Mark account as soft-deleted
-        /// 4. Set 30-day grace period
-        /// 5. Remove all ParentChild relationships (children preserved)
-        /// 6. Revoke refresh tokens
-        /// </summary>
         public async Task<(bool success, string message)> DeleteParentAccountAsync(int parentId, string currentPassword)
         {
             try
@@ -937,15 +858,7 @@ namespace MoneyMirror.Infrastructure.Services
                 return (false, "An error occurred while deleting your account. Please try again later.");
             }
         }
-        /// <summary>
         /// Recovers a soft-deleted parent account within grace period.
-        /// Steps:
-        /// 1. Find parent by email
-        /// 2. Verify password
-        /// 3. Check if within grace period
-        /// 4. Restore account status
-        /// 5. DO NOT restore ParentChild relationships (parents must re-link children)
-        /// </summary>
         public async Task<(bool success, string message)> RecoverDeletedAccountAsync(string email, string password)
         {
             try
@@ -1011,15 +924,8 @@ namespace MoneyMirror.Infrastructure.Services
                 return (false, "An error occurred while recovering your account. Please try again later.");
             }
         }
-        /// <summary>
         /// Permanently deletes accounts past grace period by anonymizing PII.
         /// This should be called by a scheduled background service.
-        /// Steps:
-        /// 1. Find all accounts where PermanentDeletionDate has passed
-        /// 2. Anonymize personal information
-        /// 3. Mark as permanently deleted
-        /// 4. Keep database record for audit trail
-        /// </summary>
         public async Task<int> PermanentlyDeleteExpiredAccountsAsync()
         {
             try
