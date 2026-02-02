@@ -108,5 +108,10 @@ namespace MoneyMirror.Core.Models
         /// Collection of challenge goals created by this parent for their children.
         /// Parent-created goals typically include rewards (bonus allowance, badges).
         public virtual ICollection<SavingsGoal> ChallengeGoals { get; set; } = new List<SavingsGoal>();
+        /// <summary>
+        /// Collection of transactions initiated by this parent.
+        /// Includes allowances given and bonuses awarded.
+        /// </summary>
+        public virtual ICollection<Transaction> InitiatedTransactions { get; set; } = new List<Transaction>();
     }
 }

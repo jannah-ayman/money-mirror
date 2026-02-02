@@ -74,6 +74,8 @@ namespace MoneyMirror.Infrastructure.Data
 
         /// Advice table - AI-generated personalized financial tips
         public DbSet<Advice> Advices { get; set; }
+        /// Transactions table - records all financial movements (allowances, bonuses, expenses)
+        public DbSet<Transaction> Transactions { get; set; }
 
         /// Configure entity relationships, indexes, constraints, and default values.
         /// Called automatically by Entity Framework when creating migrations.
@@ -417,6 +419,37 @@ namespace MoneyMirror.Infrastructure.Data
                 entity.Property(sqt => sqt.CreatedDate)
                       .HasDefaultValueSql("GETUTCDATE()");
             });
+
+            // ==================== TRANSACTION ENTITY CONFIGURATION ====================
+
+            modelBuilder.Entity<Transaction>(entity =>
+            {
+                entity.HasIndex(t => new { t.ChildID, t.TransactionDate })
+                      .HasDatabaseName("IX_Transaction_Child_TransactionDate");
+
+                entity.HasIndex(t => new { t.Type, t.TransactionDate })
+                      .HasDatabaseName("IX_Transaction_Type_TransactionDate");
+
+                // ✅ FIX HERE
+                entity.HasOne(t => t.Child)
+                      .WithMany(c => c.Transactions)
+                      .HasForeignKey(t => t.ChildID)
+                      .OnDelete(DeleteBehavior.NoAction); // or Restrict
+
+                entity.HasOne(t => t.Parent)
+                      .WithMany(p => p.InitiatedTransactions)
+                      .HasForeignKey(t => t.ParentID)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(t => t.Allowance)
+                      .WithMany(a => a.Transactions)
+                      .HasForeignKey(t => t.AllowanceID)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.Property(t => t.TransactionDate)
+                      .HasDefaultValueSql("GETUTCDATE()");
+            });
+
 
             // ==================== SEED DATA (Optional) ====================
             // Uncomment if you want to seed initial data like categories, moods, etc.

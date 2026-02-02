@@ -70,7 +70,8 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 // ==================== REGISTER CHILD SERVICES ====================
 builder.Services.AddScoped<IChildService, ChildService>();
 builder.Services.AddScoped<IPersonalityProfileService, PersonalityProfileService>();
-
+// ==================== REGISTER ALLOWANCE SERVICE ====================
+builder.Services.AddScoped<IAllowanceService, AllowanceService>();
 // ==================== JWT AUTHENTICATION CONFIGURATION ====================
 // Read JWT settings from appsettings.json
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]
@@ -234,6 +235,11 @@ RecurringJob.AddOrUpdate<IAuthService>(
     service => service.PermanentlyDeleteExpiredAccountsAsync(),
     Cron.Daily(3)); // Runs daily at 3:00 AM server time
 
+// Schedule recurring job to credit scheduled allowances every hour
+RecurringJob.AddOrUpdate<IAllowanceService>(
+    "credit-scheduled-allowances",
+    service => service.CreditScheduledAllowancesAsync(),
+    Cron.Hourly()); // Runs every hour at :00 minutes
 // ==================== RUN THE APPLICATION ====================
 Console.WriteLine("Money Mirror API is starting...");
 Console.WriteLine("Swagger documentation available at: https://localhost:7XXX/swagger");
