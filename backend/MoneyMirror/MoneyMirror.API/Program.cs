@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +10,8 @@ using FluentValidation;
 using System.Text;
 using Hangfire;
 using Hangfire.SqlServer;
+using System.Text.Json.Serialization;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +67,9 @@ builder.Services.AddHangfireServer();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+// ==================== REGISTER CHILD SERVICES ====================
+builder.Services.AddScoped<IChildService, ChildService>();
+builder.Services.AddScoped<IPersonalityProfileService, PersonalityProfileService>();
 
 // ==================== JWT AUTHENTICATION CONFIGURATION ====================
 // Read JWT settings from appsettings.json
@@ -123,7 +128,14 @@ builder.Services.AddControllers(options =>
 {
     // Add FluentValidation filter for automatic validation
     options.Filters.Add<MoneyMirror.API.Filters.FluentValidationFilter>();
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(
+        new JsonStringEnumConverter()
+    );
 });
+
 
 // ==================== FLUENTVALIDATION CONFIGURATION ====================
 // Register all FluentValidation validators from the API assembly

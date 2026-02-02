@@ -122,9 +122,6 @@ namespace MoneyMirror.Infrastructure.Data
                 entity.Property(c => c.CurrentBalance)
                       .HasDefaultValue(0.00m);
 
-                entity.Property(c => c.ProfileCompletionStatus)
-                      .HasDefaultValue(false);
-
                 entity.Property(c => c.CreatedAt)
                       .HasDefaultValueSql("GETUTCDATE()");
 

@@ -10,25 +10,19 @@ namespace MoneyMirror.Core.Models
     /// and monitor their children's spending habits.
     public class Parent
     {
-        /// Primary key for the Parent entity
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ParentID { get; set; }
 
-        /// Parent's email address - used for login and notifications.
-        /// Must be unique across all parent accounts.
         [Required]
         [MaxLength(255)]
         [EmailAddress]
         public string Email { get; set; }
 
-        /// Hashed password for parent authentication.
-        /// Should NEVER store plain text passwords - use ASP.NET Core Identity hashing.
         [Required]
         [MaxLength(255)]
         public string HashedPassword { get; set; }
 
-        /// Parent's phone number (optional) - for SMS notifications if implemented
         [MaxLength(20)]
         public string? PhoneNum { get; set; }
 
@@ -40,31 +34,21 @@ namespace MoneyMirror.Core.Models
         [MaxLength(100)]
         public string LName { get; set; }
 
-        /// Timestamp when the parent account was created.
-        /// Automatically set to current UTC time on creation.
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // ==================== AUTHENTICATION FIELDS ====================
-
-        /// Indicates whether the parent's email has been confirmed.
-        /// Parents cannot log in until email is verified.
-        /// Set to true after clicking email confirmation link.
-        /// </summary>
         [Required]
         public bool IsEmailConfirmed { get; set; } = false;
 
         /// Token sent to parent's email for email confirmation.
         /// Generated as GUID when account is created.
         /// Null after email is confirmed.
-        /// </summary>
         [MaxLength(500)]
         public string? EmailConfirmationToken { get; set; }
 
         /// Expiration timestamp for email confirmation token.
         /// Tokens are valid for 24 hours after generation.
         /// Null after email is confirmed.
-        /// </summary>
         public DateTime? EmailConfirmationTokenExpiry { get; set; }
 
         /// Token sent to parent's email for password reset.
@@ -89,6 +73,7 @@ namespace MoneyMirror.Core.Models
         /// Refresh tokens expire after 7 days.
         /// User must log in again after expiration.
         public DateTime? RefreshTokenExpiry { get; set; }
+
         // Soft delete fields
         public bool IsDeleted { get; set; } = false;
         public DateTime? DeletedAt { get; set; }
@@ -104,6 +89,7 @@ namespace MoneyMirror.Core.Models
         public string? NewEmail { get; set; }
         public string? EmailChangeToken { get; set; }
         public DateTime? EmailChangeTokenExpiry { get; set; }
+
         // ==================== NAVIGATION PROPERTIES ====================
 
         /// Collection of children linked to this parent account.
