@@ -67,11 +67,11 @@ builder.Services.AddHangfireServer();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
-// ==================== REGISTER CHILD SERVICES ====================
 builder.Services.AddScoped<IChildService, ChildService>();
 builder.Services.AddScoped<IPersonalityProfileService, PersonalityProfileService>();
-// ==================== REGISTER ALLOWANCE SERVICE ====================
 builder.Services.AddScoped<IAllowanceService, AllowanceService>();
+builder.Services.AddScoped<IExpenseService, ExpenseService>();
+
 // ==================== JWT AUTHENTICATION CONFIGURATION ====================
 // Read JWT settings from appsettings.json
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]

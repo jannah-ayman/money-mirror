@@ -24,8 +24,4 @@
     <ProjectReference Include="..\MoneyMirror.Infrastructure\MoneyMirror.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
 </Project>
