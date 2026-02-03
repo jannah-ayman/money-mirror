@@ -41,122 +41,129 @@ namespace MoneyMirror.Infrastructure.Services
         public async Task<(bool success, ExpenseResponseDto? expense, decimal newBalance, string errorMessage)>
     LogExpenseAsync(int childId, LogExpenseDto dto)
         {
-            // Use database transaction to ensure all-or-nothing operation
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // ✅ STEP 1: Get the execution strategy from EF Core
+            // This is REQUIRED when EnableRetryOnFailure is enabled
+            var strategy = _context.Database.CreateExecutionStrategy();
 
-            try
+            // ✅ STEP 2: Execute everything inside the strategy
+            return await strategy.ExecuteAsync(async () =>
             {
-                // STEP 1: Get child and verify they exist
-                var child = await _context.Children.FindAsync(childId);
+                // NOW we can safely use transactions inside the strategy
+                using var transaction = await _context.Database.BeginTransactionAsync();
 
-                if (child == null)
+                try
                 {
-                    _logger.LogWarning($"Expense log attempt for non-existent child {childId}");
-                    return (false, null, 0, "Child not found");
+                    // STEP 3: Get child and verify they exist
+                    var child = await _context.Children.FindAsync(childId);
+
+                    if (child == null)
+                    {
+                        _logger.LogWarning($"Expense log attempt for non-existent child {childId}");
+                        return (false, null, 0, "Child not found");
+                    }
+
+                    _logger.LogInformation($"Child {childId} current balance: {child.CurrentBalance}");
+
+                    // STEP 4: Validate child has enough balance
+                    if (child.CurrentBalance < dto.MoneyAmount)
+                    {
+                        _logger.LogWarning($"Child {childId} attempted to spend {dto.MoneyAmount} but only has {child.CurrentBalance}");
+                        return (false, null, child.CurrentBalance,
+                            $"Insufficient balance. You have {child.CurrentBalance:F2} but tried to spend {dto.MoneyAmount:F2}");
+                    }
+
+                    // STEP 5: Verify category exists
+                    var category = await _context.ExpenseCategories.FindAsync(dto.CategoryID);
+
+                    if (category == null)
+                    {
+                        _logger.LogWarning($"Invalid category ID {dto.CategoryID} for expense");
+                        return (false, null, child.CurrentBalance, "Invalid category selected");
+                    }
+
+                    _logger.LogInformation($"Category found: {category.Name}");
+
+                    // STEP 6: Verify mood exists
+                    var mood = await _context.Moods.FindAsync(dto.MoodID);
+
+                    if (mood == null)
+                    {
+                        _logger.LogWarning($"Invalid mood ID {dto.MoodID} for expense");
+                        return (false, null, child.CurrentBalance, "Invalid mood selected");
+                    }
+
+                    _logger.LogInformation($"Mood found: {mood.Description}");
+
+                    // STEP 7: Create the expense record
+                    var expense = new Core.Models.Expense
+                    {
+                        ItemName = dto.ItemName.Trim(),
+                        MoneyAmount = dto.MoneyAmount,
+                        LogDate = DateTime.UtcNow,
+                        Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
+                        ChildID = childId,
+                        CategoryID = dto.CategoryID,
+                        MoodID = dto.MoodID
+                    };
+
+                    _context.Expenses.Add(expense);
+                    _logger.LogInformation($"Expense record created for child {childId}");
+
+                    // STEP 8: Update child's balance (DECREASE it)
+                    decimal oldBalance = child.CurrentBalance;
+                    child.CurrentBalance -= dto.MoneyAmount;
+                    _context.Children.Update(child);
+                    _logger.LogInformation($"Balance updated: {oldBalance} -> {child.CurrentBalance}");
+
+                    // STEP 9: Create transaction record
+                    var transactionRecord = new Transaction
+                    {
+                        Type = "Expense",
+                        Amount = dto.MoneyAmount,
+                        BalanceAfter = child.CurrentBalance,
+                        Description = $"Spent on {dto.ItemName}",
+                        TransactionDate = DateTime.UtcNow,
+                        ChildID = childId,
+                        ParentID = null,
+                        AllowanceID = null
+                    };
+
+                    _context.Transactions.Add(transactionRecord);
+                    _logger.LogInformation($"Transaction record created");
+
+                    // STEP 10: Save everything to database
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"Changes saved to database");
+
+                    await transaction.CommitAsync();
+                    _logger.LogInformation($"Transaction committed");
+
+                    _logger.LogInformation(
+                        $"Child {childId} logged expense: {dto.ItemName} for {dto.MoneyAmount}. New balance: {child.CurrentBalance}");
+
+                    // STEP 11: Build response DTO
+                    var expenseResponse = new ExpenseResponseDto
+                    {
+                        ExpenseID = expense.ExpenseID,
+                        ItemName = expense.ItemName,
+                        CategoryName = category.Name,
+                        MoodDescription = mood.Description,
+                        Amount = expense.MoneyAmount,
+                        LogDate = expense.LogDate,
+                        Note = expense.Note
+                    };
+
+                    return (true, expenseResponse, child.CurrentBalance, string.Empty);
                 }
-
-                _logger.LogInformation($"Child {childId} current balance: {child.CurrentBalance}");
-
-                // STEP 2: Validate child has enough balance
-                if (child.CurrentBalance < dto.MoneyAmount)
+                catch (Exception ex)
                 {
-                    _logger.LogWarning($"Child {childId} attempted to spend {dto.MoneyAmount} but only has {child.CurrentBalance}");
-                    return (false, null, child.CurrentBalance,
-                        $"Insufficient balance. You have {child.CurrentBalance:F2} but tried to spend {dto.MoneyAmount:F2}");
+                    await transaction.RollbackAsync();
+                    _logger.LogError($"Error logging expense for child {childId}: {ex.Message}");
+                    _logger.LogError($"Stack trace: {ex.StackTrace}");
+
+                    return (false, null, 0, $"Error: {ex.Message}");
                 }
-
-                // STEP 3: Verify category exists
-                var category = await _context.ExpenseCategories.FindAsync(dto.CategoryID);
-
-                if (category == null)
-                {
-                    _logger.LogWarning($"Invalid category ID {dto.CategoryID} for expense");
-                    return (false, null, child.CurrentBalance, "Invalid category selected");
-                }
-
-                _logger.LogInformation($"Category found: {category.Name}");
-
-                // STEP 4: Verify mood exists
-                var mood = await _context.Moods.FindAsync(dto.MoodID);
-
-                if (mood == null)
-                {
-                    _logger.LogWarning($"Invalid mood ID {dto.MoodID} for expense");
-                    return (false, null, child.CurrentBalance, "Invalid mood selected");
-                }
-
-                _logger.LogInformation($"Mood found: {mood.Description}");
-
-                // STEP 5: Create the expense record
-                var expense = new Core.Models.Expense
-                {
-                    ItemName = dto.ItemName.Trim(),
-                    MoneyAmount = dto.MoneyAmount,
-                    LogDate = DateTime.UtcNow,
-                    Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
-                    ChildID = childId,
-                    CategoryID = dto.CategoryID,
-                    MoodID = dto.MoodID
-                };
-
-                _context.Expenses.Add(expense);
-                _logger.LogInformation($"Expense record created for child {childId}");
-
-                // STEP 6: Update child's balance (DECREASE it)
-                decimal oldBalance = child.CurrentBalance;
-                child.CurrentBalance -= dto.MoneyAmount;
-                _context.Children.Update(child);
-                _logger.LogInformation($"Balance updated: {oldBalance} -> {child.CurrentBalance}");
-
-                // STEP 7: Create transaction record
-                var transactionRecord = new Transaction
-                {
-                    Type = "Expense",
-                    Amount = dto.MoneyAmount,
-                    BalanceAfter = child.CurrentBalance,
-                    Description = $"Spent on {dto.ItemName}",
-                    TransactionDate = DateTime.UtcNow,
-                    ChildID = childId,
-                    ParentID = null,
-                    AllowanceID = null
-                };
-
-                _context.Transactions.Add(transactionRecord);
-                _logger.LogInformation($"Transaction record created");
-
-                // STEP 8: Save everything to database
-                await _context.SaveChangesAsync();
-                _logger.LogInformation($"Changes saved to database");
-
-                await transaction.CommitAsync();
-                _logger.LogInformation($"Transaction committed");
-
-                _logger.LogInformation(
-                    $"Child {childId} logged expense: {dto.ItemName} for {dto.MoneyAmount}. New balance: {child.CurrentBalance}");
-
-                // STEP 9: Build response DTO
-                var expenseResponse = new ExpenseResponseDto
-                {
-                    ExpenseID = expense.ExpenseID,
-                    ItemName = expense.ItemName,
-                    CategoryName = category.Name,
-                    MoodDescription = mood.Description,
-                    Amount = expense.MoneyAmount,
-                    LogDate = expense.LogDate,
-                    Note = expense.Note
-                };
-
-                return (true, expenseResponse, child.CurrentBalance, string.Empty);
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError($"Error logging expense for child {childId}: {ex.Message}");
-                _logger.LogError($"Stack trace: {ex.StackTrace}");
-
-                // Return the actual error message for debugging
-                return (false, null, 0, $"Error: {ex.Message}");
-            }
+            });
         }
 
         // ==================== EXPENSE HISTORY (CHILD VIEW) ====================
