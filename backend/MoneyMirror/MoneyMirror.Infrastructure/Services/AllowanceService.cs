@@ -507,44 +507,75 @@ namespace MoneyMirror.Infrastructure.Services
 
             try
             {
-                _logger.LogInformation("Starting scheduled allowance credit job");
+                _logger.LogInformation("🔍 Starting scheduled allowance credit job");
+                Console.WriteLine("🔍 Starting scheduled allowance credit job"); // Also print to console
 
                 // STEP 1: Get all active recurring allowances
                 var dueAllowances = await _context.Allowances
-                    .Include(a => a.Child) // Need to update child's balance
+                    .Include(a => a.Child)
                     .Where(a => a.IsRecurring && a.IsActive)
                     .ToListAsync();
 
-                _logger.LogInformation($"Found {dueAllowances.Count} active recurring allowances to check");
+                _logger.LogInformation($"📊 Found {dueAllowances.Count} active recurring allowances to check");
+                Console.WriteLine($"📊 Found {dueAllowances.Count} active recurring allowances to check");
+
+                // Log each allowance found
+                foreach (var allowance in dueAllowances)
+                {
+                    var logMsg = $"  - Allowance {allowance.AllowanceID}: Type={allowance.Type}, Amount={allowance.Amount}, DailyHour={allowance.DailyHour}, LastCredited={allowance.LastCreditedDate?.ToString("yyyy-MM-dd HH:mm") ?? "NEVER"}";
+                    _logger.LogInformation(logMsg);
+                    Console.WriteLine(logMsg);
+                }
 
                 // STEP 2: Check each allowance to see if it's due
                 foreach (var allowance in dueAllowances)
                 {
+                    var checkMsg = $"🔍 Checking allowance {allowance.AllowanceID} for child {allowance.ChildID}";
+                    _logger.LogInformation(checkMsg);
+                    Console.WriteLine(checkMsg);
+
                     bool isDue = IsAllowanceDue(allowance);
+
+                    var resultMsg = $"  → Result: {(isDue ? "✅ DUE - will credit" : "❌ NOT DUE - skipping")}";
+                    _logger.LogInformation(resultMsg);
+                    Console.WriteLine(resultMsg);
 
                     if (!isDue)
                     {
-                        continue; // Skip this allowance - not due yet
+                        continue;
                     }
 
                     // STEP 3: Credit this allowance
                     try
                     {
+                        var creditMsg = $"💰 Attempting to credit allowance {allowance.AllowanceID}";
+                        _logger.LogInformation(creditMsg);
+                        Console.WriteLine(creditMsg);
+
                         await CreditAllowanceAsync(allowance);
                         creditedCount++;
+
+                        var successMsg = $"✅ Successfully credited allowance {allowance.AllowanceID}";
+                        _logger.LogInformation(successMsg);
+                        Console.WriteLine(successMsg);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError($"Error crediting allowance {allowance.AllowanceID}: {ex.Message}");
-                        // Continue with other allowances even if one fails
+                        var errorMsg = $"❌ Error crediting allowance {allowance.AllowanceID}: {ex.Message}";
+                        _logger.LogError(errorMsg);
+                        Console.WriteLine(errorMsg);
                     }
                 }
 
-                _logger.LogInformation($"Scheduled allowance credit job completed. Credited {creditedCount} allowances");
+                var finalMsg = $"✅ Job completed. Credited {creditedCount} allowances";
+                _logger.LogInformation(finalMsg);
+                Console.WriteLine(finalMsg);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error in scheduled allowance credit job: {ex.Message}");
+                var errorMsg = $"❌ Error in scheduled allowance credit job: {ex.Message}";
+                _logger.LogError(errorMsg);
+                Console.WriteLine(errorMsg);
             }
 
             return creditedCount;
@@ -554,58 +585,98 @@ namespace MoneyMirror.Infrastructure.Services
 
         /// <summary>
         /// Checks if an allowance is due to be credited now.
+        /// IMPROVED: Checks if we're PAST the target hour, not just AT it.
         /// </summary>
         private bool IsAllowanceDue(Allowance allowance)
         {
             DateTime now = DateTime.UtcNow;
 
+            // ✅ ADD DETAILED LOGGING
+            _logger.LogInformation($"Checking allowance {allowance.AllowanceID} for child {allowance.ChildID}");
+            _logger.LogInformation($"  Type: {allowance.Type}");
+            _logger.LogInformation($"  Current UTC time: {now:yyyy-MM-dd HH:mm:ss}");
+            _logger.LogInformation($"  LastCreditedDate: {allowance.LastCreditedDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "Never"}");
+
             switch (allowance.Type)
             {
                 case "Daily":
-                    // Due if:
-                    // 1. Current hour matches DailyHour
-                    // 2. Last credited date is null OR was before today
-                    if (now.Hour != allowance.DailyHour)
-                        return false;
+                    _logger.LogInformation($"  DailyHour setting: {allowance.DailyHour}");
+                    _logger.LogInformation($"  Current hour: {now.Hour}");
 
                     if (allowance.LastCreditedDate == null)
-                        return true; // Never credited - credit now
+                    {
+                        _logger.LogInformation($"  ✅ DECISION: Credit now (never credited before)");
+                        return true;
+                    }
 
-                    // Already credited today?
-                    return allowance.LastCreditedDate.Value.Date < now.Date;
+                    if (allowance.LastCreditedDate.Value.Date == now.Date)
+                    {
+                        _logger.LogInformation($"  ❌ DECISION: Skip (already credited today)");
+                        return false;
+                    }
+
+                    if (now.Hour < allowance.DailyHour)
+                    {
+                        _logger.LogInformation($"  ❌ DECISION: Skip (current hour {now.Hour} < target hour {allowance.DailyHour})");
+                        return false;
+                    }
+
+                    _logger.LogInformation($"  ✅ DECISION: Credit now (new day + past target hour)");
+                    return true;
 
                 case "Weekly":
-                    // Due if:
-                    // 1. Current day of week matches WeeklyDay
-                    // 2. Last credited date is null OR was before the start of this week
                     string currentDay = now.DayOfWeek.ToString();
+                    _logger.LogInformation($"  WeeklyDay setting: {allowance.WeeklyDay}");
+                    _logger.LogInformation($"  Current day: {currentDay}");
+
                     if (currentDay != allowance.WeeklyDay)
+                    {
+                        _logger.LogInformation($"  ❌ DECISION: Skip (wrong day)");
                         return false;
+                    }
 
                     if (allowance.LastCreditedDate == null)
+                    {
+                        _logger.LogInformation($"  ✅ DECISION: Credit now (never credited before)");
                         return true;
+                    }
 
-                    // Already credited this week?
                     DateTime startOfWeek = now.Date.AddDays(-(int)now.DayOfWeek);
-                    return allowance.LastCreditedDate.Value < startOfWeek;
+                    bool shouldCredit = allowance.LastCreditedDate.Value < startOfWeek;
+
+                    _logger.LogInformation($"  Start of week: {startOfWeek:yyyy-MM-dd}");
+                    _logger.LogInformation($"  {(shouldCredit ? "✅" : "❌")} DECISION: {(shouldCredit ? "Credit now" : "Skip (already credited this week)")}");
+
+                    return shouldCredit;
 
                 case "Monthly":
-                    // Due if:
-                    // 1. Current day of month matches MonthlyDay (or closest valid day)
-                    // 2. Last credited date is null OR was before the start of this month
                     int targetDay = allowance.MonthlyDay!.Value;
                     int daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
-                    int effectiveDay = Math.Min(targetDay, daysInMonth); // Handle months with fewer days
+                    int effectiveDay = Math.Min(targetDay, daysInMonth);
+
+                    _logger.LogInformation($"  MonthlyDay setting: {allowance.MonthlyDay}");
+                    _logger.LogInformation($"  Effective day this month: {effectiveDay}");
+                    _logger.LogInformation($"  Current day: {now.Day}");
 
                     if (now.Day != effectiveDay)
+                    {
+                        _logger.LogInformation($"  ❌ DECISION: Skip (wrong day)");
                         return false;
+                    }
 
                     if (allowance.LastCreditedDate == null)
+                    {
+                        _logger.LogInformation($"  ✅ DECISION: Credit now (never credited before)");
                         return true;
+                    }
 
-                    // Already credited this month?
                     DateTime startOfMonth = new DateTime(now.Year, now.Month, 1);
-                    return allowance.LastCreditedDate.Value < startOfMonth;
+                    bool shouldCreditMonth = allowance.LastCreditedDate.Value < startOfMonth;
+
+                    _logger.LogInformation($"  Start of month: {startOfMonth:yyyy-MM-dd}");
+                    _logger.LogInformation($"  {(shouldCreditMonth ? "✅" : "❌")} DECISION: {(shouldCreditMonth ? "Credit now" : "Skip (already credited this month)")}");
+
+                    return shouldCreditMonth;
 
                 default:
                     _logger.LogWarning($"Unknown allowance type: {allowance.Type}");
@@ -615,50 +686,58 @@ namespace MoneyMirror.Infrastructure.Services
 
         /// <summary>
         /// Credits an allowance to a child's balance and creates a transaction record.
+        /// Uses EF's execution strategy for retry compatibility.
         /// </summary>
         private async Task CreditAllowanceAsync(Allowance allowance)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // ✅ Use EF's execution strategy (works with EnableRetryOnFailure)
+            var strategy = _context.Database.CreateExecutionStrategy();
 
-            try
+            await strategy.ExecuteAsync(async () =>
             {
-                // STEP 1: Update child's balance
-                allowance.Child.CurrentBalance += allowance.Amount;
-                _context.Children.Update(allowance.Child);
+                // Now we can safely use a transaction inside the strategy
+                using var transaction = await _context.Database.BeginTransactionAsync();
 
-                // STEP 2: Create transaction record
-                var transactionRecord = new Transaction
+                try
                 {
-                    Type = "AllowanceCredit",
-                    Amount = allowance.Amount,
-                    BalanceAfter = allowance.Child.CurrentBalance,
-                    Description = $"{allowance.Type} allowance credited",
-                    TransactionDate = DateTime.UtcNow,
-                    ChildID = allowance.ChildID,
-                    ParentID = allowance.ParentID,
-                    AllowanceID = allowance.AllowanceID
-                };
+                    // STEP 1: Update child's balance
+                    allowance.Child.CurrentBalance += allowance.Amount;
+                    _context.Children.Update(allowance.Child);
 
-                _context.Transactions.Add(transactionRecord);
+                    // STEP 2: Create transaction record
+                    var transactionRecord = new Transaction
+                    {
+                        Type = "AllowanceCredit",
+                        Amount = allowance.Amount,
+                        BalanceAfter = allowance.Child.CurrentBalance,
+                        Description = $"{allowance.Type} allowance credited",
+                        TransactionDate = DateTime.UtcNow,
+                        ChildID = allowance.ChildID,
+                        ParentID = allowance.ParentID,
+                        AllowanceID = allowance.AllowanceID
+                    };
 
-                // STEP 3: Update allowance LastCreditedDate
-                allowance.LastCreditedDate = DateTime.UtcNow;
-                allowance.GivenDate = DateTime.UtcNow; // Also update GivenDate
-                _context.Allowances.Update(allowance);
+                    _context.Transactions.Add(transactionRecord);
 
-                // STEP 4: Save and commit
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                    // STEP 3: Update allowance LastCreditedDate
+                    allowance.LastCreditedDate = DateTime.UtcNow;
+                    allowance.GivenDate = DateTime.UtcNow;
+                    _context.Allowances.Update(allowance);
 
-                _logger.LogInformation(
-                    $"Credited {allowance.Amount} to child {allowance.ChildID} from {allowance.Type} allowance {allowance.AllowanceID}. New balance: {allowance.Child.CurrentBalance}");
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError($"Error crediting allowance {allowance.AllowanceID}: {ex.Message}");
-                throw;
-            }
+                    // STEP 4: Save and commit
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation(
+                        $"✅ Credited {allowance.Amount} to child {allowance.ChildID}. New balance: {allowance.Child.CurrentBalance}");
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError($"❌ Error crediting allowance {allowance.AllowanceID}: {ex.Message}");
+                    throw; // Re-throw so the strategy knows it failed
+                }
+            });
         }
 
         /// <summary>
