@@ -239,7 +239,8 @@ RecurringJob.AddOrUpdate<IAuthService>(
 RecurringJob.AddOrUpdate<IAllowanceService>(
     "credit-scheduled-allowances",
     service => service.CreditScheduledAllowancesAsync(),
-    Cron.Hourly()); // Runs every hour at :00 minutes
+    "*/15 * * * *"); // runs every 15 minutes
+
 // ==================== RUN THE APPLICATION ====================
 Console.WriteLine("Money Mirror API is starting...");
 Console.WriteLine("Swagger documentation available at: https://localhost:7XXX/swagger");

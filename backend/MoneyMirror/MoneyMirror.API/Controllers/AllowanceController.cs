@@ -326,5 +326,24 @@ namespace MoneyMirror.API.Controllers
                 "Test successful"
             ));
         }
+        /// <summary>
+        /// TESTING ONLY: Manually trigger the allowance credit job.
+        /// DELETE THIS BEFORE PRODUCTION!
+        /// GET /api/allowance/test-credit-job
+        /// </summary>
+        [HttpGet("test-credit-job")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<object>>> TestCreditJob()
+        {
+            _logger.LogInformation("Manually triggering allowance credit job");
+
+            // Call the background job method directly
+            int credited = await _allowanceService.CreditScheduledAllowancesAsync();
+
+            return Ok(ApiResponse<object>.SuccessResponse(
+                new { AllowancesCredited = credited },
+                $"Job completed. Credited {credited} allowance(s)."
+            ));
+        }
     }
 }
