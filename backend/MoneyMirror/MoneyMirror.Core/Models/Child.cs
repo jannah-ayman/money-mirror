@@ -48,20 +48,22 @@ namespace MoneyMirror.Core.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int? TypeID { get; set; }
-        /// <summary>
+
         /// Selected character type (Nova, Luna, Cosmo, Aura).
+        /// Foreign key to Character table.
+        /// The space character this child has chosen.
         /// Null if child hasn't selected a character yet.
         /// </summary>
-        [MaxLength(50)]
-        public string? SelectedCharacter { get; set; }
+        public int? CharacterID { get; set; }
+
+        // ==================== NAVIGATION PROPERTIES ====================
+        // Add this to the navigation properties section
 
         /// <summary>
-        /// URL to character's idle state image (profile picture).
-        /// Updated when character is selected.
-        /// Example: "/characters/nova/idle.png"
+        /// Reference to the child's selected space character.
         /// </summary>
-        [MaxLength(500)]
-        public string? AvatarUrl { get; set; }
+        [ForeignKey("CharacterID")]
+        public virtual Character SelectedCharacter { get; set; }
 
         // ==================== AUTHENTICATION FIELDS ====================
 
@@ -112,10 +114,6 @@ namespace MoneyMirror.Core.Models
         /// Collection of achievements/badges earned by this child.
         /// Uses ChildAchievement junction table for many-to-many relationship.
         public virtual ICollection<ChildAchievement> ChildAchievements { get; set; } = new List<ChildAchievement>();
-
-        /// Collection of character state interactions (happy, sad reactions).
-        /// Tracks how the animated character guide responds to child's actions.
-        public virtual ICollection<ChildCharacterStats> ChildCharacterStats { get; set; } = new List<ChildCharacterStats>();
 
         /// One-to-one relationship with initial profiling questionnaire.
         /// Stores parent's responses during child account setup.

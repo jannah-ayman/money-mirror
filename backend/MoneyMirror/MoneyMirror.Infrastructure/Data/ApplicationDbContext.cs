@@ -63,11 +63,11 @@ namespace MoneyMirror.Infrastructure.Data
         /// AchievementTypes table - predefined achievement/badge definitions
         public DbSet<AchievementType> AchievementTypes { get; set; }
 
-        /// CharacterStats table - predefined character animation states
-        public DbSet<CharacterStats> CharacterStats { get; set; }
+        /// Characters table - space-themed character options
+        public DbSet<Character> Characters { get; set; }
 
-        /// ChildCharacterStats table - logs of character reactions shown to children
-        public DbSet<ChildCharacterStats> ChildCharacterStats { get; set; }
+        /// CharacterStates table - visual states for each character
+        public DbSet<CharacterState> CharacterStates { get; set; }
 
         /// Moods table - predefined mood emojis for expense logging
         public DbSet<Mood> Moods { get; set; }
@@ -132,6 +132,37 @@ namespace MoneyMirror.Infrastructure.Data
                       .WithMany(pt => pt.Children)
                       .HasForeignKey(c => c.TypeID)
                       .OnDelete(DeleteBehavior.SetNull); // Don't delete child if personality type is removed
+                                                         // In the existing Child configuration section, add:
+                entity.HasOne(c => c.SelectedCharacter)
+                      .WithMany(ch => ch.Children)
+                      .HasForeignKey(c => c.CharacterID)
+                      .OnDelete(DeleteBehavior.SetNull); // Don't delete child if character removed
+            });
+            // ==================== CHARACTER ENTITY CONFIGURATION ====================
+
+            modelBuilder.Entity<Character>(entity =>
+            {
+                // Character name must be unique
+                entity.HasIndex(c => c.Name)
+                      .IsUnique()
+                      .HasDatabaseName("IX_Character_Name_Unique");
+            });
+
+            // ==================== CHARACTER STATE ENTITY CONFIGURATION ====================
+
+            modelBuilder.Entity<CharacterState>(entity =>
+            {
+                // Each character can only have ONE state per screen context
+                // (e.g., Nova can't have 2 different dashboard images)
+                entity.HasIndex(cs => new { cs.CharacterID, cs.ScreenContext })
+                      .IsUnique()
+                      .HasDatabaseName("IX_CharacterState_Character_Screen_Unique");
+
+                // Relationship with Character
+                entity.HasOne(cs => cs.Character)
+                      .WithMany(c => c.CharacterStates)
+                      .HasForeignKey(cs => cs.CharacterID)
+                      .OnDelete(DeleteBehavior.Cascade); // Delete states if character deleted
             });
 
             // ==================== PARENT-CHILD RELATIONSHIP (Many-to-Many) ====================
@@ -364,26 +395,7 @@ namespace MoneyMirror.Infrastructure.Data
                       .HasDefaultValueSql("GETUTCDATE()");
             });
 
-            // ==================== CHILD CHARACTER STATS CONFIGURATION ====================
-
-            modelBuilder.Entity<ChildCharacterStats>(entity =>
-            {
-                // Index for analytics
-                entity.HasIndex(ccs => new { ccs.ChildID, ccs.TriggerEvent })
-                      .HasDatabaseName("IX_ChildCharacterStats_Child_Trigger");
-
-                // Relationship with Child
-                entity.HasOne(ccs => ccs.Child)
-                      .WithMany(c => c.ChildCharacterStats)
-                      .HasForeignKey(ccs => ccs.ChildID)
-                      .OnDelete(DeleteBehavior.Cascade); // Delete stats if child deleted
-
-                // Relationship with CharacterStats
-                entity.HasOne(ccs => ccs.CharacterStats)
-                      .WithMany(cs => cs.ChildCharacterStats)
-                      .HasForeignKey(ccs => ccs.StatsID)
-                      .OnDelete(DeleteBehavior.Restrict); // Don't allow deleting character states in use
-            });
+            
 
             // ==================== ADVICE ENTITY CONFIGURATION ====================
 

@@ -7,56 +7,44 @@ using MoneyMirror.Core.Interfaces;
 namespace MoneyMirror.API.Controllers
 {
     /// <summary>
-    /// Controller handling character selection and state management endpoints.
-    /// Routes: /api/character/*
-    /// Provides endpoints for character selection, state retrieval, and profile pictures.
+    /// Simple controller for character operations.
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class CharacterController : ControllerBase
     {
         private readonly ICharacterService _characterService;
-        private readonly ILogger<CharacterController> _logger;
 
-        public CharacterController(
-            ICharacterService characterService,
-            ILogger<CharacterController> logger)
+        public CharacterController(ICharacterService characterService)
         {
             _characterService = characterService;
-            _logger = logger;
         }
 
-        // ==================== PUBLIC ENDPOINTS (NO AUTH) ====================
-
         /// <summary>
-        /// Gets list of all available characters.
-        /// Used for character selection screen.
-        /// GET /api/character/available
-        /// [Public - no auth required for browsing characters]
+        /// Gets all available space characters.
+        /// GET /api/character
+        /// [Public - anyone can see available characters]
         /// </summary>
-        [HttpGet("available")]
+        [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<List<CharacterInfoDto>>>> GetAvailableCharacters()
+        public async Task<ActionResult<ApiResponse<List<CharacterDto>>>> GetAllCharacters()
         {
-            var characters = await _characterService.GetAvailableCharactersAsync();
+            var characters = await _characterService.GetAllCharactersAsync();
 
-            return Ok(ApiResponse<List<CharacterInfoDto>>.SuccessResponse(
+            return Ok(ApiResponse<List<CharacterDto>>.SuccessResponse(
                 characters,
-                $"Found {characters.Count} available characters"
+                $"Found {characters.Count} space characters!"
             ));
         }
 
-        // ==================== CHILD ENDPOINTS ====================
-
         /// <summary>
         /// Selects a character for the logged-in child.
-        /// Updates profile picture to character's idle state.
         /// PUT /api/character/select
         /// [Child only]
         /// </summary>
         [HttpPut("select")]
         [Authorize(Roles = "Child")]
-        public async Task<ActionResult<ApiResponse<SelectCharacterResponseDto>>> SelectCharacter(
+        public async Task<ActionResult<ApiResponse<object>>> SelectCharacter(
             [FromBody] SelectCharacterDto dto)
         {
             // Get child ID from JWT token
@@ -64,146 +52,51 @@ namespace MoneyMirror.API.Controllers
 
             if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
             {
-                return BadRequest(ApiResponse<SelectCharacterResponseDto>.ErrorResponse("Invalid token claims"));
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token"));
             }
 
-            var (success, response, errorMessage) =
-                await _characterService.SelectCharacterAsync(childId, dto);
+            var (success, message) = await _characterService.SelectCharacterAsync(
+                childId,
+                dto.CharacterID);
 
             if (!success)
             {
-                return BadRequest(ApiResponse<SelectCharacterResponseDto>.ErrorResponse(errorMessage));
+                return BadRequest(ApiResponse<object>.ErrorResponse(message));
             }
 
-            _logger.LogInformation($"Child {childId} selected character: {dto.CharacterType}");
-
-            return Ok(ApiResponse<SelectCharacterResponseDto>.SuccessResponse(
-                response,
-                response.Message
-            ));
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
         /// <summary>
-        /// Gets character state and image for current screen context.
-        /// Determines appropriate character emotion based on what child is doing.
-        /// POST /api/character/state
+        /// Gets character image for current screen.
+        /// POST /api/character/image
         /// [Child only]
         /// </summary>
-        [HttpPost("state")]
+        [HttpPost("image")]
         [Authorize(Roles = "Child")]
-        public async Task<ActionResult<ApiResponse<CharacterStateResponseDto>>> GetCharacterState(
-            [FromBody] GetCharacterStateDto dto)
+        public async Task<ActionResult<ApiResponse<CharacterImageResponseDto>>> GetCharacterImage(
+            [FromBody] GetCharacterImageDto dto)
         {
             // Get child ID from JWT token
             var childIdClaim = User.FindFirst("ChildId")?.Value;
 
             if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
             {
-                return BadRequest(ApiResponse<CharacterStateResponseDto>.ErrorResponse("Invalid token claims"));
+                return BadRequest(ApiResponse<CharacterImageResponseDto>.ErrorResponse("Invalid token"));
             }
 
-            var (success, response, errorMessage) =
-                await _characterService.GetCharacterStateAsync(childId, dto);
+            var (success, image, errorMessage) = await _characterService.GetCharacterImageAsync(
+                childId,
+                dto.ScreenContext);
 
             if (!success)
             {
-                return BadRequest(ApiResponse<CharacterStateResponseDto>.ErrorResponse(errorMessage));
+                return BadRequest(ApiResponse<CharacterImageResponseDto>.ErrorResponse(errorMessage));
             }
 
-            return Ok(ApiResponse<CharacterStateResponseDto>.SuccessResponse(
-                response,
-                "Character state retrieved successfully"
-            ));
-        }
-
-        /// <summary>
-        /// Gets the logged-in child's profile picture URL.
-        /// Returns idle state of their selected character.
-        /// GET /api/character/profile-picture
-        /// [Child only]
-        /// </summary>
-        [HttpGet("profile-picture")]
-        [Authorize(Roles = "Child")]
-        public async Task<ActionResult<ApiResponse<string>>> GetMyProfilePicture()
-        {
-            // Get child ID from JWT token
-            var childIdClaim = User.FindFirst("ChildId")?.Value;
-
-            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
-            {
-                return BadRequest(ApiResponse<string>.ErrorResponse("Invalid token claims"));
-            }
-
-            var (success, imageUrl, errorMessage) =
-                await _characterService.GetProfilePictureUrlAsync(childId);
-
-            if (!success)
-            {
-                return BadRequest(ApiResponse<string>.ErrorResponse(errorMessage));
-            }
-
-            return Ok(ApiResponse<string>.SuccessResponse(
-                imageUrl,
-                "Profile picture retrieved successfully"
-            ));
-        }
-
-        // ==================== PARENT ENDPOINTS ====================
-
-        /// <summary>
-        /// Gets a child's profile picture URL (parent view).
-        /// Used to display child's character in parent dashboard.
-        /// GET /api/character/{childId}/profile-picture
-        /// [Parent only]
-        /// </summary>
-        [HttpGet("{childId}/profile-picture")]
-        [Authorize(Roles = "Parent")]
-        public async Task<ActionResult<ApiResponse<string>>> GetChildProfilePicture(int childId)
-        {
-            // Get parent ID from JWT token
-            var parentIdClaim = User.FindFirst("ParentId")?.Value;
-
-            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
-            {
-                return BadRequest(ApiResponse<string>.ErrorResponse("Invalid token claims"));
-            }
-
-            // TODO: Verify parent-child relationship here
-            // For now, we'll allow any parent to view any child's character
-            // In production, add authorization check
-
-            var (success, imageUrl, errorMessage) =
-                await _characterService.GetProfilePictureUrlAsync(childId);
-
-            if (!success)
-            {
-                return BadRequest(ApiResponse<string>.ErrorResponse(errorMessage));
-            }
-
-            return Ok(ApiResponse<string>.SuccessResponse(
-                imageUrl,
-                "Profile picture retrieved successfully"
-            ));
-        }
-
-        // ==================== TEST ENDPOINT ====================
-
-        /// <summary>
-        /// Test endpoint to verify character controller is working.
-        /// GET /api/character/test
-        /// </summary>
-        [HttpGet("test")]
-        [AllowAnonymous]
-        public ActionResult<ApiResponse<object>> Test()
-        {
-            return Ok(ApiResponse<object>.SuccessResponse(
-                new
-                {
-                    Message = "Character controller is working!",
-                    AvailableCharacters = new[] { "Nova", "Luna", "Cosmo", "Aura" },
-                    TotalStates = 10
-                },
-                "Test successful"
+            return Ok(ApiResponse<CharacterImageResponseDto>.SuccessResponse(
+                image,
+                "Character ready!"
             ));
         }
     }

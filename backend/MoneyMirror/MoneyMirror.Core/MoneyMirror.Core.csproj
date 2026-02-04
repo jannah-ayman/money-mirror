@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="DTOs\Character\" />
+    <Folder Include="Enums\CharacterEnums\" />
   </ItemGroup>
 
 </Project>

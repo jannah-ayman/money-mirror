@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Validators\Character\" />
     <Folder Include="wwwroot\characters\aura\" />
     <Folder Include="wwwroot\characters\luna\" />
     <Folder Include="wwwroot\characters\cosmo\" />
