@@ -71,6 +71,8 @@ builder.Services.AddScoped<IChildService, ChildService>();
 builder.Services.AddScoped<IPersonalityProfileService, PersonalityProfileService>();
 builder.Services.AddScoped<IAllowanceService, AllowanceService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
+builder.Services.AddScoped<ICharacterService, CharacterService>();
+
 
 // ==================== JWT AUTHENTICATION CONFIGURATION ====================
 // Read JWT settings from appsettings.json
