@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MoneyMirror.Core.DTOs.Child;
+using MoneyMirror.Core.Enums;
+using MoneyMirror.Core.Helpers;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Core.Models;
 using MoneyMirror.Infrastructure.Data;
@@ -67,7 +69,8 @@ namespace MoneyMirror.Infrastructure.Services
                         FName = dto.ChildFirstName,
                         LName = dto.ChildLastName,
                         DOB = dto.DOB,
-                        Age = CalculateAge(dto.DOB),
+                        Age = AgeHelper.CalculateAge(dto.DOB), // ✅ Use helper
+                        Gender = string.IsNullOrWhiteSpace(dto.Gender) ? null : dto.Gender.Trim(),
                         LoginCode = await GenerateUniqueLoginCodeAsync(),
                         CreatedAt = DateTime.UtcNow,
                         IsPersonalityFinalized = false
@@ -92,12 +95,15 @@ namespace MoneyMirror.Infrastructure.Services
                     // Serialize SpendingCategories list to JSON
                     string spendingCategoriesJson = JsonSerializer.Serialize(dto.SpendingCategories);
 
+                    // Calculate age group automatically from DOB
+                    ChildAgeGroup calculatedAgeGroup = AgeHelper.CalculateAgeGroup(dto.DOB);
+
                     var questionnaire = new InitialProfilingQuestionnaire
                     {
                         ChildID = child.ChildID,
 
-                        // Question 1: Age Group
-                        ChildAgeGroup = dto.ChildAgeGroup,
+                        // Question 1: Age group is calculated automatically from DOB
+                        ChildAgeGroup = calculatedAgeGroup,
 
                         // Question 2: Has Allowance
                         HasAllowance = dto.HasAllowance,
@@ -156,6 +162,8 @@ namespace MoneyMirror.Infrastructure.Services
                     {
                         ChildID = child.ChildID,
                         ChildFirstName = child.FName,
+                        Age = child.Age,
+                        Gender = child.Gender,
                         ChildLoginCode = child.LoginCode,
                         IsPersonalityFinalized = child.IsPersonalityFinalized,
                         PersonalityProfile = new PersonalityProfileDto
@@ -465,6 +473,7 @@ namespace MoneyMirror.Infrastructure.Services
                         ChildName = $"{pc.Child.FName} {pc.Child.LName}",
                         DOB = pc.Child.DOB,
                         Age = pc.Child.Age,
+                        Gender = pc.Child.Gender,
                         LoginCode = pc.Child.LoginCode,
                         CreatedAt = pc.Child.CreatedAt,
                         IsPersonalityFinalized = pc.Child.IsPersonalityFinalized,
@@ -487,16 +496,16 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         // HELPER METHODS
-        private int CalculateAge(DateTime dob)
-        {
-            var today = DateTime.UtcNow;
-            var age = today.Year - dob.Year;
+        //private int CalculateAge(DateTime dob)
+        //{
+        //    var today = DateTime.UtcNow;
+        //    var age = today.Year - dob.Year;
 
-            if (dob.Date > today.AddYears(-age))
-                age--;
+        //    if (dob.Date > today.AddYears(-age))
+        //        age--;
 
-            return age;
-        }
+        //    return age;
+        //}
 
         public async Task<string> GenerateUniqueLoginCodeAsync()
         {
@@ -527,6 +536,38 @@ namespace MoneyMirror.Infrastructure.Services
 
             throw new InvalidOperationException(
                 "Unable to generate unique login code");
+        }
+        public async Task<int> UpdateAllChildrenAgesAsync()
+        {
+            try
+            {
+                var children = await _context.Children.ToListAsync();
+                int updatedCount = 0;
+
+                foreach (var child in children)
+                {
+                    int currentAge = AgeHelper.CalculateAge(child.DOB);
+
+                    if (child.Age != currentAge)
+                    {
+                        child.Age = currentAge;
+                        updatedCount++;
+                    }
+                }
+
+                if (updatedCount > 0)
+                {
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"Updated ages for {updatedCount} children");
+                }
+
+                return updatedCount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating children ages: {ex.Message}");
+                return 0;
+            }
         }
     }
 }

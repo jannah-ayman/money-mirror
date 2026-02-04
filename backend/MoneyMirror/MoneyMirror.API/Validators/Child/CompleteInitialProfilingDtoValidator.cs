@@ -29,6 +29,13 @@ namespace MoneyMirror.API.Validators.Child
                 .Matches(@"^[a-zA-Z\s'-]+$")
                 .WithMessage("Last name can only contain letters, spaces, hyphens, and apostrophes");
 
+            RuleFor(x => x.Gender)
+                .Must(gender => string.IsNullOrWhiteSpace(gender) || gender == "Boy" || gender == "Girl")
+                .WithMessage("Gender must be 'Boy', 'Girl', or left empty")
+                .When(x => !string.IsNullOrWhiteSpace(x.Gender));
+            
+            // ==================== Question 1: Age Group ====================
+
             RuleFor(x => x.DOB)
                 .NotEmpty()
                 .WithMessage("Date of birth is required")
@@ -36,12 +43,6 @@ namespace MoneyMirror.API.Validators.Child
                 .WithMessage("Date of birth must be in the past")
                 .Must(BeValidChildAge)
                 .WithMessage("Child must be between 6 and 14 years old");
-
-            // ==================== Question 1: Age Group ====================
-
-            RuleFor(x => x.ChildAgeGroup)
-                .IsInEnum()
-                .WithMessage("Invalid age group selection");
 
             // ==================== Question 2: Has Allowance ====================
 
@@ -107,6 +108,9 @@ namespace MoneyMirror.API.Validators.Child
         /// <summary>
         /// Custom validator to ensure child is between 6 and 14 years old
         /// </summary>
+        /// <summary>
+        /// Custom validator to ensure child is between 0 and 18 years old
+        /// </summary>
         private bool BeValidChildAge(DateTime dob)
         {
             var today = DateTime.UtcNow;
@@ -115,7 +119,7 @@ namespace MoneyMirror.API.Validators.Child
             if (dob.Date > today.AddYears(-age))
                 age--;
 
-            return age >= 6 && age <= 14;
+            return age >= 0 && age <= 18;
         }
     }
 }

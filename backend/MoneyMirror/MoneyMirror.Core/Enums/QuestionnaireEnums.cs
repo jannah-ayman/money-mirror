@@ -3,9 +3,11 @@
     // ==================== Question 1: Child Age Group ====================
     public enum ChildAgeGroup
     {
-        Age_6_8,
-        Age_9_11,
-        Age_12_14
+        Younger_Than_6,    // Ages 0-5
+        Age_6_8,           // Ages 6-8
+        Age_9_11,          // Ages 9-11
+        Age_12_14,         // Ages 12-14
+        Older_Than_14      // Ages 15+
     }
 
     // ==================== Question 2: Has Allowance ====================

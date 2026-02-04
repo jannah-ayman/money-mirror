@@ -29,9 +29,9 @@ namespace MoneyMirror.Core.Models
         [Required]
         public int Age { get; set; }
 
-        /// Child's current balance/allowance available to spend.
-        /// Increases when allowances are given, decreases when expenses are logged.
-        /// Stored as DECIMAL(10,2) for precise currency calculations.
+        [MaxLength(10)]
+        public string? Gender { get; set; }
+
         [Required]
         [Column(TypeName = "decimal(10,2)")]
         public decimal CurrentBalance { get; set; } = 0.00m;

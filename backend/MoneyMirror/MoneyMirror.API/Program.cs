@@ -241,6 +241,12 @@ RecurringJob.AddOrUpdate<IAllowanceService>(
     service => service.CreditScheduledAllowancesAsync(),
     "*/15 * * * *"); // runs every 15 minutes
 
+// Schedule job to update all children's ages daily at 2 AM
+RecurringJob.AddOrUpdate<IChildService>(
+    "update-children-ages",
+    service => service.UpdateAllChildrenAgesAsync(),
+    Cron.Daily(2));
+
 // ==================== RUN THE APPLICATION ====================
 Console.WriteLine("Money Mirror API is starting...");
 Console.WriteLine("Swagger documentation available at: https://localhost:7XXX/swagger");

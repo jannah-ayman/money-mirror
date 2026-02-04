@@ -50,5 +50,10 @@ namespace MoneyMirror.Core.Interfaces
         /// Generates a unique login code for a child.
         /// <returns>Unique login code string</returns>
         Task<string> GenerateUniqueLoginCodeAsync();
+        /// <summary>
+        /// Updates all children's ages based on current date.
+        /// Called by background job daily.
+        /// </summary>
+        Task<int> UpdateAllChildrenAgesAsync();
     }
 }

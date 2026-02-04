@@ -6,7 +6,8 @@ namespace MoneyMirror.Core.DTOs.Child
 {
     /// <summary>
     /// Data Transfer Object for completing the initial profiling questionnaire.
-    /// Contains child basic info and answers to the 10 profiling questions.
+    /// Contains child basic info and answers to the 9 profiling questions.
+    /// Age and age group are calculated automatically from Date of Birth.
     /// Used as input for POST /api/children/complete-initial-profiling endpoint.
     /// Validation is handled by CompleteInitialProfilingDtoValidator using FluentValidation.
     /// </summary>
@@ -14,36 +15,17 @@ namespace MoneyMirror.Core.DTOs.Child
     {
         // ==================== Child Identity ====================
 
-        /// <summary>
-        /// Child's first name.
-        /// Example: "Emma"
-        /// </summary>
         public string ChildFirstName { get; set; }
 
-        /// <summary>
-        /// Child's last name.
-        /// Example: "Smith"
-        /// </summary>
         public string ChildLastName { get; set; }
 
-        /// <summary>
-        /// Child's date of birth.
-        /// Used to calculate age and personalize content.
-        /// </summary>
+
         public DateTime DOB { get; set; }
 
-        // ==================== Question 1: How old is your child? ====================
-
-        /// <summary>
-        /// Child's age group (Age_6_8, Age_9_11, Age_12_14)
-        /// </summary>
-        public ChildAgeGroup ChildAgeGroup { get; set; }
+        public string? Gender { get; set; }
 
         // ==================== Question 2: Does your child receive a regular allowance or income? ====================
 
-        /// <summary>
-        /// Whether child receives regular allowance (Yes, No)
-        /// </summary>
         public HasAllowance HasAllowance { get; set; }
 
         // ==================== Question 3: How does your child usually spend their allowance? ====================
