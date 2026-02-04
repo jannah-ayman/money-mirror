@@ -32,10 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\characters\aura\" />
-    <Folder Include="wwwroot\characters\luna\" />
-    <Folder Include="wwwroot\characters\cosmo\" />
-    <Folder Include="wwwroot\characters\nova\" />
+    <Folder Include="wwwroot\images\aura\" />
+    <Folder Include="wwwroot\images\luna\" />
+    <Folder Include="wwwroot\images\cosmo\" />
+    <Folder Include="wwwroot\images\nova\" />
   </ItemGroup>
 
 </Project>
