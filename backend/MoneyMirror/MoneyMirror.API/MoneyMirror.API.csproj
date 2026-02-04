@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Validators\Character\**" />
+    <Content Remove="Validators\Character\**" />
+    <EmbeddedResource Remove="Validators\Character\**" />
+    <None Remove="Validators\Character\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.22" />
@@ -25,7 +32,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Validators\Character\" />
     <Folder Include="wwwroot\characters\aura\" />
     <Folder Include="wwwroot\characters\luna\" />
     <Folder Include="wwwroot\characters\cosmo\" />
