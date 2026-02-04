@@ -4,6 +4,7 @@ using MoneyMirror.Core.DTOs.Auth;
 using MoneyMirror.Core.DTOs.Common;
 using MoneyMirror.Core.Enums;
 using MoneyMirror.Core.Interfaces;
+using MoneyMirror.Core.DTOs.Parent;
 
 namespace MoneyMirror.API.Controllers
 {
@@ -423,6 +424,99 @@ namespace MoneyMirror.API.Controllers
             }
 
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+        /// <summary>
+        /// Gets the logged-in parent's profile information.
+        /// Shows current details (email, name, phone, etc.)
+        /// GET /api/auth/my-profile
+        /// [Parent only]
+        /// </summary>
+        [HttpGet("my-profile")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<ParentProfileResponseDto>>> GetMyProfile()
+        {
+            // Get parent ID from JWT token
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<ParentProfileResponseDto>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, profile, errorMessage) = await _authService.GetMyProfileAsync(parentId);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<ParentProfileResponseDto>.ErrorResponse(errorMessage));
+            }
+
+            return Ok(ApiResponse<ParentProfileResponseDto>.SuccessResponse(
+                profile,
+                $"Welcome, {profile.FirstName}!"
+            ));
+        }
+
+        /// <summary>
+        /// Gets the parent's main dashboard.
+        /// Shows welcome message and quick cards for all children.
+        /// GET /api/auth/my-dashboard
+        /// [Parent only]
+        /// </summary>
+        [HttpGet("my-dashboard")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<ParentDashboardDto>>> GetMyDashboard()
+        {
+            // Get parent ID from JWT token
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<ParentDashboardDto>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, dashboard, errorMessage) = await _authService.GetMyDashboardAsync(parentId);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<ParentDashboardDto>.ErrorResponse(errorMessage));
+            }
+
+            return Ok(ApiResponse<ParentDashboardDto>.SuccessResponse(
+                dashboard,
+                $"Hello, {dashboard.FirstName}! 👋"
+            ));
+        }
+
+        /// <summary>
+        /// Gets detailed information for a specific child.
+        /// This is called when parent clicks on a child's button on the dashboard.
+        /// Shows balance, stats, and allowance info in one call.
+        /// GET /api/auth/child/{childId}/card
+        /// [Parent only]
+        /// </summary>
+        [HttpGet("child/{childId}/card")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<ChildDetailedCardDto>>> GetChildCard(int childId)
+        {
+            // Get parent ID from JWT token
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<ChildDetailedCardDto>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, childCard, errorMessage) = await _authService.GetChildDetailedCardAsync(parentId, childId);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<ChildDetailedCardDto>.ErrorResponse(errorMessage));
+            }
+
+            return Ok(ApiResponse<ChildDetailedCardDto>.SuccessResponse(
+                childCard,
+                $"{childCard.FirstName}'s Overview"
+            ));
         }
     }
 }

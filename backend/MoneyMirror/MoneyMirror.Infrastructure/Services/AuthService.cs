@@ -6,6 +6,7 @@ using MoneyMirror.Core.Enums;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Core.Models;
 using MoneyMirror.Infrastructure.Data;
+using MoneyMirror.Core.DTOs.Parent;
 
 namespace MoneyMirror.Infrastructure.Services
 {
@@ -984,6 +985,254 @@ namespace MoneyMirror.Infrastructure.Services
             {
                 _logger.LogError($"Error during permanent deletion of expired accounts: {ex.Message}");
                 return 0;
+            }
+        }
+        /// <summary>
+        /// Gets the logged-in parent's profile information.
+        /// Shows current details that can be edited.
+        /// </summary>
+        public async Task<(bool success, ParentProfileResponseDto? profile, string errorMessage)>
+            GetMyProfileAsync(int parentId)
+        {
+            try
+            {
+                // STEP 1: Find parent with their children count
+                var parent = await _context.Parents
+                    .Include(p => p.ParentChildren)
+                    .FirstOrDefaultAsync(p => p.ParentID == parentId);
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Profile request for non-existent parent {parentId}");
+                    return (false, null, "Parent not found");
+                }
+
+                // STEP 2: Check if account is deleted
+                if (parent.IsDeleted)
+                {
+                    _logger.LogWarning($"Profile request for deleted parent {parentId}");
+                    return (false, null, "Account has been deleted");
+                }
+
+                // STEP 3: Build response
+                var profile = new ParentProfileResponseDto
+                {
+                    ParentID = parent.ParentID,
+                    Email = parent.Email,
+                    FirstName = parent.FName,
+                    LastName = parent.LName,
+                    PhoneNumber = parent.PhoneNum,
+                    CreatedAt = parent.CreatedAt,
+                    IsEmailConfirmed = parent.IsEmailConfirmed,
+                    TotalChildren = parent.ParentChildren.Count
+                };
+
+                _logger.LogInformation($"Profile loaded for parent {parentId}");
+
+                return (true, profile, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting profile for parent {parentId}: {ex.Message}");
+                return (false, null, "An error occurred while loading your profile");
+            }
+        }
+
+        /// <summary>
+        /// Gets the parent's main dashboard.
+        /// Shows welcome message and quick cards for all children (for the top buttons).
+        /// </summary>
+        public async Task<(bool success, ParentDashboardDto? dashboard, string errorMessage)>
+            GetMyDashboardAsync(int parentId)
+        {
+            try
+            {
+                // STEP 1: Find parent
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.ParentID == parentId);
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Dashboard request for non-existent parent {parentId}");
+                    return (false, null, "Parent not found");
+                }
+
+                // STEP 2: Get all children with their basic info
+                var children = await _context.ParentChildren
+                    .Where(pc => pc.ParentID == parentId)
+                    .Include(pc => pc.Child)
+                    .OrderBy(pc => pc.Child.CreatedAt) // Oldest first (or change to OrderByDescending for newest first)
+                    .Select(pc => new ChildQuickCardDto
+                    {
+                        ChildID = pc.Child.ChildID,
+                        FirstName = pc.Child.FName,
+                        CurrentBalance = pc.Child.CurrentBalance,
+                        Age = pc.Child.Age,
+                        AvatarUrl = null // TODO: implement avatar later
+                    })
+                    .ToListAsync();
+
+                // STEP 3: Build dashboard
+                var dashboard = new ParentDashboardDto
+                {
+                    FirstName = parent.FName,
+                    TotalChildren = children.Count,
+                    Children = children
+                };
+
+                _logger.LogInformation($"Dashboard loaded for parent {parentId}");
+
+                return (true, dashboard, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting dashboard for parent {parentId}: {ex.Message}");
+                return (false, null, "An error occurred while loading your dashboard");
+            }
+        }
+
+        /// <summary>
+        /// Gets detailed information for a specific child.
+        /// This is called when parent clicks on a child's button.
+        /// Shows balance, quick stats, and buttons to manage allowance/expenses/goals/reports.
+        /// </summary>
+        public async Task<(bool success, ChildDetailedCardDto? childCard, string errorMessage)>
+            GetChildDetailedCardAsync(int parentId, int childId)
+        {
+            try
+            {
+                // STEP 1: Verify parent-child relationship
+                bool isLinked = await _context.ParentChildren
+                    .AnyAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
+
+                if (!isLinked)
+                {
+                    _logger.LogWarning($"Parent {parentId} attempted to view non-linked child {childId}");
+                    return (false, null, "You are not authorized to view this child");
+                }
+
+                // STEP 2: Get child with personality type
+                var child = await _context.Children
+                    .Include(c => c.PersonalityType)
+                    .FirstOrDefaultAsync(c => c.ChildID == childId);
+
+                if (child == null)
+                {
+                    return (false, null, "Child not found");
+                }
+
+                // STEP 3: Calculate this month's stats
+                var firstDayOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+
+                // Total spent this month
+                var totalSpentThisMonth = await _context.Expenses
+                    .Where(e => e.ChildID == childId && e.LogDate >= firstDayOfMonth)
+                    .SumAsync(e => e.MoneyAmount);
+
+                // Count expenses this month
+                var expensesCountThisMonth = await _context.Expenses
+                    .CountAsync(e => e.ChildID == childId && e.LogDate >= firstDayOfMonth);
+
+                // Count active goals
+                var activeGoalsCount = await _context.SavingsGoals
+                    .CountAsync(g => g.ChildID == childId && g.Status == "Active");
+
+                // STEP 4: Get allowance info (if exists)
+                var allowance = await _context.Allowances
+                    .FirstOrDefaultAsync(a => a.ChildID == childId && a.IsRecurring && a.IsActive);
+
+                ChildAllowanceInfoSummaryDto? allowanceInfo = null;
+                if (allowance != null)
+                {
+                    // Calculate next payment date (simple estimate)
+                    DateTime? nextPaymentDate = CalculateNextPaymentDate(allowance);
+
+                    allowanceInfo = new ChildAllowanceInfoSummaryDto
+                    {
+                        Type = allowance.Type,
+                        Amount = allowance.Amount,
+                        NextPaymentDate = nextPaymentDate,
+                        IsActive = allowance.IsActive
+                    };
+                }
+
+                // STEP 5: Build quick stats
+                var quickStats = new ChildQuickStatsDto
+                {
+                    TotalSpentThisMonth = totalSpentThisMonth,
+                    ExpensesCountThisMonth = expensesCountThisMonth,
+                    ActiveGoalsCount = activeGoalsCount,
+                    PersonalityTypeName = child.PersonalityType?.ParentName
+                };
+
+                // STEP 6: Build detailed card
+                var childCard = new ChildDetailedCardDto
+                {
+                    ChildID = child.ChildID,
+                    FirstName = child.FName,
+                    LastName = child.LName,
+                    Age = child.Age,
+                    Gender = child.Gender,
+                    CurrentBalance = child.CurrentBalance,
+                    QuickStats = quickStats,
+                    AllowanceInfo = allowanceInfo
+                };
+
+                _logger.LogInformation($"Parent {parentId} loaded detailed card for child {childId}");
+
+                return (true, childCard, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting child card for parent {parentId}, child {childId}: {ex.Message}");
+                return (false, null, "An error occurred while loading child information");
+            }
+        }
+
+        // ==================== HELPER METHOD ====================
+
+        /// <summary>
+        /// Calculates approximate next payment date for an allowance.
+        /// This is a simplified version - you already have this logic in AllowanceService.
+        /// </summary>
+        private DateTime? CalculateNextPaymentDate(Allowance allowance)
+        {
+            DateTime now = DateTime.UtcNow;
+
+            switch (allowance.Type)
+            {
+                case "Daily":
+                    var nextDaily = new DateTime(now.Year, now.Month, now.Day, allowance.DailyHour!.Value, 0, 0);
+                    if (nextDaily <= now)
+                        nextDaily = nextDaily.AddDays(1);
+                    return nextDaily;
+
+                case "Weekly":
+                    DayOfWeek targetDay = Enum.Parse<DayOfWeek>(allowance.WeeklyDay!);
+                    int daysUntilTarget = ((int)targetDay - (int)now.DayOfWeek + 7) % 7;
+                    if (daysUntilTarget == 0 && allowance.LastCreditedDate?.Date == now.Date)
+                        daysUntilTarget = 7;
+                    return now.Date.AddDays(daysUntilTarget);
+
+                case "Monthly":
+                    int targetDayOfMonth = allowance.MonthlyDay!.Value;
+                    int daysInCurrentMonth = DateTime.DaysInMonth(now.Year, now.Month);
+                    int effectiveDay = Math.Min(targetDayOfMonth, daysInCurrentMonth);
+
+                    if (now.Day < effectiveDay)
+                    {
+                        return new DateTime(now.Year, now.Month, effectiveDay);
+                    }
+                    else
+                    {
+                        var nextMonth = now.AddMonths(1);
+                        int daysInNextMonth = DateTime.DaysInMonth(nextMonth.Year, nextMonth.Month);
+                        int effectiveDayNextMonth = Math.Min(targetDayOfMonth, daysInNextMonth);
+                        return new DateTime(nextMonth.Year, nextMonth.Month, effectiveDayNextMonth);
+                    }
+
+                default:
+                    return null;
             }
         }
     }

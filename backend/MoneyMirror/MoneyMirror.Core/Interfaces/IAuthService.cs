@@ -1,4 +1,5 @@
 using MoneyMirror.Core.DTOs.Auth;
+using MoneyMirror.Core.DTOs.Parent;
 using MoneyMirror.Core.Enums;
 
 namespace MoneyMirror.Core.Interfaces
@@ -111,6 +112,36 @@ namespace MoneyMirror.Core.Interfaces
         /// Should be called by a scheduled background service (e.g., Hangfire, Azure Functions).
         /// <returns>Count of accounts permanently deleted</returns>
         Task<int> PermanentlyDeleteExpiredAccountsAsync();
+        // ==================== NEW METHODS FOR PARENT DASHBOARD & PROFILE ====================
+
+        /// <summary>
+        /// Gets the parent's own profile information.
+        /// Shows current details before editing.
+        /// </summary>
+        /// <param name="parentId">ID of the parent (from JWT token)</param>
+        /// <returns>Tuple: (success flag, profile data, error message)</returns>
+        Task<(bool success, ParentProfileResponseDto? profile, string errorMessage)>
+        GetMyProfileAsync(int parentId);
+
+        /// <summary>
+        /// Gets the parent's main dashboard data.
+        /// Shows welcome message and quick cards for all children.
+        /// </summary>
+        /// <param name="parentId">ID of the parent (from JWT token)</param>
+        /// <returns>Tuple: (success flag, dashboard data, error message)</returns>
+        Task<(bool success, ParentDashboardDto? dashboard, string errorMessage)>
+        GetMyDashboardAsync(int parentId);
+
+        /// <summary>
+        /// Gets detailed information for a specific child.
+        /// This is what shows when parent clicks a child's button on the dashboard.
+        /// Includes balance, quick stats, and allowance info.
+        /// </summary>
+        /// <param name="parentId">ID of the parent (from JWT token)</param>
+        /// <param name="childId">ID of the child to view</param>
+        /// <returns>Tuple: (success flag, child detailed card, error message)</returns>
+        Task<(bool success, ChildDetailedCardDto? childCard, string errorMessage)>
+        GetChildDetailedCardAsync(int parentId, int childId);
     }
 
 }
