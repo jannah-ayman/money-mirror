@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoneyMirror.Core.DTOs.Child;
 using MoneyMirror.Core.DTOs.Common;
@@ -242,6 +242,175 @@ namespace MoneyMirror.API.Controllers
                     ParentId = parentId
                 },
                 "Test successful"
+            ));
+        }
+        // Add these endpoints to your ChildrenController.cs class
+
+        // ==================== CHILD DASHBOARD & PROFILE ENDPOINTS ====================
+
+        /// <summary>
+        /// Gets the logged-in child's profile information.
+        /// Shows on "My Profile" screen.
+        /// GET /api/children/my-profile
+        /// [Child only]
+        /// </summary>
+        [HttpGet("my-profile")]
+        [Authorize(Roles = "Child")]
+        public async Task<ActionResult<ApiResponse<ChildProfileResponseDto>>> GetMyProfile()
+        {
+            // Get child ID from JWT token
+            var childIdClaim = User.FindFirst("ChildId")?.Value;
+
+            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
+            {
+                return BadRequest(ApiResponse<ChildProfileResponseDto>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, profile, errorMessage) = await _childService.GetMyProfileAsync(childId);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<ChildProfileResponseDto>.ErrorResponse(errorMessage));
+            }
+
+            return Ok(ApiResponse<ChildProfileResponseDto>.SuccessResponse(
+                profile,
+                $"Welcome, {profile.FirstName}!"
+            ));
+        }
+
+        /// <summary>
+        /// Gets the logged-in child's dashboard data.
+        /// Shows on main home screen.
+        /// GET /api/children/my-dashboard
+        /// [Child only]
+        /// </summary>
+        [HttpGet("my-dashboard")]
+        [Authorize(Roles = "Child")]
+        public async Task<ActionResult<ApiResponse<ChildDashboardDto>>> GetMyDashboard()
+        {
+            // Get child ID from JWT token
+            var childIdClaim = User.FindFirst("ChildId")?.Value;
+
+            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
+            {
+                return BadRequest(ApiResponse<ChildDashboardDto>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, dashboard, errorMessage) = await _childService.GetMyDashboardAsync(childId);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<ChildDashboardDto>.ErrorResponse(errorMessage));
+            }
+
+            return Ok(ApiResponse<ChildDashboardDto>.SuccessResponse(
+                dashboard,
+                $"Hello, {dashboard.FirstName}! 👋"
+            ));
+        }
+        // Add these endpoints to your ChildrenController.cs class
+
+        // ==================== PARENT MANAGEMENT OF CHILDREN ENDPOINTS ====================
+
+        /// <summary>
+        /// Updates a child's basic information.
+        /// Parent can change first name, last name, and date of birth.
+        /// PUT /api/children/{childId}
+        /// [Parent only]
+        /// </summary>
+        [HttpPut("{childId}")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<UpdateChildResponseDto>>> UpdateChild(
+            int childId,
+            [FromBody] UpdateChildDto dto)
+        {
+            // Get parent ID from JWT token
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<UpdateChildResponseDto>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, updatedChild, errorMessage) = await _childService.UpdateChildAsync(parentId, childId, dto);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<UpdateChildResponseDto>.ErrorResponse(errorMessage));
+            }
+
+            _logger.LogInformation($"Parent {parentId} updated child {childId}");
+
+            return Ok(ApiResponse<UpdateChildResponseDto>.SuccessResponse(
+                updatedChild,
+                $"Child {updatedChild.FirstName} updated successfully!"
+            ));
+        }
+
+        /// <summary>
+        /// Regenerates a new login code for a child.
+        /// Old code becomes invalid immediately.
+        /// POST /api/children/{childId}/regenerate-code
+        /// [Parent only]
+        /// </summary>
+        [HttpPost("{childId}/regenerate-code")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<RegenerateCodeResponseDto>>> RegenerateLoginCode(int childId)
+        {
+            // Get parent ID from JWT token
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<RegenerateCodeResponseDto>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, codeInfo, errorMessage) = await _childService.RegenerateLoginCodeAsync(parentId, childId);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<RegenerateCodeResponseDto>.ErrorResponse(errorMessage));
+            }
+
+            _logger.LogInformation($"Parent {parentId} regenerated code for child {childId}");
+
+            return Ok(ApiResponse<RegenerateCodeResponseDto>.SuccessResponse(
+                codeInfo,
+                $"New login code generated for {codeInfo.ChildName}. The old code is no longer valid."
+            ));
+        }
+
+        /// <summary>
+        /// Permanently deletes a child and all their data.
+        /// This action cannot be undone.
+        /// DELETE /api/children/{childId}
+        /// [Parent only]
+        /// </summary>
+        [HttpDelete("{childId}")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<object>>> DeleteChild(int childId)
+        {
+            // Get parent ID from JWT token
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, message, errorMessage) = await _childService.DeleteChildAsync(parentId, childId);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(errorMessage));
+            }
+
+            _logger.LogInformation($"Parent {parentId} permanently deleted child {childId}");
+
+            return Ok(ApiResponse<object>.SuccessResponse(
+                null,
+                message
             ));
         }
     }

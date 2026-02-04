@@ -50,10 +50,56 @@ namespace MoneyMirror.Core.Interfaces
         /// Generates a unique login code for a child.
         /// <returns>Unique login code string</returns>
         Task<string> GenerateUniqueLoginCodeAsync();
-        /// <summary>
+
         /// Updates all children's ages based on current date.
         /// Called by background job daily.
-        /// </summary>
+        /// <returns>Number of children whose ages were updated</returns>
         Task<int> UpdateAllChildrenAgesAsync();
+
+        // ==================== NEW METHODS FOR PART 2 ====================
+
+        /// Gets the child's full profile information.
+        /// Used for the "My Profile" screen.
+        /// <param name="childId">ID of the child (from JWT token)</param>
+        /// <returns>Tuple: (success flag, profile data, error message)</returns>
+        Task<(bool success, ChildProfileResponseDto? profile, string errorMessage)>
+        GetMyProfileAsync(int childId);
+
+        /// Gets the child's dashboard data.
+        /// Used for the main home screen.
+        /// <param name="childId">ID of the child (from JWT token)</param>
+        /// <returns>Tuple: (success flag, dashboard data, error message)</returns>
+        Task<(bool success, ChildDashboardDto? dashboard, string errorMessage)>
+        GetMyDashboardAsync(int childId);
+
+        // ==================== PARENT MANAGEMENT OF CHILDREN ====================
+
+        /// Updates a child's basic information (name, DOB).
+        /// Only the linked parent can update.
+        /// Age and age group are recalculated automatically.
+        /// <param name="parentId">ID of the parent (from JWT token)</param>
+        /// <param name="childId">ID of the child to update</param>
+        /// <param name="dto">Updated child information</param>
+        /// <returns>Tuple: (success flag, updated child data, error message)</returns>
+        Task<(bool success, UpdateChildResponseDto? updatedChild, string errorMessage)>
+        UpdateChildAsync(int parentId, int childId, UpdateChildDto dto);
+
+        /// Regenerates a new login code for a child.
+        /// Old code becomes invalid immediately.
+        /// Only the linked parent can regenerate.
+        /// <param name="parentId">ID of the parent (from JWT token)</param>
+        /// <param name="childId">ID of the child</param>
+        /// <returns>Tuple: (success flag, new login code, error message)</returns>
+        Task<(bool success, RegenerateCodeResponseDto? codeInfo, string errorMessage)>
+        RegenerateLoginCodeAsync(int parentId, int childId);
+
+        /// Permanently deletes a child and all their data.
+        /// This is a HARD DELETE - data cannot be recovered.
+        /// Only the linked parent can delete.
+        /// <param name="parentId">ID of the parent (from JWT token)</param>
+        /// <param name="childId">ID of the child to delete</param>
+        /// <returns>Tuple: (success flag, confirmation message, error message)</returns>
+        Task<(bool success, string message, string errorMessage)>
+        DeleteChildAsync(int parentId, int childId);
     }
 }
