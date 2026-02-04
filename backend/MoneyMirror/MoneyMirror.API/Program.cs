@@ -210,6 +210,8 @@ if (app.Environment.IsDevelopment())
 
 // 2. HTTPS REDIRECTION (redirect HTTP to HTTPS)
 app.UseHttpsRedirection();
+// 2.5. STATIC FILES (serve images from wwwroot)
+app.UseStaticFiles();
 
 // 3. CORS (must come before authentication)
 app.UseCors("AllowReactNative");

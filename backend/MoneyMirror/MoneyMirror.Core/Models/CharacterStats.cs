@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -5,11 +6,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace MoneyMirror.Core.Models
 {
     /// <summary>
-    /// Represents different states/reactions of the animated character guide.
-    /// The character provides visual feedback to children based on their financial actions.
-    /// Examples: Happy reaction when saving, sad reaction when overspending, 
-    ///           celebration animation when reaching goals.
-    /// Predefined character states are consistent across all children.
+    /// Represents a specific visual/emotional state for a character.
+    /// Examples: Nova-Happy, Luna-Thinking, Cosmo-Celebrating
+    /// Each character has 10 predefined states that display in different contexts.
+    /// State changes dynamically based on child's actions and screen context.
     /// </summary>
     public class CharacterStats
     {
@@ -21,32 +21,69 @@ namespace MoneyMirror.Core.Models
         public int StatsID { get; set; }
 
         /// <summary>
-        /// URL/path to the animation file or image for this character state.
-        /// Could be stored on Cloudinary or local asset server.
-        /// Examples: 
-        /// - "https://res.cloudinary.com/moneymirror/character/happy.gif"
-        /// - "https://res.cloudinary.com/moneymirror/character/sad.png"
-        /// - "https://res.cloudinary.com/moneymirror/character/celebration.json" (Lottie)
+        /// Foreign key to Character table.
+        /// Links this state to its parent character.
+        /// Required - every state belongs to exactly one character.
+        /// </summary>
+        [Required]
+        public int CharacterID { get; set; }
+
+        /// <summary>
+        /// The emotional/visual state name (matches CharacterState enum).
+        /// Values: "Idle", "Happy", "Excited", "Thinking", "Encouraging", 
+        ///         "Celebrating", "Neutral", "Curious", "Proud", "Worried"
+        /// Used to programmatically select appropriate state for context.
+        /// </summary>
+        [Required]
+        [MaxLength(50)]
+        public string State { get; set; }
+
+        /// <summary>
+        /// Full URL/path to the animation or image file for this state.
+        /// Can be: .png (static image), .gif (animated), .json (Lottie animation)
+        /// Example: "/characters/nova/happy.png"
+        /// Served from wwwroot/characters folder in API.
         /// </summary>
         [Required]
         [MaxLength(500)]
         public string AnimationURL { get; set; }
 
         /// <summary>
-        /// Text description of this character state/reaction.
-        /// Examples: "Happy", "Sad", "Excited", "Worried", "Celebrating"
-        /// Used for accessibility and system logging.
+        /// Description of when/why this state is displayed.
+        /// Used for documentation and admin purposes.
+        /// Example: "Shown when child completes a savings goal"
+        /// Helps designers/developers understand state usage.
+        /// </summary>
+        [MaxLength(500)]
+        public string? UsageContext { get; set; }
+
+        /// <summary>
+        /// Whether this state is currently active and can be displayed.
+        /// Allows temporarily disabling states without deletion.
+        /// Use case: Testing new animations, seasonal variations.
         /// </summary>
         [Required]
-        [MaxLength(200)]
-        public string Description { get; set; }
+        public bool IsActive { get; set; } = true;
+
+        /// <summary>
+        /// Timestamp when this state was created/added.
+        /// Useful for version tracking and analytics.
+        /// </summary>
+        [Required]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // ==================== NAVIGATION PROPERTIES ====================
 
         /// <summary>
-        /// Collection of child-character interactions using this state.
-        /// Tracks when children see specific character reactions.
-        /// One character state can be shown to many children across multiple events.
+        /// Reference to the parent character this state belongs to.
+        /// </summary>
+        [ForeignKey("CharacterID")]
+        public virtual Character Character { get; set; }
+
+        /// <summary>
+        /// Collection of instances when children viewed this specific state.
+        /// Used for engagement analytics and A/B testing.
+        /// Tracks which states resonate most with children.
         /// </summary>
         public virtual ICollection<ChildCharacterStats> ChildCharacterStats { get; set; } = new List<ChildCharacterStats>();
     }

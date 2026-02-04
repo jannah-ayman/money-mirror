@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MoneyMirror.Core.DTOs.Character;
-using MoneyMirror.Core.Enums;
 using MoneyMirror.Core.Enums.CharacterEnums;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Infrastructure.Data;
@@ -9,18 +8,10 @@ using System.Text.Json;
 
 namespace MoneyMirror.Infrastructure.Services
 {
-    /// <summary>
-    /// Service implementing character selection and state management logic.
-    /// Handles character selection, dynamic state determination, and image URL generation.
-    /// All character images are stored locally in wwwroot/characters/{character}/{state}.png
-    /// </summary>
     public class CharacterService : ICharacterService
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<CharacterService> _logger;
-
-        // Base path for character images (relative to wwwroot)
-        private const string CHARACTER_BASE_PATH = "/characters";
 
         public CharacterService(
             ApplicationDbContext context,
@@ -30,52 +21,32 @@ namespace MoneyMirror.Infrastructure.Services
             _logger = logger;
         }
 
-        /// <summary>
-        /// Gets all available characters with their information.
-        /// Character data is hardcoded as it's fixed content.
-        /// </summary>
         public async Task<List<CharacterInfoDto>> GetAvailableCharactersAsync()
         {
-            // Character information is static and predefined
-            var characters = new List<CharacterInfoDto>
+            try
             {
-                new CharacterInfoDto
-                {
-                    CharacterType = "Nova",
-                    DisplayName = "Nova the Explorer",
-                    Description = "Energetic and loves adventures! Nova is always excited to help you reach your goals! 🚀",
-                    PreviewImageUrl = $"{CHARACTER_BASE_PATH}/nova/idle.png"
-                },
-                new CharacterInfoDto
-                {
-                    CharacterType = "Luna",
-                    DisplayName = "Luna the Thinker",
-                    Description = "Calm and thoughtful! Luna helps you make smart decisions about your money. 🌙",
-                    PreviewImageUrl = $"{CHARACTER_BASE_PATH}/luna/idle.png"
-                },
-                new CharacterInfoDto
-                {
-                    CharacterType = "Cosmo",
-                    DisplayName = "Cosmo the Curious",
-                    Description = "Curious and playful! Cosmo loves learning new things about saving and spending! ⭐",
-                    PreviewImageUrl = $"{CHARACTER_BASE_PATH}/cosmo/idle.png"
-                },
-                new CharacterInfoDto
-                {
-                    CharacterType = "Aura",
-                    DisplayName = "Aura the Wise",
-                    Description = "Wise and encouraging! Aura believes in you and celebrates every achievement! ✨",
-                    PreviewImageUrl = $"{CHARACTER_BASE_PATH}/aura/idle.png"
-                }
-            };
+                var characters = await _context.Characters
+                    .Where(c => c.IsActive)
+                    .OrderBy(c => c.DisplayOrder)
+                    .Select(c => new CharacterInfoDto
+                    {
+                        CharacterID = c.CharacterID,
+                        CharacterType = c.CharacterType,
+                        DisplayName = c.DisplayName,
+                        Description = c.Description,
+                        PreviewImageUrl = $"{c.BasePath}/idle.png"
+                    })
+                    .ToListAsync();
 
-            await Task.CompletedTask; // For async consistency
-            return characters;
+                return characters;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting available characters: {ex.Message}");
+                return new List<CharacterInfoDto>();
+            }
         }
 
-        /// <summary>
-        /// Updates a child's selected character.
-        /// </summary>
         public async Task<(bool success, SelectCharacterResponseDto? response, string errorMessage)>
             SelectCharacterAsync(int childId, SelectCharacterDto dto)
         {
@@ -90,33 +61,37 @@ namespace MoneyMirror.Infrastructure.Services
                     return (false, null, "Child not found");
                 }
 
-                // STEP 2: Validate character type
-                if (!Enum.IsDefined(typeof(CharacterType), dto.CharacterType))
+                // STEP 2: Validate character exists
+                var character = await _context.Characters.FindAsync(dto.CharacterID);
+
+                if (character == null)
                 {
-                    _logger.LogWarning($"Invalid character type selected: {dto.CharacterType}");
-                    return (false, null, "Invalid character type");
+                    _logger.LogWarning($"Invalid character ID selected: {dto.CharacterID}");
+                    return (false, null, "Invalid character selected");
                 }
 
-                // STEP 3: Update child's character (stored as string)
-                string characterName = dto.CharacterType.ToString();
-                child.SelectedCharacter = characterName;
+                if (!character.IsActive)
+                {
+                    _logger.LogWarning($"Inactive character selected: {dto.CharacterID}");
+                    return (false, null, "This character is not currently available");
+                }
 
-                // STEP 4: Generate profile picture URL (idle state)
-                string profileImageUrl = GenerateImageUrl(dto.CharacterType, CharacterState.Idle);
-                child.AvatarUrl = profileImageUrl;
+                // STEP 3: Update child's character
+                child.CharacterID = character.CharacterID;
 
-                // STEP 5: Save changes
                 _context.Children.Update(child);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"Child {childId} selected character: {characterName}");
+                _logger.LogInformation($"Child {childId} selected character: {character.CharacterType}");
 
-                // STEP 6: Build response
+                // STEP 4: Build response
                 var response = new SelectCharacterResponseDto
                 {
-                    CharacterType = characterName,
-                    ProfileImageUrl = profileImageUrl,
-                    Message = $"You chose {GetCharacterDisplayName(dto.CharacterType)}! Great choice! 🎉"
+                    CharacterID = character.CharacterID,
+                    CharacterType = character.CharacterType,
+                    DisplayName = character.DisplayName,
+                    ProfileImageUrl = $"{character.BasePath}/idle.png",
+                    Message = $"You chose {character.DisplayName}! Great choice! 🎉"
                 };
 
                 return (true, response, string.Empty);
@@ -128,16 +103,15 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// Gets character state and image for current screen context.
-        /// </summary>
         public async Task<(bool success, CharacterStateResponseDto? response, string errorMessage)>
             GetCharacterStateAsync(int childId, GetCharacterStateDto dto)
         {
             try
             {
-                // STEP 1: Find child and get their selected character
-                var child = await _context.Children.FindAsync(childId);
+                // STEP 1: Find child with their selected character
+                var child = await _context.Children
+                    .Include(c => c.Character)
+                    .FirstOrDefaultAsync(c => c.ChildID == childId);
 
                 if (child == null)
                 {
@@ -145,30 +119,35 @@ namespace MoneyMirror.Infrastructure.Services
                     return (false, null, "Child not found");
                 }
 
-                // STEP 2: Get character type (default to Nova if not set)
-                CharacterType characterType = CharacterType.Nova;
-                if (!string.IsNullOrEmpty(child.SelectedCharacter))
+                // STEP 2: Get character (use default if not selected)
+                var character = child.Character;
+                if (character == null)
                 {
-                    if (!Enum.TryParse<CharacterType>(child.SelectedCharacter, out characterType))
+                    // Default to Nova if no character selected
+                    character = await _context.Characters
+                        .FirstOrDefaultAsync(c => c.CharacterType == "Nova");
+
+                    if (character == null)
                     {
-                        _logger.LogWarning($"Invalid character type stored for child {childId}: {child.SelectedCharacter}");
-                        characterType = CharacterType.Nova; // Fallback
+                        _logger.LogError("Default character 'Nova' not found in database");
+                        return (false, null, "Character data unavailable");
                     }
                 }
 
-                // STEP 3: Determine appropriate character state based on context
+                // STEP 3: Determine appropriate state
                 CharacterState state = DetermineCharacterState(dto.ScreenContext, dto.ContextData);
 
                 // STEP 4: Generate image URL
-                string imageUrl = GenerateImageUrl(characterType, state);
+                string imageUrl = $"{character.BasePath}/{state.ToString().ToLower()}.png";
 
-                // STEP 5: Generate character message (optional)
-                string? message = GenerateCharacterMessage(characterType, state, dto.ScreenContext);
+                // STEP 5: Generate message
+                string? message = GenerateCharacterMessage(character.CharacterID, state, dto.ScreenContext);
 
                 // STEP 6: Build response
                 var response = new CharacterStateResponseDto
                 {
-                    CharacterType = characterType.ToString(),
+                    CharacterID = character.CharacterID,
+                    CharacterType = character.CharacterType,
                     State = state.ToString(),
                     ImageUrl = imageUrl,
                     Message = message
@@ -183,30 +162,35 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// Gets child's profile picture URL (idle state of selected character).
-        /// </summary>
         public async Task<(bool success, string? imageUrl, string errorMessage)>
             GetProfilePictureUrlAsync(int childId)
         {
             try
             {
-                var child = await _context.Children.FindAsync(childId);
+                var child = await _context.Children
+                    .Include(c => c.Character)
+                    .FirstOrDefaultAsync(c => c.ChildID == childId);
 
                 if (child == null)
                 {
                     return (false, null, "Child not found");
                 }
 
-                // Return stored avatar URL or generate default
-                if (!string.IsNullOrEmpty(child.AvatarUrl))
+                var character = child.Character;
+                if (character == null)
                 {
-                    return (true, child.AvatarUrl, string.Empty);
+                    // Default to Nova
+                    character = await _context.Characters
+                        .FirstOrDefaultAsync(c => c.CharacterType == "Nova");
+
+                    if (character == null)
+                    {
+                        return (false, null, "Character data unavailable");
+                    }
                 }
 
-                // No character selected - return default (Nova idle)
-                string defaultUrl = GenerateImageUrl(CharacterType.Nova, CharacterState.Idle);
-                return (true, defaultUrl, string.Empty);
+                string imageUrl = $"{character.BasePath}/idle.png";
+                return (true, imageUrl, string.Empty);
             }
             catch (Exception ex)
             {
@@ -215,15 +199,8 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        // ==================== HELPER METHODS ====================
-
-        /// <summary>
-        /// Determines appropriate character state based on screen context and additional data.
-        /// This is the core logic for dynamic character states.
-        /// </summary>
         public CharacterState DetermineCharacterState(ScreenContext screenContext, string? contextData)
         {
-            // Parse context data if provided
             ContextDataModel? data = null;
             if (!string.IsNullOrEmpty(contextData))
             {
@@ -237,7 +214,6 @@ namespace MoneyMirror.Infrastructure.Services
                 }
             }
 
-            // Determine state based on screen and data
             return screenContext switch
             {
                 ScreenContext.Dashboard => data?.HasLowBalance == true ? CharacterState.Worried : CharacterState.Idle,
@@ -256,125 +232,72 @@ namespace MoneyMirror.Infrastructure.Services
             };
         }
 
-        /// <summary>
-        /// Determines state for goal progress screen based on progress percentage.
-        /// </summary>
         private CharacterState DetermineGoalProgressState(ContextDataModel? data)
         {
             if (data?.GoalProgress == null)
                 return CharacterState.Encouraging;
 
-            // Near completion (80%+) → Excited
             if (data.GoalProgress >= 80)
                 return CharacterState.Excited;
 
-            // Good progress (50%+) → Proud
             if (data.GoalProgress >= 50)
                 return CharacterState.Proud;
 
-            // Some progress (25%+) → Encouraging
             if (data.GoalProgress >= 25)
                 return CharacterState.Encouraging;
 
-            // Just started → Encouraging
             return CharacterState.Encouraging;
         }
 
-        /// <summary>
-        /// Generates image URL for character and state.
-        /// Format: /characters/{character_name}/{state}.png
-        /// Example: /characters/nova/happy.png
-        /// </summary>
-        private string GenerateImageUrl(CharacterType characterType, CharacterState state)
+        public string? GenerateCharacterMessage(int characterId, CharacterState state, ScreenContext screenContext)
         {
-            string characterName = characterType.ToString().ToLower();
-            string stateName = state.ToString().ToLower();
-
-            return $"{CHARACTER_BASE_PATH}/{characterName}/{stateName}.png";
-        }
-
-        /// <summary>
-        /// Generates contextual message from character based on state and screen.
-        /// Each character has slightly different personality in their messages.
-        /// </summary>
-        public string? GenerateCharacterMessage(CharacterType characterType, CharacterState state, ScreenContext screenContext)
-        {
-            // Generate message based on character personality and context
-            return (characterType, state, screenContext) switch
+            return (characterId, state, screenContext) switch
             {
-                // Dashboard messages
-                (CharacterType.Nova, CharacterState.Idle, ScreenContext.Dashboard) => "Ready for today's adventure? Let's check your balance! 🚀",
-                (CharacterType.Luna, CharacterState.Idle, ScreenContext.Dashboard) => "Welcome back! Let's see how you're doing today. 🌙",
-                (CharacterType.Cosmo, CharacterState.Idle, ScreenContext.Dashboard) => "Hi there! What fun things shall we explore today? ⭐",
-                (CharacterType.Aura, CharacterState.Idle, ScreenContext.Dashboard) => "Hello! I'm proud of your progress so far! ✨",
+                // Nova (ID 1)
+                (1, CharacterState.Idle, ScreenContext.Dashboard) => "Ready for today's adventure? Let's check your balance! 🚀",
+                (1, CharacterState.Worried, _) => "Uh oh! Your balance is getting low. Time to save up! 💰",
+                (1, CharacterState.Celebrating, ScreenContext.GoalCompleted) => "YES! You did it! Goal reached! I knew you could! 🎉",
+                (1, CharacterState.Thinking, ScreenContext.LogExpense) => "Let me help you track this expense! 🚀",
+                (1, CharacterState.Proud, ScreenContext.GoalProgress) => "Look how much you've saved! Keep going! 💪",
+                (1, CharacterState.Excited, ScreenContext.Achievement) => "A new badge! You're on fire! 🔥",
+                (1, CharacterState.Curious, ScreenContext.Quiz) => "Ooh, a quiz! I love learning new things! 🚀",
 
-                // Low balance warnings
-                (CharacterType.Nova, CharacterState.Worried, _) => "Uh oh! Your balance is getting low. Time to save up! 💰",
-                (CharacterType.Luna, CharacterState.Worried, _) => "Let's think carefully about our next purchase. Balance is low. 💭",
-                (CharacterType.Cosmo, CharacterState.Worried, _) => "Hmm, we should be careful with spending now! 🤔",
-                (CharacterType.Aura, CharacterState.Worried, _) => "Don't worry! Let's make a plan to build your balance back up. 🌟",
+                // Luna (ID 2)
+                (2, CharacterState.Idle, ScreenContext.Dashboard) => "Welcome back! Let's see how you're doing today. 🌙",
+                (2, CharacterState.Worried, _) => "Let's think carefully about our next purchase. Balance is low. 💭",
+                (2, CharacterState.Celebrating, ScreenContext.GoalCompleted) => "Wonderful! Your patience and planning paid off! 🌙✨",
+                (2, CharacterState.Thinking, ScreenContext.LogExpense) => "Good idea to log this. It helps you understand your spending! 💭",
+                (2, CharacterState.Proud, ScreenContext.GoalProgress) => "Your steady progress is impressive! 🌙",
+                (2, CharacterState.Excited, ScreenContext.Achievement) => "Well deserved! Your hard work is paying off! 🌟",
+                (2, CharacterState.Curious, ScreenContext.Quiz) => "Let's think through this carefully together. 🤔",
 
-                // Goal completion celebrations
-                (CharacterType.Nova, CharacterState.Celebrating, ScreenContext.GoalCompleted) => "YES! You did it! Goal reached! I knew you could! 🎉",
-                (CharacterType.Luna, CharacterState.Celebrating, ScreenContext.GoalCompleted) => "Wonderful! Your patience and planning paid off! 🌙✨",
-                (CharacterType.Cosmo, CharacterState.Celebrating, ScreenContext.GoalCompleted) => "WOOHOO! That was amazing! You're a star! ⭐🎊",
-                (CharacterType.Aura, CharacterState.Celebrating, ScreenContext.GoalCompleted) => "I'm so proud of you! You achieved your goal! ✨🎉",
+                // Cosmo (ID 3)
+                (3, CharacterState.Idle, ScreenContext.Dashboard) => "Hi there! What fun things shall we explore today? ⭐",
+                (3, CharacterState.Worried, _) => "Hmm, we should be careful with spending now! 🤔",
+                (3, CharacterState.Celebrating, ScreenContext.GoalCompleted) => "WOOHOO! That was amazing! You're a star! ⭐🎊",
+                (3, CharacterState.Thinking, ScreenContext.LogExpense) => "What did you buy? Let's record it together! 📝",
+                (3, CharacterState.Proud, ScreenContext.GoalProgress) => "Wow! You're doing great! Almost there! ⭐",
+                (3, CharacterState.Excited, ScreenContext.Achievement) => "AWESOME! A new achievement unlocked! 🏆",
+                (3, CharacterState.Curious, ScreenContext.Quiz) => "Quiz time! This is going to be fun! 📚",
 
-                // Expense logging
-                (CharacterType.Nova, CharacterState.Thinking, ScreenContext.LogExpense) => "Let me help you track this expense! 🚀",
-                (CharacterType.Luna, CharacterState.Thinking, ScreenContext.LogExpense) => "Good idea to log this. It helps you understand your spending! 💭",
-                (CharacterType.Cosmo, CharacterState.Thinking, ScreenContext.LogExpense) => "What did you buy? Let's record it together! 📝",
-                (CharacterType.Aura, CharacterState.Thinking, ScreenContext.LogExpense) => "Tracking expenses is a wise habit! ✨",
+                // Aura (ID 4)
+                (4, CharacterState.Idle, ScreenContext.Dashboard) => "Hello! I'm proud of your progress so far! ✨",
+                (4, CharacterState.Worried, _) => "Don't worry! Let's make a plan to build your balance back up. 🌟",
+                (4, CharacterState.Celebrating, ScreenContext.GoalCompleted) => "I'm so proud of you! You achieved your goal! ✨🎉",
+                (4, CharacterState.Thinking, ScreenContext.LogExpense) => "Tracking expenses is a wise habit! ✨",
+                (4, CharacterState.Proud, ScreenContext.GoalProgress) => "I knew you had it in you! Keep saving! ✨",
+                (4, CharacterState.Excited, ScreenContext.Achievement) => "Magnificent! Another achievement earned! ✨",
+                (4, CharacterState.Curious, ScreenContext.Quiz) => "Every question helps you learn and grow! 💡",
 
-                // Goal progress
-                (CharacterType.Nova, CharacterState.Proud, ScreenContext.GoalProgress) => "Look how much you've saved! Keep going! 💪",
-                (CharacterType.Luna, CharacterState.Proud, ScreenContext.GoalProgress) => "Your steady progress is impressive! 🌙",
-                (CharacterType.Cosmo, CharacterState.Proud, ScreenContext.GoalProgress) => "Wow! You're doing great! Almost there! ⭐",
-                (CharacterType.Aura, CharacterState.Proud, ScreenContext.GoalProgress) => "I knew you had it in you! Keep saving! ✨",
-
-                // Achievements
-                (CharacterType.Nova, CharacterState.Excited, ScreenContext.Achievement) => "A new badge! You're on fire! 🔥",
-                (CharacterType.Luna, CharacterState.Excited, ScreenContext.Achievement) => "Well deserved! Your hard work is paying off! 🌟",
-                (CharacterType.Cosmo, CharacterState.Excited, ScreenContext.Achievement) => "AWESOME! A new achievement unlocked! 🏆",
-                (CharacterType.Aura, CharacterState.Excited, ScreenContext.Achievement) => "Magnificent! Another achievement earned! ✨",
-
-                // Quizzes
-                (CharacterType.Nova, CharacterState.Curious, ScreenContext.Quiz) => "Ooh, a quiz! I love learning new things! 🚀",
-                (CharacterType.Luna, CharacterState.Curious, ScreenContext.Quiz) => "Let's think through this carefully together. 🤔",
-                (CharacterType.Cosmo, CharacterState.Curious, ScreenContext.Quiz) => "Quiz time! This is going to be fun! 📚",
-                (CharacterType.Aura, CharacterState.Curious, ScreenContext.Quiz) => "Every question helps you learn and grow! 💡",
-
-                // Default: no message
                 _ => null
             };
         }
 
-        /// <summary>
-        /// Gets display name for character type.
-        /// </summary>
-        private string GetCharacterDisplayName(CharacterType characterType)
-        {
-            return characterType switch
-            {
-                CharacterType.Nova => "Nova the Explorer",
-                CharacterType.Luna => "Luna the Thinker",
-                CharacterType.Cosmo => "Cosmo the Curious",
-                CharacterType.Aura => "Aura the Wise",
-                _ => characterType.ToString()
-            };
-        }
-
-        // ==================== HELPER CLASSES ====================
-
-        /// <summary>
-        /// Model for parsing context data JSON.
-        /// Contains additional info for state determination.
-        /// </summary>
         private class ContextDataModel
         {
             public bool? HasLowBalance { get; set; }
             public decimal? CurrentBalance { get; set; }
-            public decimal? GoalProgress { get; set; } // Percentage (0-100)
+            public decimal? GoalProgress { get; set; }
             public int? ExpenseCount { get; set; }
             public bool? IsFirstTime { get; set; }
         }

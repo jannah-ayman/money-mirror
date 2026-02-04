@@ -6,11 +6,6 @@ using MoneyMirror.Core.Interfaces;
 
 namespace MoneyMirror.API.Controllers
 {
-    /// <summary>
-    /// Controller handling character selection and state management endpoints.
-    /// Routes: /api/character/*
-    /// Provides endpoints for character selection, state retrieval, and profile pictures.
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class CharacterController : ControllerBase
@@ -26,14 +21,6 @@ namespace MoneyMirror.API.Controllers
             _logger = logger;
         }
 
-        // ==================== PUBLIC ENDPOINTS (NO AUTH) ====================
-
-        /// <summary>
-        /// Gets list of all available characters.
-        /// Used for character selection screen.
-        /// GET /api/character/available
-        /// [Public - no auth required for browsing characters]
-        /// </summary>
         [HttpGet("available")]
         [AllowAnonymous]
         public async Task<ActionResult<ApiResponse<List<CharacterInfoDto>>>> GetAvailableCharacters()
@@ -46,20 +33,11 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        // ==================== CHILD ENDPOINTS ====================
-
-        /// <summary>
-        /// Selects a character for the logged-in child.
-        /// Updates profile picture to character's idle state.
-        /// PUT /api/character/select
-        /// [Child only]
-        /// </summary>
         [HttpPut("select")]
         [Authorize(Roles = "Child")]
         public async Task<ActionResult<ApiResponse<SelectCharacterResponseDto>>> SelectCharacter(
             [FromBody] SelectCharacterDto dto)
         {
-            // Get child ID from JWT token
             var childIdClaim = User.FindFirst("ChildId")?.Value;
 
             if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
@@ -75,7 +53,7 @@ namespace MoneyMirror.API.Controllers
                 return BadRequest(ApiResponse<SelectCharacterResponseDto>.ErrorResponse(errorMessage));
             }
 
-            _logger.LogInformation($"Child {childId} selected character: {dto.CharacterType}");
+            _logger.LogInformation($"Child {childId} selected character ID: {dto.CharacterID}");
 
             return Ok(ApiResponse<SelectCharacterResponseDto>.SuccessResponse(
                 response,
@@ -83,18 +61,11 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
-        /// Gets character state and image for current screen context.
-        /// Determines appropriate character emotion based on what child is doing.
-        /// POST /api/character/state
-        /// [Child only]
-        /// </summary>
         [HttpPost("state")]
         [Authorize(Roles = "Child")]
         public async Task<ActionResult<ApiResponse<CharacterStateResponseDto>>> GetCharacterState(
             [FromBody] GetCharacterStateDto dto)
         {
-            // Get child ID from JWT token
             var childIdClaim = User.FindFirst("ChildId")?.Value;
 
             if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
@@ -116,17 +87,10 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
-        /// Gets the logged-in child's profile picture URL.
-        /// Returns idle state of their selected character.
-        /// GET /api/character/profile-picture
-        /// [Child only]
-        /// </summary>
         [HttpGet("profile-picture")]
         [Authorize(Roles = "Child")]
         public async Task<ActionResult<ApiResponse<string>>> GetMyProfilePicture()
         {
-            // Get child ID from JWT token
             var childIdClaim = User.FindFirst("ChildId")?.Value;
 
             if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
@@ -148,29 +112,16 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        // ==================== PARENT ENDPOINTS ====================
-
-        /// <summary>
-        /// Gets a child's profile picture URL (parent view).
-        /// Used to display child's character in parent dashboard.
-        /// GET /api/character/{childId}/profile-picture
-        /// [Parent only]
-        /// </summary>
         [HttpGet("{childId}/profile-picture")]
         [Authorize(Roles = "Parent")]
         public async Task<ActionResult<ApiResponse<string>>> GetChildProfilePicture(int childId)
         {
-            // Get parent ID from JWT token
             var parentIdClaim = User.FindFirst("ParentId")?.Value;
 
             if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
             {
                 return BadRequest(ApiResponse<string>.ErrorResponse("Invalid token claims"));
             }
-
-            // TODO: Verify parent-child relationship here
-            // For now, we'll allow any parent to view any child's character
-            // In production, add authorization check
 
             var (success, imageUrl, errorMessage) =
                 await _characterService.GetProfilePictureUrlAsync(childId);
@@ -186,12 +137,6 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        // ==================== TEST ENDPOINT ====================
-
-        /// <summary>
-        /// Test endpoint to verify character controller is working.
-        /// GET /api/character/test
-        /// </summary>
         [HttpGet("test")]
         [AllowAnonymous]
         public ActionResult<ApiResponse<object>> Test()

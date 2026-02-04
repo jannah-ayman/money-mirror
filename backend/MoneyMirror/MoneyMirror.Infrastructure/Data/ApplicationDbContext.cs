@@ -74,8 +74,12 @@ namespace MoneyMirror.Infrastructure.Data
 
         /// Advice table - AI-generated personalized financial tips
         public DbSet<Advice> Advices { get; set; }
+
         /// Transactions table - records all financial movements (allowances, bonuses, expenses)
         public DbSet<Transaction> Transactions { get; set; }
+
+        /// Characters table - available character types for children to select
+        public DbSet<Character> Characters { get; set; }
 
         /// Configure entity relationships, indexes, constraints, and default values.
         /// Called automatically by Entity Framework when creating migrations.
@@ -132,6 +136,26 @@ namespace MoneyMirror.Infrastructure.Data
                       .WithMany(pt => pt.Children)
                       .HasForeignKey(c => c.TypeID)
                       .OnDelete(DeleteBehavior.SetNull); // Don't delete child if personality type is removed
+
+                // Configure optional foreign key to Character
+                entity.HasOne(c => c.Character)
+                      .WithMany(ch => ch.Children)
+                      .HasForeignKey(c => c.CharacterID)
+                      .OnDelete(DeleteBehavior.SetNull); // Don't delete child if character is removed
+            });
+
+            // ==================== CHARACTER ENTITY CONFIGURATION ====================
+
+            modelBuilder.Entity<Character>(entity =>
+            {
+                // CharacterType must be unique
+                entity.HasIndex(ch => ch.CharacterType)
+                      .IsUnique()
+                      .HasDatabaseName("IX_Character_CharacterType_Unique");
+
+                // Default value
+                entity.Property(ch => ch.IsActive)
+                      .HasDefaultValue(true);
             });
 
             // ==================== PARENT-CHILD RELATIONSHIP (Many-to-Many) ====================
@@ -430,11 +454,10 @@ namespace MoneyMirror.Infrastructure.Data
                 entity.HasIndex(t => new { t.Type, t.TransactionDate })
                       .HasDatabaseName("IX_Transaction_Type_TransactionDate");
 
-                // ✅ FIX HERE
                 entity.HasOne(t => t.Child)
                       .WithMany(c => c.Transactions)
                       .HasForeignKey(t => t.ChildID)
-                      .OnDelete(DeleteBehavior.NoAction); // or Restrict
+                      .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(t => t.Parent)
                       .WithMany(p => p.InitiatedTransactions)
@@ -450,29 +473,49 @@ namespace MoneyMirror.Infrastructure.Data
                       .HasDefaultValueSql("GETUTCDATE()");
             });
 
-
-            // ==================== SEED DATA (Optional) ====================
-            // Uncomment if you want to seed initial data like categories, moods, etc.
-
-            /*
-            // Seed Expense Categories
-            modelBuilder.Entity<ExpenseCategory>().HasData(
-                new ExpenseCategory { CategoryID = 1, Name = "Toys" },
-                new ExpenseCategory { CategoryID = 2, Name = "Food & Snacks" },
-                new ExpenseCategory { CategoryID = 3, Name = "Books" },
-                new ExpenseCategory { CategoryID = 4, Name = "Clothes" },
-                new ExpenseCategory { CategoryID = 5, Name = "Entertainment" }
+            // ==================== CHARACTER SEED DATA ====================
+            modelBuilder.Entity<Character>().HasData(
+                new Character
+                {
+                    CharacterID = 1,
+                    CharacterType = "Nova",
+                    DisplayName = "Nova the Explorer",
+                    Description = "Energetic and loves adventures! Nova is always excited to help you reach your goals! 🚀",
+                    BasePath = "/characters/nova",
+                    IsActive = true,
+                    DisplayOrder = 1
+                },
+                new Character
+                {
+                    CharacterID = 2,
+                    CharacterType = "Luna",
+                    DisplayName = "Luna the Thinker",
+                    Description = "Calm and thoughtful! Luna helps you make smart decisions about your money. 🌙",
+                    BasePath = "/characters/luna",
+                    IsActive = true,
+                    DisplayOrder = 2
+                },
+                new Character
+                {
+                    CharacterID = 3,
+                    CharacterType = "Cosmo",
+                    DisplayName = "Cosmo the Curious",
+                    Description = "Curious and playful! Cosmo loves learning new things about saving and spending! ⭐",
+                    BasePath = "/characters/cosmo",
+                    IsActive = true,
+                    DisplayOrder = 3
+                },
+                new Character
+                {
+                    CharacterID = 4,
+                    CharacterType = "Aura",
+                    DisplayName = "Aura the Wise",
+                    Description = "Wise and encouraging! Aura believes in you and celebrates every achievement! ✨",
+                    BasePath = "/characters/aura",
+                    IsActive = true,
+                    DisplayOrder = 4
+                }
             );
-
-            // Seed Moods
-            modelBuilder.Entity<Mood>().HasData(
-                new Mood { MoodID = 1, Emoji = "😊", Description = "Happy" },
-                new Mood { MoodID = 2, Emoji = "😢", Description = "Sad" },
-                new Mood { MoodID = 3, Emoji = "😐", Description = "Neutral" },
-                new Mood { MoodID = 4, Emoji = "😍", Description = "Excited" },
-                new Mood { MoodID = 5, Emoji = "😔", Description = "Regretful" }
-            );
-            */
         }
     }
 }
