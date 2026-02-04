@@ -48,6 +48,20 @@ namespace MoneyMirror.Core.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int? TypeID { get; set; }
+        /// <summary>
+        /// Selected character type (Nova, Luna, Cosmo, Aura).
+        /// Null if child hasn't selected a character yet.
+        /// </summary>
+        [MaxLength(50)]
+        public string? SelectedCharacter { get; set; }
+
+        /// <summary>
+        /// URL to character's idle state image (profile picture).
+        /// Updated when character is selected.
+        /// Example: "/characters/nova/idle.png"
+        /// </summary>
+        [MaxLength(500)]
+        public string? AvatarUrl { get; set; }
 
         // ==================== AUTHENTICATION FIELDS ====================
 

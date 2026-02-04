@@ -24,4 +24,11 @@
     <ProjectReference Include="..\MoneyMirror.Infrastructure\MoneyMirror.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\characters\aura\" />
+    <Folder Include="wwwroot\characters\luna\" />
+    <Folder Include="wwwroot\characters\cosmo\" />
+    <Folder Include="wwwroot\characters\nova\" />
+  </ItemGroup>
+
 </Project>
