@@ -183,65 +183,73 @@ namespace MoneyMirror.Infrastructure.Services
         // ==================== BONUS ====================
 
         public async Task<(bool success, decimal newBalance, string errorMessage)> GiveBonusAsync(
-            int parentId,
-            int childId,
-            GiveBonusDto dto)
+    int parentId,
+    int childId,
+    GiveBonusDto dto)
         {
-            // Use database transaction to ensure consistency
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // ✅ STEP 1: Get the execution strategy from EF Core
+            // This is REQUIRED when EnableRetryOnFailure is enabled
+            var strategy = _context.Database.CreateExecutionStrategy();
 
-            try
+            // ✅ STEP 2: Execute everything inside the strategy
+            return await strategy.ExecuteAsync(async () =>
             {
-                // STEP 1: Verify parent-child relationship
-                bool isLinked = await IsParentLinkedToChildAsync(parentId, childId);
+                // NOW we can safely use transactions inside the strategy
+                using var transaction = await _context.Database.BeginTransactionAsync();
 
-                if (!isLinked)
+                try
                 {
-                    _logger.LogWarning($"Parent {parentId} attempted to give bonus to non-linked child {childId}");
-                    return (false, 0, "You are not authorized to give bonuses to this child");
+                    // STEP 1: Verify parent-child relationship
+                    bool isLinked = await IsParentLinkedToChildAsync(parentId, childId);
+
+                    if (!isLinked)
+                    {
+                        _logger.LogWarning($"Parent {parentId} attempted to give bonus to non-linked child {childId}");
+                        return (false, 0, "You are not authorized to give bonuses to this child");
+                    }
+
+                    // STEP 2: Get child's current balance
+                    var child = await _context.Children.FindAsync(childId);
+
+                    if (child == null)
+                    {
+                        return (false, 0, "Child not found");
+                    }
+
+                    // STEP 3: Update child's balance
+                    child.CurrentBalance += dto.Amount;
+                    _context.Children.Update(child);
+
+                    // STEP 4: Create transaction record
+                    var transactionRecord = new Transaction
+                    {
+                        Type = "BonusCredit",
+                        Amount = dto.Amount,
+                        BalanceAfter = child.CurrentBalance,
+                        Description = dto.Reason, // Use parent's reason as description
+                        TransactionDate = DateTime.UtcNow,
+                        ChildID = childId,
+                        ParentID = parentId,
+                        AllowanceID = null // Bonuses are not linked to allowance schedules
+                    };
+
+                    _context.Transactions.Add(transactionRecord);
+
+                    // STEP 5: Save changes and commit transaction
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation($"Bonus of {dto.Amount} given to child {childId} by parent {parentId}. New balance: {child.CurrentBalance}");
+
+                    return (true, child.CurrentBalance, string.Empty);
                 }
-
-                // STEP 2: Get child's current balance
-                var child = await _context.Children.FindAsync(childId);
-
-                if (child == null)
+                catch (Exception ex)
                 {
-                    return (false, 0, "Child not found");
+                    await transaction.RollbackAsync();
+                    _logger.LogError($"Error giving bonus to child {childId}: {ex.Message}");
+                    return (false, 0, "An error occurred while giving the bonus");
                 }
-
-                // STEP 3: Update child's balance
-                child.CurrentBalance += dto.Amount;
-                _context.Children.Update(child);
-
-                // STEP 4: Create transaction record
-                var transactionRecord = new Transaction
-                {
-                    Type = "BonusCredit",
-                    Amount = dto.Amount,
-                    BalanceAfter = child.CurrentBalance,
-                    Description = dto.Reason, // Use parent's reason as description
-                    TransactionDate = DateTime.UtcNow,
-                    ChildID = childId,
-                    ParentID = parentId,
-                    AllowanceID = null // Bonuses are not linked to allowance schedules
-                };
-
-                _context.Transactions.Add(transactionRecord);
-
-                // STEP 5: Save changes and commit transaction
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                _logger.LogInformation($"Bonus of {dto.Amount} given to child {childId} by parent {parentId}. New balance: {child.CurrentBalance}");
-
-                return (true, child.CurrentBalance, string.Empty);
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError($"Error giving bonus to child {childId}: {ex.Message}");
-                return (false, 0, "An error occurred while giving the bonus");
-            }
+            });
         }
 
         // ==================== BALANCE (PARENT VIEW) ====================
