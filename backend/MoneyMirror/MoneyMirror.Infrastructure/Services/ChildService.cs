@@ -569,5 +569,338 @@ namespace MoneyMirror.Infrastructure.Services
                 return 0;
             }
         }
+        // Add these methods to your ChildService.cs class
+
+        // ==================== CHILD DASHBOARD & PROFILE ====================
+
+        /// <summary>
+        /// Gets the child's full profile information for "My Profile" screen.
+        /// This is simple - just fetch the child and their personality type.
+        /// </summary>
+        public async Task<(bool success, ChildProfileResponseDto? profile, string errorMessage)>
+            GetMyProfileAsync(int childId)
+        {
+            try
+            {
+                // STEP 1: Find child with their personality type
+                var child = await _context.Children
+                    .Include(c => c.PersonalityType) // Load personality info
+                    .FirstOrDefaultAsync(c => c.ChildID == childId);
+
+                if (child == null)
+                {
+                    _logger.LogWarning($"Profile request for non-existent child {childId}");
+                    return (false, null, "Child not found");
+                }
+
+                // STEP 2: Build the response
+                var profile = new ChildProfileResponseDto
+                {
+                    ChildID = child.ChildID,
+                    FirstName = child.FName,
+                    LastName = child.LName,
+                    Age = child.Age,
+                    Gender = child.Gender,
+                    CurrentBalance = child.CurrentBalance,
+                    AvatarUrl = null, // TODO: implement avatar selection later
+                    PersonalityInfo = new PersonalityInfoDto
+                    {
+                        ChildName = child.PersonalityType?.ChildName ?? "Little Learner",
+                        FunFacts = child.PersonalityType?.FunFacts,
+                        IsFinalized = child.IsPersonalityFinalized
+                    }
+                };
+
+                _logger.LogInformation($"Profile loaded for child {childId}");
+
+                return (true, profile, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting profile for child {childId}: {ex.Message}");
+                return (false, null, "An error occurred while loading your profile");
+            }
+        }
+
+        /// <summary>
+        /// Gets the child's dashboard data for main home screen.
+        /// Shows balance, personality, and counts for goals/expenses.
+        /// </summary>
+        public async Task<(bool success, ChildDashboardDto? dashboard, string errorMessage)>
+            GetMyDashboardAsync(int childId)
+        {
+            try
+            {
+                // STEP 1: Find child with personality type
+                var child = await _context.Children
+                    .Include(c => c.PersonalityType)
+                    .FirstOrDefaultAsync(c => c.ChildID == childId);
+
+                if (child == null)
+                {
+                    _logger.LogWarning($"Dashboard request for non-existent child {childId}");
+                    return (false, null, "Child not found");
+                }
+
+                // STEP 2: Count active goals (for future use)
+                // For now, we'll return 0 since goals aren't implemented yet
+                int activeGoalsCount = await _context.SavingsGoals
+                    .CountAsync(g => g.ChildID == childId && g.Status == "Active");
+
+                // STEP 3: Build dashboard response
+                var dashboard = new ChildDashboardDto
+                {
+                    FirstName = child.FName,
+                    CurrentBalance = child.CurrentBalance,
+                    AvatarUrl = null, // TODO: implement avatar selection later
+                    PersonalityName = child.PersonalityType?.ChildName ?? "Little Learner",
+                    FunFacts = child.PersonalityType?.FunFacts,
+                    UnloggedExpensesCount = 0, // Not tracking this yet
+                    ActiveGoalsCount = activeGoalsCount
+                };
+
+                _logger.LogInformation($"Dashboard loaded for child {childId}");
+
+                return (true, dashboard, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting dashboard for child {childId}: {ex.Message}");
+                return (false, null, "An error occurred while loading your dashboard");
+            }
+        }
+        // Add these methods to your ChildService.cs class
+
+        // ==================== PARENT MANAGEMENT OF CHILDREN ====================
+
+        /// <summary>
+        /// Helper method to verify parent-child relationship.
+        /// Returns true only if the parent is linked to this child.
+        /// </summary>
+        private async Task<bool> IsParentLinkedToChildAsync(int parentId, int childId)
+        {
+            return await _context.ParentChildren
+                .AnyAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
+        }
+
+        /// <summary>
+        /// Updates a child's basic information.
+        /// Parent can change first name, last name, and date of birth.
+        /// Age and age group are recalculated automatically.
+        /// </summary>
+        public async Task<(bool success, UpdateChildResponseDto? updatedChild, string errorMessage)>
+            UpdateChildAsync(int parentId, int childId, UpdateChildDto dto)
+        {
+            try
+            {
+                // STEP 1: Verify parent-child relationship
+                bool isLinked = await IsParentLinkedToChildAsync(parentId, childId);
+
+                if (!isLinked)
+                {
+                    _logger.LogWarning($"Parent {parentId} attempted to update non-linked child {childId}");
+                    return (false, null, "You are not authorized to update this child");
+                }
+
+                // STEP 2: Find the child
+                var child = await _context.Children.FindAsync(childId);
+
+                if (child == null)
+                {
+                    _logger.LogWarning($"Update attempt for non-existent child {childId}");
+                    return (false, null, "Child not found");
+                }
+
+                // STEP 3: Update the fields
+                child.FName = dto.FirstName.Trim();
+                child.LName = dto.LastName.Trim();
+                child.DOB = dto.DateOfBirth;
+
+                // STEP 4: Recalculate age and age group automatically
+                child.Age = AgeHelper.CalculateAge(dto.DateOfBirth);
+                var newAgeGroup = AgeHelper.CalculateAgeGroup(dto.DateOfBirth);
+
+                // STEP 5: Update questionnaire age group if it exists
+                var questionnaire = await _context.InitialProfilingQuestionnaires
+                    .FirstOrDefaultAsync(q => q.ChildID == childId);
+
+                if (questionnaire != null)
+                {
+                    questionnaire.ChildAgeGroup = newAgeGroup;
+                    _context.InitialProfilingQuestionnaires.Update(questionnaire);
+                }
+
+                // STEP 6: Save changes
+                _context.Children.Update(child);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Parent {parentId} updated child {childId}: {child.FName} {child.LName}, Age: {child.Age}");
+
+                // STEP 7: Build response
+                var response = new UpdateChildResponseDto
+                {
+                    ChildID = child.ChildID,
+                    FirstName = child.FName,
+                    LastName = child.LName,
+                    DateOfBirth = child.DOB,
+                    Age = child.Age,
+                    AgeGroup = AgeHelper.GetAgeGroupDisplayName(newAgeGroup)
+                };
+
+                return (true, response, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating child {childId}: {ex.Message}");
+                return (false, null, "An error occurred while updating the child");
+            }
+        }
+
+        /// <summary>
+        /// Regenerates a new login code for a child.
+        /// Old code becomes invalid immediately.
+        /// This is useful if the code is lost or compromised.
+        /// </summary>
+        public async Task<(bool success, RegenerateCodeResponseDto? codeInfo, string errorMessage)>
+            RegenerateLoginCodeAsync(int parentId, int childId)
+        {
+            try
+            {
+                // STEP 1: Verify parent-child relationship
+                bool isLinked = await IsParentLinkedToChildAsync(parentId, childId);
+
+                if (!isLinked)
+                {
+                    _logger.LogWarning($"Parent {parentId} attempted to regenerate code for non-linked child {childId}");
+                    return (false, null, "You are not authorized to manage this child");
+                }
+
+                // STEP 2: Find the child
+                var child = await _context.Children.FindAsync(childId);
+
+                if (child == null)
+                {
+                    _logger.LogWarning($"Code regeneration attempt for non-existent child {childId}");
+                    return (false, null, "Child not found");
+                }
+
+                // STEP 3: Generate new unique code
+                string oldCode = child.LoginCode;
+                string newCode = await GenerateUniqueLoginCodeAsync();
+
+                // STEP 4: Update the child's login code
+                child.LoginCode = newCode;
+
+                // STEP 5: Revoke any active refresh tokens (force re-login with new code)
+                child.RefreshToken = null;
+                child.RefreshTokenExpiry = null;
+
+                _context.Children.Update(child);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Parent {parentId} regenerated login code for child {childId} ({child.FName}). Old: {oldCode}, New: {newCode}");
+
+                // STEP 6: Build response
+                var response = new RegenerateCodeResponseDto
+                {
+                    NewLoginCode = newCode,
+                    ChildName = $"{child.FName} {child.LName}"
+                };
+
+                return (true, response, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error regenerating code for child {childId}: {ex.Message}");
+                return (false, null, "An error occurred while generating a new code");
+            }
+        }
+
+        /// <summary>
+        /// Permanently deletes a child and ALL their data.
+        /// This is a HARD DELETE - cannot be undone.
+        /// 
+        /// Why hard delete for children:
+        /// - Privacy: Parent explicitly wants child's data removed
+        /// - Compliance: Child's data should not be used for training
+        /// - Clear intent: Different from parent account deletion
+        /// 
+        /// What gets deleted:
+        /// - Child record
+        /// - All expenses
+        /// - All allowances
+        /// - All transactions
+        /// - All goals
+        /// - All achievements
+        /// - Questionnaire
+        /// - Everything linked to this child
+        /// 
+        /// What does NOT get deleted:
+        /// - Parent account (remains intact)
+        /// - Other children under same parent (unaffected)
+        /// </summary>
+        public async Task<(bool success, string message, string errorMessage)>
+            DeleteChildAsync(int parentId, int childId)
+        {
+            // ✅ Use execution strategy for transaction safety
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // STEP 1: Verify parent-child relationship
+                    bool isLinked = await IsParentLinkedToChildAsync(parentId, childId);
+
+                    if (!isLinked)
+                    {
+                        _logger.LogWarning($"Parent {parentId} attempted to delete non-linked child {childId}");
+                        return (false, string.Empty, "You are not authorized to delete this child");
+                    }
+
+                    // STEP 2: Find the child
+                    var child = await _context.Children
+                        .Include(c => c.ParentChildren)
+                        .FirstOrDefaultAsync(c => c.ChildID == childId);
+
+                    if (child == null)
+                    {
+                        _logger.LogWarning($"Delete attempt for non-existent child {childId}");
+                        return (false, string.Empty, "Child not found");
+                    }
+
+                    string childName = $"{child.FName} {child.LName}";
+
+                    // STEP 3: Delete all related data
+                    // Entity Framework will handle cascading deletes based on your
+                    // OnDelete settings in ApplicationDbContext.cs
+
+                    // Remove ParentChild relationships first
+                    _context.ParentChildren.RemoveRange(child.ParentChildren);
+
+                    // Remove the child (cascading deletes handle the rest)
+                    _context.Children.Remove(child);
+
+                    // STEP 4: Save and commit
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation(
+                        $"Parent {parentId} permanently deleted child {childId} ({childName}) and all related data");
+
+                    return (true, $"Child {childName} and all their data have been permanently deleted", string.Empty);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError($"Error deleting child {childId}: {ex.Message}");
+                    return (false, string.Empty, "An error occurred while deleting the child");
+                }
+            });
+        }
     }
 }
