@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoneyMirror.Core.DTOs.Character;
 using MoneyMirror.Core.DTOs.Common;
@@ -6,97 +7,149 @@ using MoneyMirror.Core.Interfaces;
 
 namespace MoneyMirror.API.Controllers
 {
-    /// <summary>
-    /// Simple controller for character operations.
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class CharacterController : ControllerBase
     {
         private readonly ICharacterService _characterService;
+        private readonly ILogger<CharacterController> _logger;
 
-        public CharacterController(ICharacterService characterService)
+        public CharacterController(
+            ICharacterService characterService,
+            ILogger<CharacterController> logger)
         {
             _characterService = characterService;
+            _logger = logger;
         }
 
-        /// <summary>
-        /// Gets all available space characters.
-        /// GET /api/character
-        /// [Public - anyone can see available characters]
-        /// </summary>
-        [HttpGet]
+        [HttpGet("available")]
         [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<List<CharacterDto>>>> GetAllCharacters()
+        public async Task<ActionResult<ApiResponse<List<CharacterInfoDto>>>> GetAvailableCharacters()
         {
-            var characters = await _characterService.GetAllCharactersAsync();
+            var characters = await _characterService.GetAvailableCharactersAsync();
 
-            return Ok(ApiResponse<List<CharacterDto>>.SuccessResponse(
+            return Ok(ApiResponse<List<CharacterInfoDto>>.SuccessResponse(
                 characters,
-                $"Found {characters.Count} space characters!"
+                $"Found {characters.Count} available characters"
             ));
         }
 
-        /// <summary>
-        /// Selects a character for the logged-in child.
-        /// PUT /api/character/select
-        /// [Child only]
-        /// </summary>
         [HttpPut("select")]
         [Authorize(Roles = "Child")]
-        public async Task<ActionResult<ApiResponse<object>>> SelectCharacter(
+        public async Task<ActionResult<ApiResponse<SelectCharacterResponseDto>>> SelectCharacter(
             [FromBody] SelectCharacterDto dto)
         {
-            // Get child ID from JWT token
             var childIdClaim = User.FindFirst("ChildId")?.Value;
 
             if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
             {
-                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token"));
+                return BadRequest(ApiResponse<SelectCharacterResponseDto>.ErrorResponse("Invalid token claims"));
             }
 
-            var (success, message) = await _characterService.SelectCharacterAsync(
-                childId,
-                dto.CharacterID);
+            var (success, response, errorMessage) =
+                await _characterService.SelectCharacterAsync(childId, dto);
 
             if (!success)
             {
-                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+                return BadRequest(ApiResponse<SelectCharacterResponseDto>.ErrorResponse(errorMessage));
             }
 
-            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+            _logger.LogInformation($"Child {childId} selected character ID: {dto.CharacterID}");
+
+            return Ok(ApiResponse<SelectCharacterResponseDto>.SuccessResponse(
+                response,
+                response.Message
+            ));
         }
 
-        /// <summary>
-        /// Gets character image for current screen.
-        /// POST /api/character/image
-        /// [Child only]
-        /// </summary>
-        [HttpPost("image")]
+        [HttpPost("state")]
         [Authorize(Roles = "Child")]
-        public async Task<ActionResult<ApiResponse<CharacterImageResponseDto>>> GetCharacterImage(
-            [FromBody] GetCharacterImageDto dto)
+        public async Task<ActionResult<ApiResponse<CharacterStateResponseDto>>> GetCharacterState(
+            [FromBody] GetCharacterStateDto dto)
         {
-            // Get child ID from JWT token
             var childIdClaim = User.FindFirst("ChildId")?.Value;
 
             if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
             {
-                return BadRequest(ApiResponse<CharacterImageResponseDto>.ErrorResponse("Invalid token"));
+                return BadRequest(ApiResponse<CharacterStateResponseDto>.ErrorResponse("Invalid token claims"));
             }
 
-            var (success, image, errorMessage) = await _characterService.GetCharacterImageAsync(
-                childId,
-                dto.ScreenContext);
+            var (success, response, errorMessage) =
+                await _characterService.GetCharacterStateAsync(childId, dto);
 
             if (!success)
             {
-                return BadRequest(ApiResponse<CharacterImageResponseDto>.ErrorResponse(errorMessage));
+                return BadRequest(ApiResponse<CharacterStateResponseDto>.ErrorResponse(errorMessage));
             }
 
-            return Ok(ApiResponse<CharacterImageResponseDto>.SuccessResponse(
-                image,
-                "Character ready!"
+            return Ok(ApiResponse<CharacterStateResponseDto>.SuccessResponse(
+                response,
+                "Character state retrieved successfully"
+            ));
+        }
+
+        [HttpGet("profile-picture")]
+        [Authorize(Roles = "Child")]
+        public async Task<ActionResult<ApiResponse<string>>> GetMyProfilePicture()
+        {
+            var childIdClaim = User.FindFirst("ChildId")?.Value;
+
+            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
+            {
+                return BadRequest(ApiResponse<string>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, imageUrl, errorMessage) =
+                await _characterService.GetProfilePictureUrlAsync(childId);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<string>.ErrorResponse(errorMessage));
+            }
+
+            return Ok(ApiResponse<string>.SuccessResponse(
+                imageUrl,
+                "Profile picture retrieved successfully"
+            ));
+        }
+
+        [HttpGet("{childId}/profile-picture")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<string>>> GetChildProfilePicture(int childId)
+        {
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<string>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, imageUrl, errorMessage) =
+                await _characterService.GetProfilePictureUrlAsync(childId);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<string>.ErrorResponse(errorMessage));
+            }
+
+            return Ok(ApiResponse<string>.SuccessResponse(
+                imageUrl,
+                "Profile picture retrieved successfully"
+            ));
+        }
+
+        [HttpGet("test")]
+        [AllowAnonymous]
+        public ActionResult<ApiResponse<object>> Test()
+        {
+            return Ok(ApiResponse<object>.SuccessResponse(
+                new
+                {
+                    Message = "Character controller is working!",
+                    AvailableCharacters = new[] { "Nova", "Luna", "Cosmo", "Aura" },
+                    TotalStates = 10
+                },
+                "Test successful"
             ));
         }
     }

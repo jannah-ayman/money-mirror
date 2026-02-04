@@ -2,26 +2,17 @@
 
 namespace MoneyMirror.Core.Interfaces
 {
-    /// <summary>
-    /// Simple interface for character operations.
-    /// </summary>
     public interface ICharacterService
     {
-        /// <summary>
-        /// Gets all available space characters for selection.
-        /// </summary>
-        Task<List<CharacterDto>> GetAllCharactersAsync();
+        Task<List<CharacterInfoDto>> GetAvailableCharactersAsync();
 
-        /// <summary>
-        /// Selects a character for a child.
-        /// </summary>
-        Task<(bool success, string message)> SelectCharacterAsync(int childId, int characterId);
+        Task<(bool success, SelectCharacterResponseDto response, string errorMessage)>
+            SelectCharacterAsync(int childId, SelectCharacterDto dto);
 
-        /// <summary>
-        /// Gets the appropriate character image for the current screen.
-        /// Falls back to default image if no specific state exists.
-        /// </summary>
-        Task<(bool success, CharacterImageResponseDto image, string errorMessage)>
-            GetCharacterImageAsync(int childId, string screenContext);
+        Task<(bool success, CharacterStateResponseDto response, string errorMessage)>
+            GetCharacterStateAsync(int childId, GetCharacterStateDto dto);
+
+        Task<(bool success, string imageUrl, string errorMessage)>
+            GetProfilePictureUrlAsync(int childId);
     }
 }
