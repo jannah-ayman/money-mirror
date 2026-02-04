@@ -210,7 +210,7 @@ if (app.Environment.IsDevelopment())
 
 // 2. HTTPS REDIRECTION (redirect HTTP to HTTPS)
 app.UseHttpsRedirection();
-
+app.UseStaticFiles();
 // 3. CORS (must come before authentication)
 app.UseCors("AllowReactNative");
 
