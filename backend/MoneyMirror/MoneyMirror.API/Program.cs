@@ -61,6 +61,7 @@ builder.Services.AddHangfire(config => config
 
 // Add Hangfire server
 builder.Services.AddHangfireServer();
+builder.Services.AddHttpClient();
 
 // ==================== DEPENDENCY INJECTION - REGISTER SERVICES ====================
 // These tell ASP.NET Core: "When someone asks for IAuthService, give them AuthService"
@@ -72,7 +73,7 @@ builder.Services.AddScoped<IPersonalityProfileService, PersonalityProfileService
 builder.Services.AddScoped<IAllowanceService, AllowanceService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ICharacterService, CharacterService>();
-
+builder.Services.AddScoped<IAIPersonalityService, AIPersonalityService>();
 
 // ==================== JWT AUTHENTICATION CONFIGURATION ====================
 // Read JWT settings from appsettings.json

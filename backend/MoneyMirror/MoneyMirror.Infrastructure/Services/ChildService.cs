@@ -32,28 +32,29 @@ namespace MoneyMirror.Infrastructure.Services
         private readonly IJwtService _jwtService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<ChildService> _logger;
-
+        private readonly IAIPersonalityService _aiPersonalityService;
         public ChildService(
             ApplicationDbContext context,
             IPersonalityProfileService personalityService,
             IJwtService jwtService,
             IConfiguration configuration,
-            ILogger<ChildService> logger)
+            ILogger<ChildService> logger,
+            IAIPersonalityService aiPersonalityService )
         {
             _context = context;
             _personalityService = personalityService;
             _jwtService = jwtService;
             _configuration = configuration;
             _logger = logger;
+            _aiPersonalityService = aiPersonalityService;
         }
 
         /// Completes initial onboarding in ONE request.
         /// The client does NOT send ChildID.
         /// The backend creates everything safely.
         public async Task<(bool success, QuestionnaireCompletionResponseDto? response, string errorMessage)>
-            CompleteInitialProfilingAsync(int parentId, CompleteInitialProfilingDto dto)
+        CompleteInitialProfilingAsync(int parentId, CompleteInitialProfilingDto dto)
         {
-            // ✅ REQUIRED when EnableRetryOnFailure is enabled
             var strategy = _context.Database.CreateExecutionStrategy();
 
             return await strategy.ExecuteAsync(async () =>
@@ -62,100 +63,117 @@ namespace MoneyMirror.Infrastructure.Services
 
                 try
                 {
-                    // STEP 1: CREATE CHILD
-
+                    // STEP 1: CREATE CHILD (same as before)
                     var child = new Child
                     {
                         FName = dto.ChildFirstName,
                         LName = dto.ChildLastName,
                         DOB = dto.DOB,
-                        Age = AgeHelper.CalculateAge(dto.DOB), // ✅ Use helper
+                        Age = AgeHelper.CalculateAge(dto.DOB),
                         Gender = string.IsNullOrWhiteSpace(dto.Gender) ? null : dto.Gender.Trim(),
                         LoginCode = await GenerateUniqueLoginCodeAsync(),
                         CreatedAt = DateTime.UtcNow,
-                        IsPersonalityFinalized = false
+                        IsPersonalityFinalized = false // ✅ Start as false
                     };
 
                     _context.Children.Add(child);
-                    await _context.SaveChangesAsync(); // Generates ChildID
+                    await _context.SaveChangesAsync();
 
                     _logger.LogInformation(
                         "Created child {FirstName} {LastName} (ID: {ChildID})",
                         child.FName, child.LName, child.ChildID);
 
-                    // STEP 2: LINK PARENT ↔ CHILD
+                    // STEP 2: LINK PARENT ↔ CHILD (same as before)
                     _context.ParentChildren.Add(new ParentChild
                     {
                         ParentID = parentId,
                         ChildID = child.ChildID
                     });
 
-                    // STEP 3: SAVE QUESTIONNAIRE
-  
-                    // Serialize SpendingCategories list to JSON
+                    // STEP 3: SAVE QUESTIONNAIRE (same as before)
                     string spendingCategoriesJson = JsonSerializer.Serialize(dto.SpendingCategories);
-
-                    // Calculate age group automatically from DOB
                     ChildAgeGroup calculatedAgeGroup = AgeHelper.CalculateAgeGroup(dto.DOB);
 
                     var questionnaire = new InitialProfilingQuestionnaire
                     {
                         ChildID = child.ChildID,
-
-                        // Question 1: Age group is calculated automatically from DOB
                         ChildAgeGroup = calculatedAgeGroup,
-
-                        // Question 2: Has Allowance
                         HasAllowance = dto.HasAllowance,
-
-                        // Question 3: Spending Pace
                         SpendingPace = dto.SpendingPace,
-
-                        // Question 4: Spending Categories (JSON)
                         SpendingCategories = spendingCategoriesJson,
-
-                        // Question 5: Out of Money Behavior
                         OutOfMoneyBehavior = dto.OutOfMoneyBehavior,
-
-                        // Question 6: Tries to Save
                         TriesToSave = dto.TriesToSave,
-
-                        // Question 7: Money Mindset
                         MoneyMindset = dto.MoneyMindset,
-
-                        // Question 8: Feeling After Spending
                         FeelingAfterSpending = dto.FeelingAfterSpending,
-
-                        // Question 9: Feeling When Saving Grows
                         FeelingWhenSavingGrows = dto.FeelingWhenSavingGrows,
-
-                        // Question 10: Reaction to 100 EGP
                         ReactionTo100 = dto.ReactionTo100,
-
                         IsCompleted = true,
                         CompletedDate = DateTime.UtcNow
                     };
 
                     _context.InitialProfilingQuestionnaires.Add(questionnaire);
+                    await _context.SaveChangesAsync(); // ✅ Save to get QuestionnaireID
 
-                    // STEP 4: ASSIGN TEMP PERSONALITY PROFILE
+                    // ✅ AFTER SAVING QUESTIONNAIRE, CALL PYTHON AI
+                    _logger.LogInformation($"Calling Python AI service for questionnaire {questionnaire.QuestionnaireID}");
 
-                    var (profileSuccess, assignedType) =
-                        await _personalityService.AssignTemporaryProfileAsync(child.ChildID);
+                    var (aiSuccess, parentPersonalityName, aiError) =
+                        await _aiPersonalityService.CalculatePersonalityFromQuestionnaireAsync(
+                            questionnaire.QuestionnaireID);
 
-                    if (!profileSuccess || assignedType == null)
+                    PersonalityType assignedType;
+
+                    if (aiSuccess && !string.IsNullOrEmpty(parentPersonalityName))
                     {
-                        throw new InvalidOperationException(
-                            "Failed to assign personality profile");
+                        // ✅ PYTHON AI SUCCESS - USE THE REAL TYPE
+                        _logger.LogInformation($"Python AI returned: {parentPersonalityName}");
+
+                        // Find the personality type in database by name
+                        var personalityType = await _context.PersonalityTypes
+                            .FirstOrDefaultAsync(pt => pt.ParentName == parentPersonalityName);
+
+                        if (personalityType != null)
+                        {
+                            // Update questionnaire
+                            questionnaire.CalculatedTypeID = personalityType.TypeID;
+                            _context.InitialProfilingQuestionnaires.Update(questionnaire);
+
+                            // Assign to child
+                            child.TypeID = personalityType.TypeID;
+                            child.IsPersonalityFinalized = true; // ✅ REAL AI ANALYSIS!
+                            _context.Children.Update(child);
+
+                            assignedType = personalityType;
+
+                            _logger.LogInformation($"✅ Assigned REAL personality: {assignedType.ParentName}");
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"Personality type '{parentPersonalityName}' not found in database");
+                            throw new InvalidOperationException($"Personality type '{parentPersonalityName}' not in database");
+                        }
+                    }
+                    else
+                    {
+                        // ✅ PYTHON AI FAILED - USE PENDING ANALYSIS
+                        _logger.LogWarning($"Python AI failed: {aiError}. Using Pending Analysis fallback.");
+
+                        var (fallbackSuccess, fallbackType) =
+                            await _personalityService.AssignTemporaryProfileAsync(child.ChildID);
+
+                        if (!fallbackSuccess || fallbackType == null)
+                        {
+                            throw new InvalidOperationException("Failed to assign personality profile");
+                        }
+
+                        assignedType = fallbackType;
                     }
 
                     // STEP 5: SAVE + COMMIT
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
-                    _logger.LogInformation(
-                        "Onboarding completed for child ID {ChildID}",
-                        child.ChildID);
+                    _logger.LogInformation($"Onboarding completed for child ID {child.ChildID}");
 
                     // STEP 6: BUILD RESPONSE
                     var response = new QuestionnaireCompletionResponseDto
@@ -165,7 +183,7 @@ namespace MoneyMirror.Infrastructure.Services
                         Age = child.Age,
                         Gender = child.Gender,
                         ChildLoginCode = child.LoginCode,
-                        IsPersonalityFinalized = child.IsPersonalityFinalized,
+                        IsPersonalityFinalized = child.IsPersonalityFinalized, // ✅ Will be true if AI succeeded
                         PersonalityProfile = new PersonalityProfileDto
                         {
                             TypeID = assignedType.TypeID,
@@ -182,12 +200,10 @@ namespace MoneyMirror.Infrastructure.Services
                 {
                     await transaction.RollbackAsync();
                     _logger.LogError(ex, "Error during child onboarding");
-
                     return (false, null, "An error occurred while onboarding the child");
                 }
             });
         }
-
         /// Authenticates a child using their unique login code.
         /// Generates JWT tokens similar to parent login.
         /// Stores refresh token in database.
