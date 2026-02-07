@@ -15,7 +15,7 @@
         /// Name of the item purchased.
         /// Example: "Ice Cream"
         /// </summary>
-        public string ItemName { get; set; }
+        public string? ItemName { get; set; }
 
         /// <summary>
         /// Name of the category (not ID - easier for frontend to display).

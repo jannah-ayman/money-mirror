@@ -10,13 +10,15 @@
     {
         /// <summary>
         /// Name/description of the item purchased.
+        /// ONLY REQUIRED if CategoryID corresponds to "Other" category.
         /// Example: "Ice Cream", "Comic Book", "Birthday Gift"
+        /// Can be null/empty for predefined categories.
         /// </summary>
-        public string ItemName { get; set; }
+        public string? ItemName { get; set; }
 
         /// <summary>
         /// ID of the expense category.
-        /// Example: 1 = "Snacks / Food"
+        /// Example: 1 = "Snacks / Food", 5 = "Other"
         /// Must be a valid category from ExpenseCategories table.
         /// </summary>
         public int CategoryID { get; set; }

@@ -12,8 +12,8 @@ using MoneyMirror.Infrastructure.Data;
 namespace MoneyMirror.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260204222148_FixedCharacter")]
-    partial class FixedCharacter
+    [Migration("20260207182326_idk")]
+    partial class idk
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -338,7 +338,6 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("ItemName")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 

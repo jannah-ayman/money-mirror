@@ -12,8 +12,8 @@ using MoneyMirror.Infrastructure.Data;
 namespace MoneyMirror.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260204224127_FixCharacterAgain")]
-    partial class FixCharacterAgain
+    [Migration("20260207181304_MakeExpenseItemNameNullable")]
+    partial class MakeExpenseItemNameNullable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -172,121 +172,63 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CharacterID"));
 
-                    b.Property<string>("BasePath")
+                    b.Property<string>("DefaultImageUrl")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("CharacterType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.HasKey("CharacterID");
-
-                    b.HasIndex("CharacterType")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Character_CharacterType_Unique");
-
-                    b.ToTable("Characters");
-
-                    b.HasData(
-                        new
-                        {
-                            CharacterID = 1,
-                            BasePath = "/characters/nova",
-                            CharacterType = "Nova",
-                            Description = "Energetic and loves adventures! Nova is always excited to help you reach your goals! 🚀",
-                            DisplayName = "Nova the Explorer",
-                            DisplayOrder = 1,
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CharacterID = 2,
-                            BasePath = "/characters/luna",
-                            CharacterType = "Luna",
-                            Description = "Calm and thoughtful! Luna helps you make smart decisions about your money. 🌙",
-                            DisplayName = "Luna the Thinker",
-                            DisplayOrder = 2,
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CharacterID = 3,
-                            BasePath = "/characters/cosmo",
-                            CharacterType = "Cosmo",
-                            Description = "Curious and playful! Cosmo loves learning new things about saving and spending! ⭐",
-                            DisplayName = "Cosmo the Curious",
-                            DisplayOrder = 3,
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CharacterID = 4,
-                            BasePath = "/characters/aura",
-                            CharacterType = "Aura",
-                            Description = "Wise and encouraging! Aura believes in you and celebrates every achievement! ✨",
-                            DisplayName = "Aura the Wise",
-                            DisplayOrder = 4,
-                            IsActive = true
-                        });
-                });
-
-            modelBuilder.Entity("MoneyMirror.Core.Models.CharacterStats", b =>
-                {
-                    b.Property<int>("StatsID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StatsID"));
-
-                    b.Property<string>("AnimationURL")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("CharacterID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("State")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("UsageContext")
+                    b.HasKey("CharacterID");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Character_Name_Unique");
+
+                    b.ToTable("Characters");
+                });
+
+            modelBuilder.Entity("MoneyMirror.Core.Models.CharacterState", b =>
+                {
+                    b.Property<int>("StateID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StateID"));
+
+                    b.Property<int>("CharacterID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.HasKey("StatsID");
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
-                    b.HasIndex("CharacterID");
+                    b.Property<string>("ScreenContext")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
-                    b.ToTable("CharacterStats");
+                    b.HasKey("StateID");
+
+                    b.HasIndex("CharacterID", "ScreenContext")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CharacterState_Character_Screen_Unique");
+
+                    b.ToTable("CharacterStates");
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Child", b =>
@@ -381,47 +323,6 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.ToTable("ChildAchievements");
                 });
 
-            modelBuilder.Entity("MoneyMirror.Core.Models.ChildCharacterStats", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ChildID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("DisplayedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("DurationSeconds")
-                        .HasColumnType("int");
-
-                    b.Property<string>("StatsData")
-                        .HasColumnType("NVARCHAR(MAX)");
-
-                    b.Property<int>("StatsID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("TriggerEvent")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool?>("WasInteracted")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StatsID");
-
-                    b.HasIndex("ChildID", "TriggerEvent")
-                        .HasDatabaseName("IX_ChildCharacterStats_Child_Trigger");
-
-                    b.ToTable("ChildCharacterStats");
-                });
-
             modelBuilder.Entity("MoneyMirror.Core.Models.Expense", b =>
                 {
                     b.Property<int>("ExpenseID")
@@ -437,7 +338,6 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("ItemName")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
@@ -1022,10 +922,10 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.Navigation("Parent");
                 });
 
-            modelBuilder.Entity("MoneyMirror.Core.Models.CharacterStats", b =>
+            modelBuilder.Entity("MoneyMirror.Core.Models.CharacterState", b =>
                 {
                     b.HasOne("MoneyMirror.Core.Models.Character", "Character")
-                        .WithMany()
+                        .WithMany("CharacterStates")
                         .HasForeignKey("CharacterID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1035,7 +935,7 @@ namespace MoneyMirror.Infrastructure.Migrations
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Child", b =>
                 {
-                    b.HasOne("MoneyMirror.Core.Models.Character", "Character")
+                    b.HasOne("MoneyMirror.Core.Models.Character", "SelectedCharacter")
                         .WithMany("Children")
                         .HasForeignKey("CharacterID")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -1045,9 +945,9 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .HasForeignKey("TypeID")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Character");
-
                     b.Navigation("PersonalityType");
+
+                    b.Navigation("SelectedCharacter");
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.ChildAchievement", b =>
@@ -1065,25 +965,6 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("AchievementType");
-
-                    b.Navigation("Child");
-                });
-
-            modelBuilder.Entity("MoneyMirror.Core.Models.ChildCharacterStats", b =>
-                {
-                    b.HasOne("MoneyMirror.Core.Models.Child", "Child")
-                        .WithMany("ChildCharacterStats")
-                        .HasForeignKey("ChildID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MoneyMirror.Core.Models.CharacterStats", "CharacterStats")
-                        .WithMany("ChildCharacterStats")
-                        .HasForeignKey("StatsID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CharacterStats");
 
                     b.Navigation("Child");
                 });
@@ -1251,12 +1132,9 @@ namespace MoneyMirror.Infrastructure.Migrations
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Character", b =>
                 {
-                    b.Navigation("Children");
-                });
+                    b.Navigation("CharacterStates");
 
-            modelBuilder.Entity("MoneyMirror.Core.Models.CharacterStats", b =>
-                {
-                    b.Navigation("ChildCharacterStats");
+                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Child", b =>
@@ -1266,8 +1144,6 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.Navigation("Allowances");
 
                     b.Navigation("ChildAchievements");
-
-                    b.Navigation("ChildCharacterStats");
 
                     b.Navigation("Expenses");
 

@@ -5,7 +5,7 @@
 namespace MoneyMirror.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class FixCharacterAgain : Migration
+    public partial class MakeExpenseItemNameNullable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

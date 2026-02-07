@@ -13,9 +13,8 @@ namespace MoneyMirror.Core.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ExpenseID { get; set; }
 
-        [Required]
         [MaxLength(200)]
-        public string ItemName { get; set; }
+        public string? ItemName { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(10,2)")]
