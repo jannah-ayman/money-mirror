@@ -1,0 +1,156 @@
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+const IntroStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0a0e27',
+  },
+  
+  starsOverlay: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    zIndex: 1,
+  },
+  star: {
+    position: 'absolute',
+    width: 3,
+    height: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 1.5,
+    top: '10%',
+    left: '20%',
+    shadowColor: '#fff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+
+  topSection: {
+    flex: 1.2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 60,
+    zIndex: 2,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  astronaut: {
+    width: 200,
+    height: 200,
+    zIndex: 3,
+  },
+  glowEffect: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(100, 200, 255, 0.15)',
+    shadowColor: '#78d0ff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 30,
+    zIndex: 1,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  title: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    fontFamily: 'MouseMemoirs-Regular',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(100, 200, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20,
+  },
+  titleUnderline: {
+    height: 3,
+    width: 150,
+    marginTop: 8,
+    borderRadius: 2,
+  },
+  subtitle: {
+    fontSize: 22,
+    color: '#ffffff',
+    textAlign: 'center',
+    marginTop: 15,
+    fontFamily: 'MouseMemoirs-Regular',
+    letterSpacing: 1,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 191, 255, 0.9)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+
+  bottomSection: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: 50,
+    paddingHorizontal: 30,
+    zIndex: 2,
+  },
+  welcomeText: {
+    fontSize: 24,
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 25,
+    fontFamily: 'MouseMemoirs-Regular',
+    letterSpacing: 1.5,
+    textShadowColor: 'rgba(100, 200, 255, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  buttonContainer: {
+    width: '100%',
+    gap: 16,
+    marginBottom:30,
+  },
+  button: {
+    paddingVertical: 18,
+    borderRadius: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    zIndex: 2,
+  },
+  buttonIcon: {
+    fontSize: 24,
+  },
+  buttonText: {
+    fontSize: 20,
+    color: '#ffffff',
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  buttonShine: {
+    position: 'absolute',
+    top: 0,
+    left: -100,
+    width: 50,
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    transform: [{ skewX: '-20deg' }],
+  },
+});
+
+export default IntroStyles;
