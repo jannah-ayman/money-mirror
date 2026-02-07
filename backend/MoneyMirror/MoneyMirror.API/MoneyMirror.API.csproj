@@ -8,9 +8,29 @@
 
   <ItemGroup>
     <Compile Remove="Validators\Character\**" />
+    <Compile Remove="wwwroot\images\aura\**" />
+    <Compile Remove="wwwroot\images\cosmo\**" />
+    <Compile Remove="wwwroot\images\luna\**" />
+    <Compile Remove="wwwroot\images\nova\**" />
+    <Compile Remove="wwwroot\images\stella\**" />
     <Content Remove="Validators\Character\**" />
+    <Content Remove="wwwroot\images\aura\**" />
+    <Content Remove="wwwroot\images\cosmo\**" />
+    <Content Remove="wwwroot\images\luna\**" />
+    <Content Remove="wwwroot\images\nova\**" />
+    <Content Remove="wwwroot\images\stella\**" />
     <EmbeddedResource Remove="Validators\Character\**" />
+    <EmbeddedResource Remove="wwwroot\images\aura\**" />
+    <EmbeddedResource Remove="wwwroot\images\cosmo\**" />
+    <EmbeddedResource Remove="wwwroot\images\luna\**" />
+    <EmbeddedResource Remove="wwwroot\images\nova\**" />
+    <EmbeddedResource Remove="wwwroot\images\stella\**" />
     <None Remove="Validators\Character\**" />
+    <None Remove="wwwroot\images\aura\**" />
+    <None Remove="wwwroot\images\cosmo\**" />
+    <None Remove="wwwroot\images\luna\**" />
+    <None Remove="wwwroot\images\nova\**" />
+    <None Remove="wwwroot\images\stella\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,13 +49,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MoneyMirror.Core\MoneyMirror.Core.csproj" />
     <ProjectReference Include="..\MoneyMirror.Infrastructure\MoneyMirror.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\images\aura\" />
-    <Folder Include="wwwroot\images\luna\" />
-    <Folder Include="wwwroot\images\cosmo\" />
-    <Folder Include="wwwroot\images\nova\" />
   </ItemGroup>
 
 </Project>
