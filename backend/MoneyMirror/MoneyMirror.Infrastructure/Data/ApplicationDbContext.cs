@@ -101,10 +101,10 @@ namespace MoneyMirror.Infrastructure.Data
                       .HasDefaultValue(false);
 
                 // Precision for timezone-sensitive fields
-                entity.Property(p => p.EmailConfirmationTokenExpiry)
+                entity.Property(p => p.EmailConfirmationCodeExpiry)
                       .HasColumnType("datetime2");
 
-                entity.Property(p => p.PasswordResetTokenExpiry)
+                entity.Property(p => p.PasswordResetCodeExpiry)
                       .HasColumnType("datetime2");
 
                 entity.Property(p => p.RefreshTokenExpiry)

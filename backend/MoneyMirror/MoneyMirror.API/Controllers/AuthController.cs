@@ -24,19 +24,16 @@ namespace MoneyMirror.API.Controllers
             _authService = authService;
             _logger = logger;
         }
-
+        /// <summary>
         /// Registers a new parent account.
+        /// Sends 6-digit confirmation code to email.
         /// POST /api/auth/register
-        /// <param name="registerDto">Registration data from client</param>
-        /// <returns>Success message or error</returns>
+        /// </summary>
         [HttpPost("register")]
-        [AllowAnonymous] // Anyone can access this endpoint (not logged in)
-        public async Task<ActionResult<ApiResponse<object>>> Register([FromBody] RegisterParentDto registerDto)
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<object>>> Register(
+            [FromBody] RegisterParentDto registerDto)
         {
-            // Validation happens automatically via FluentValidationFilter
-            // If we reach here, validation passed
-
-            // Call service to register parent
             var (success, message, parentId) = await _authService.RegisterParentAsync(registerDto);
 
             if (!success)
@@ -44,11 +41,54 @@ namespace MoneyMirror.API.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResponse(message));
             }
 
-            // Return success response
             return Ok(ApiResponse<object>.SuccessResponse(
                 new { ParentId = parentId },
                 message
             ));
+        }
+
+
+        /// <summary>
+        /// Confirms email using 6-digit code.
+        /// Automatically logs in the parent after successful confirmation.
+        /// POST /api/auth/confirm-email-with-code
+        /// </summary>
+        [HttpPost("confirm-email-with-code")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<AuthResponseDto>>> ConfirmEmailWithCode(
+            [FromBody] ConfirmEmailWithCodeDto dto)
+        {
+            var (success, message, authResponse) =
+                await _authService.ConfirmEmailWithCodeAsync(dto);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<AuthResponseDto>.ErrorResponse(message));
+            }
+
+            return Ok(ApiResponse<AuthResponseDto>.SuccessResponse(
+                authResponse,
+                message
+            ));
+        }
+
+        /// <summary>
+        /// Resends email confirmation code.
+        /// POST /api/auth/resend-confirmation-code
+        /// </summary>
+        [HttpPost("resend-confirmation-code")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<object>>> ResendConfirmationCode(
+            [FromBody] ResendConfirmationCodeDto dto)
+        {
+            var (success, message) = await _authService.ResendConfirmationCodeAsync(dto);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
         /// Authenticates a parent and returns JWT tokens.
@@ -94,38 +134,6 @@ namespace MoneyMirror.API.Controllers
                 "Login successful"
             ));
         }
-
-
-
-        /// Confirms a parent's email address.
-        /// GET /api/auth/confirm-email?email=xxx&token=xxx
-        /// This endpoint is called when user clicks the link in their email.
-        /// <param name="email">Parent's email address</param>
-        /// <param name="token">Email confirmation token</param>
-        /// <returns>Success or error message</returns>
-        [HttpGet("confirm-email")]
-        [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<object>>> ConfirmEmail([FromQuery] string email, [FromQuery] string token)
-        {
-            // Validate parameters
-            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
-            {
-                return BadRequest(ApiResponse<object>.ErrorResponse(
-                    "Email and token are required"
-                ));
-            }
-
-            // Call service to confirm email
-            var (success, message) = await _authService.ConfirmEmailAsync(email, token);
-
-            if (!success)
-            {
-                return BadRequest(ApiResponse<object>.ErrorResponse(message));
-            }
-
-            return Ok(ApiResponse<object>.SuccessResponse(null, message));
-        }
-
         /// Refreshes JWT tokens using a valid refresh token.
         /// POST /api/auth/refresh-token
         /// Called by client when access token expires.
@@ -229,33 +237,35 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// Initiates password reset flow by sending reset link to email.
+        
+        // ==================== PASSWORD RESET ====================
+
+        /// <summary>
+        /// Initiates password reset by sending 6-digit code to email.
         /// POST /api/auth/forgot-password
-        /// <param name="forgotPasswordDto">Email address to send reset link to</param>
-        /// <returns>Success message (always returns success for security)</returns>
+        /// </summary>
         [HttpPost("forgot-password")]
         [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<object>>> ForgotPassword([FromBody] ForgotPasswordDto forgotPasswordDto)
+        public async Task<ActionResult<ApiResponse<object>>> ForgotPassword(
+            [FromBody] ForgotPasswordDto dto)
         {
-            var (success, message) = await _authService.ForgotPasswordAsync(forgotPasswordDto.Email);
+            var (success, message) = await _authService.ForgotPasswordAsync(dto);
 
-            // Always return 200 OK even if email doesn't exist (prevents email enumeration)
+            // Always return 200 OK for security (prevent email enumeration)
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
-        /// Resets password using token from email link.
-        /// POST /api/auth/reset-password
-        /// <param name="resetPasswordDto">Email, token, and new password</param>
-        /// <returns>Success or error message</returns>
-        [HttpPost("reset-password")]
+        /// <summary>
+        /// Verifies password reset code before showing password input.
+        /// This is optional - can skip and go straight to reset-password-with-code.
+        /// POST /api/auth/verify-reset-code
+        /// </summary>
+        [HttpPost("verify-reset-code")]
         [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<object>>> ResetPassword([FromBody] ResetPasswordDto resetPasswordDto)
+        public async Task<ActionResult<ApiResponse<object>>> VerifyResetCode(
+            [FromBody] VerifyResetCodeDto dto)
         {
-            var (success, message) = await _authService.ResetPasswordAsync(
-                resetPasswordDto.Email,
-                resetPasswordDto.Token,
-                resetPasswordDto.NewPassword
-            );
+            var (success, message) = await _authService.VerifyResetCodeAsync(dto);
 
             if (!success)
             {
@@ -265,22 +275,28 @@ namespace MoneyMirror.API.Controllers
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
-        /// Resends email confirmation link.
-        /// POST /api/auth/resend-confirmation
-        /// <param name="resendConfirmationDto">Email address to resend confirmation to</param>
-        /// <returns>Success or error message</returns>
-        [HttpPost("resend-confirmation")]
+        /// <summary>
+        /// Resets password using verified code.
+        /// Automatically logs in parent after successful reset.
+        /// POST /api/auth/reset-password-with-code
+        /// </summary>
+        [HttpPost("reset-password-with-code")]
         [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<object>>> ResendConfirmation([FromBody] ResendConfirmationDto resendConfirmationDto)
+        public async Task<ActionResult<ApiResponse<AuthResponseDto>>> ResetPasswordWithCode(
+            [FromBody] ResetPasswordWithCodeDto dto)
         {
-            var (success, message) = await _authService.ResendConfirmationEmailAsync(resendConfirmationDto.Email);
+            var (success, message, authResponse) =
+                await _authService.ResetPasswordWithCodeAsync(dto);
 
             if (!success)
             {
-                return BadRequest(ApiResponse<object>.ErrorResponse(message));
+                return BadRequest(ApiResponse<AuthResponseDto>.ErrorResponse(message));
             }
 
-            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+            return Ok(ApiResponse<AuthResponseDto>.SuccessResponse(
+                authResponse,
+                message
+            ));
         }
         // ==================== ADD THESE ENDPOINTS TO AuthController.cs ====================
         // Place them at the end of the class, before the closing brace
@@ -311,17 +327,18 @@ namespace MoneyMirror.API.Controllers
 
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
+        // ==================== EMAIL CHANGE ====================
 
-        /// Initiates email change process by sending verification to new email.
-        /// POST /api/auth/change-email
-        /// Requires authentication.
-        /// <param name="changeEmailDto">New email and current password</param>
-        /// <returns>Success or error message</returns>
-        [HttpPost("change-email")]
+        /// <summary>
+        /// Initiates email change by sending 6-digit code to NEW email.
+        /// Requires current password for security.
+        /// POST /api/auth/request-email-change
+        /// </summary>
+        [HttpPost("request-email-change")]
         [Authorize]
-        public async Task<ActionResult<ApiResponse<object>>> ChangeEmail([FromBody] ChangeEmailDto changeEmailDto)
+        public async Task<ActionResult<ApiResponse<object>>> RequestEmailChange(
+            [FromBody] RequestEmailChangeDto dto)
         {
-            // Get parent ID from JWT token
             var parentIdClaim = User.FindFirst("ParentId")?.Value;
 
             if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
@@ -329,7 +346,7 @@ namespace MoneyMirror.API.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims"));
             }
 
-            var (success, message) = await _authService.ChangeEmailAsync(parentId, changeEmailDto);
+            var (success, message) = await _authService.RequestEmailChangeAsync(parentId, dto);
 
             if (!success)
             {
@@ -339,27 +356,18 @@ namespace MoneyMirror.API.Controllers
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
-        /// Confirms email change using token from verification email.
-        /// GET /api/auth/confirm-email-change?oldEmail=xxx&newEmail=xxx&token=xxx
-        /// <param name="oldEmail">Current email address</param>
-        /// <param name="newEmail">New email address being confirmed</param>
-        /// <param name="token">Email change confirmation token</param>
-        /// <returns>Success or error message</returns>
-        [HttpGet("confirm-email-change")]
-        [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<object>>> ConfirmEmailChange(
-            [FromQuery] string oldEmail,
-            [FromQuery] string newEmail,
-            [FromQuery] string token)
+        /// <summary>
+        /// Confirms email change using 6-digit code.
+        /// Revokes all tokens - user must log in with new email.
+        /// POST /api/auth/confirm-email-change-with-code
+        /// </summary>
+        [HttpPost("confirm-email-change-with-code")]
+        [AllowAnonymous] // User enters code from new email
+        public async Task<ActionResult<ApiResponse<object>>> ConfirmEmailChangeWithCode(
+            [FromBody] ConfirmEmailChangeWithCodeDto dto)
         {
-            var confirmDto = new ConfirmEmailChangeDto
-            {
-                OldEmail = oldEmail,
-                NewEmail = newEmail,
-                Token = token
-            };
-
-            var (success, message) = await _authService.ConfirmEmailChangeAsync(confirmDto);
+            var (success, message) =
+                await _authService.ConfirmEmailChangeWithCodeAsync(dto);
 
             if (!success)
             {
@@ -368,6 +376,7 @@ namespace MoneyMirror.API.Controllers
 
             return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
+
 
         /// <summary>
         /// Soft deletes parent account with 30-day recovery grace period.

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -40,27 +40,6 @@ namespace MoneyMirror.Core.Models
         [Required]
         public bool IsEmailConfirmed { get; set; } = false;
 
-        /// Token sent to parent's email for email confirmation.
-        /// Generated as GUID when account is created.
-        /// Null after email is confirmed.
-        [MaxLength(500)]
-        public string? EmailConfirmationToken { get; set; }
-
-        /// Expiration timestamp for email confirmation token.
-        /// Tokens are valid for 24 hours after generation.
-        /// Null after email is confirmed.
-        public DateTime? EmailConfirmationTokenExpiry { get; set; }
-
-        /// Token sent to parent's email for password reset.
-        /// Generated as GUID when password reset is requested.
-        /// Null after password is successfully reset or token expires.
-        [MaxLength(500)]
-        public string? PasswordResetToken { get; set; }
-
-        /// Expiration timestamp for password reset token.
-        /// Tokens are valid for 1 hour after generation.
-        /// Null when no active reset request exists.
-        public DateTime? PasswordResetTokenExpiry { get; set; }
 
         /// Long-lived refresh token for obtaining new access tokens.
         /// Generated during login, valid for 7 days.
@@ -87,8 +66,17 @@ namespace MoneyMirror.Core.Models
         public DateTime? PermanentDeletionDate { get; set; }
         // Email change fields
         public string? NewEmail { get; set; }
-        public string? EmailChangeToken { get; set; }
-        public DateTime? EmailChangeTokenExpiry { get; set; }
+        // Email confirmation
+        public string? EmailConfirmationCode { get; set; }
+        public DateTime? EmailConfirmationCodeExpiry { get; set; }
+
+        // Password reset
+        public string? PasswordResetCode { get; set; }
+        public DateTime? PasswordResetCodeExpiry { get; set; }
+
+        // Email change
+        public string? EmailChangeCode { get; set; }
+        public DateTime? EmailChangeCodeExpiry { get; set; }
 
         // ==================== NAVIGATION PROPERTIES ====================
 

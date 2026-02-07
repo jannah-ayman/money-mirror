@@ -9,9 +9,8 @@
     public class ForgotPasswordDto
     {
         /// <summary>
-        /// Parent's registered email address.
-        /// A password reset link will be sent to this email if it exists.
-        /// Example: "john.smith@email.com"
+        /// Email address to send reset code to.
+        /// Example: "john@email.com"
         /// </summary>
         public string Email { get; set; }
     }

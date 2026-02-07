@@ -7,7 +7,7 @@ namespace MoneyMirror.API.Validators.Auth
     /// FluentValidation validator for ChangeEmailDto.
     /// Defines validation rules for email change request.
     /// </summary>
-    public class ChangeEmailDtoValidator : AbstractValidator<ChangeEmailDto>
+    public class ChangeEmailDtoValidator : AbstractValidator<RequestEmailChangeDto>
     {
         public ChangeEmailDtoValidator()
         {

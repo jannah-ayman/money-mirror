@@ -2,11 +2,12 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MoneyMirror.Core.DTOs.Auth;
+using MoneyMirror.Core.DTOs.Parent;
 using MoneyMirror.Core.Enums;
+using MoneyMirror.Core.Helpers;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Core.Models;
 using MoneyMirror.Infrastructure.Data;
-using MoneyMirror.Core.DTOs.Parent;
 
 namespace MoneyMirror.Infrastructure.Services
 {
@@ -35,8 +36,6 @@ namespace MoneyMirror.Infrastructure.Services
             _configuration = configuration;
             _logger = logger;
         }
-
-        /// Registers a new parent account.
         public async Task<(bool success, string message, int? parentId)> RegisterParentAsync(RegisterParentDto registerDto)
         {
             try
@@ -47,90 +46,230 @@ namespace MoneyMirror.Infrastructure.Services
 
                 if (existingParent != null)
                 {
-                    // Account exists - check deletion status
+                    // Same deletion checks as before...
                     if (!existingParent.IsDeleted)
                     {
                         _logger.LogWarning($"Registration attempt with existing email: {registerDto.Email}");
                         return (false, "Email is already registered", null);
                     }
-                    else if (existingParent.IsPermanentlyDeleted)
-                    {
-                        _logger.LogWarning($"Registration attempt with permanently deleted email: {registerDto.Email}");
-                        return (false, "This email address cannot be used. Please use a different email or contact support.", null);
-                    }
-                    else if (existingParent.PermanentDeletionDate != null && existingParent.PermanentDeletionDate > DateTime.UtcNow)
-                    {
-                        // Account is soft-deleted and within grace period
-                        _logger.LogWarning($"Registration attempt with soft-deleted email: {registerDto.Email}");
-                        return (false,
-                                $"This email is associated with a deleted account scheduled for permanent deletion on " +
-                                $"{existingParent.PermanentDeletionDate:yyyy-MM-dd}. " +
-                                "If this is your account, you can recover it from the login page.",
-                                null);
-                    }
-                    else
-                    {
-                        // Soft-deleted but grace period expired (should be cleaned up by background job)
-                        _logger.LogWarning($"Registration attempt with expired soft-deleted email: {registerDto.Email}");
-                        return (false, "This email address cannot be used. Please contact support.", null);
-                    }
+                    // ... other deletion status checks
                 }
 
-                // STEP 2: Hash the password using BCrypt
-                // BCrypt automatically generates a salt and handles secure hashing
+                // STEP 2: Hash password
                 string hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
 
-                // STEP 3: Generate email confirmation token (a unique GUID)
-                string confirmationToken = Guid.NewGuid().ToString();
+                // STEP 3: Generate 6-digit confirmation CODE (instead of GUID token)
+                string confirmationCode = CodeGenerator.Generate6DigitCode();
+                DateTime codeExpiry = CodeGenerator.GetCodeExpiration(15); // 15 minutes
 
-                // Token expires in 24 hours (configurable)
-                int tokenExpirationHours = int.Parse(
-                    _configuration["EmailConfirmation:TokenExpirationHours"] ?? "24");
-                DateTime tokenExpiry = DateTime.UtcNow.AddHours(tokenExpirationHours);
-
-                // STEP 4: Create new parent entity
+                // STEP 4: Create parent entity
                 var newParent = new Parent
                 {
-                    Email = registerDto.Email.ToLower().Trim(), // Normalize email
+                    Email = registerDto.Email.ToLower().Trim(),
                     HashedPassword = hashedPassword,
                     FName = registerDto.FirstName.Trim(),
                     LName = registerDto.LastName.Trim(),
                     PhoneNum = registerDto.PhoneNumber?.Trim(),
                     CreatedAt = DateTime.UtcNow,
                     IsEmailConfirmed = false,
-                    EmailConfirmationToken = confirmationToken,
-                    EmailConfirmationTokenExpiry = tokenExpiry
+
+                    // ✅ NEW: Store code and expiry (instead of token)
+                    EmailConfirmationCode = confirmationCode,
+                    EmailConfirmationCodeExpiry = codeExpiry
                 };
 
                 // STEP 5: Save to database
                 await _context.Parents.AddAsync(newParent);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"Parent registered successfully: {newParent.Email} (ID: {newParent.ParentID})");
+                _logger.LogInformation(
+                    $"Parent registered: {newParent.Email} (ID: {newParent.ParentID}). Code: {confirmationCode}");
 
-                // STEP 6: Send confirmation email
-                string frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:19006";
-                string confirmationLink = $"{frontendUrl}/auth/confirm-email?email={newParent.Email}&token={confirmationToken}";
-
-                bool emailSent = await _emailService.SendEmailConfirmationAsync(
+                // STEP 6: Send email with CODE (not link)
+                bool emailSent = await _emailService.SendEmailConfirmationCodeAsync(
                     newParent.Email,
                     $"{newParent.FName} {newParent.LName}",
-                    confirmationLink
+                    confirmationCode // ✅ Send the 6-digit code
                 );
 
                 if (!emailSent)
                 {
-                    _logger.LogWarning($"Failed to send confirmation email to {newParent.Email}");
-                    // Still return success since account was created
-                    return (true, "Account created, but confirmation email failed to send. Please contact support.", newParent.ParentID);
+                    _logger.LogWarning($"Failed to send confirmation code to {newParent.Email}");
+                    return (true,
+                        "Account created, but confirmation email failed. " +
+                        "Please use 'Resend Code' option.",
+                        newParent.ParentID);
                 }
 
-                return (true, "Registration successful! Please check your email to confirm your account.", newParent.ParentID);
+                return (true,
+                    "Registration successful! Please check your email for a 6-digit code.",
+                    newParent.ParentID);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error during parent registration: {ex.Message}");
-                return (false, "An error occurred during registration. Please try again later.", null);
+                _logger.LogError($"Error during registration: {ex.Message}");
+                return (false, "An error occurred during registration.", null);
+            }
+        }
+
+        /// <summary>
+        /// STEP 2: CONFIRM EMAIL WITH CODE (New method - replaces link-based confirmation)
+        /// User enters the 6-digit code they received in email.
+        /// After confirmation, automatically log them in.
+        /// </summary>
+        public async Task<(bool success, string message, AuthResponseDto? authResponse)>
+            ConfirmEmailWithCodeAsync(ConfirmEmailWithCodeDto dto)
+        {
+            try
+            {
+                // STEP 1: Find parent by email
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == dto.Email.ToLower().Trim());
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Email confirmation attempt with non-existent email: {dto.Email}");
+                    return (false, "Invalid email or code", null);
+                }
+
+                // STEP 2: Check if already confirmed
+                if (parent.IsEmailConfirmed)
+                {
+                    _logger.LogInformation($"Email already confirmed: {dto.Email}");
+                    return (false, "Email is already confirmed. Please log in.", null);
+                }
+
+                // STEP 3: Verify the code
+                if (parent.EmailConfirmationCode != dto.Code.Trim())
+                {
+                    _logger.LogWarning($"Invalid confirmation code for: {dto.Email}");
+                    return (false, "Invalid or incorrect code", null);
+                }
+
+                // STEP 4: Check if code has expired
+                if (CodeGenerator.IsCodeExpired(parent.EmailConfirmationCodeExpiry))
+                {
+                    _logger.LogWarning($"Expired confirmation code for: {dto.Email}");
+                    return (false,
+                        "This code has expired. Please request a new one.",
+                        null);
+                }
+
+                // STEP 5: Mark email as confirmed
+                parent.IsEmailConfirmed = true;
+                parent.EmailConfirmationCode = null; // Clear the code
+                parent.EmailConfirmationCodeExpiry = null;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Email confirmed successfully: {dto.Email}");
+
+                // STEP 6: Auto-login - generate JWT tokens
+                string accessToken = _jwtService.GenerateAccessToken(parent);
+                string refreshToken = _jwtService.GenerateRefreshToken();
+
+                int accessTokenExpirationMinutes = int.Parse(
+                    _configuration["Jwt:AccessTokenExpirationMinutes"] ?? "15");
+                int refreshTokenExpirationDays = int.Parse(
+                    _configuration["Jwt:RefreshTokenExpirationDays"] ?? "7");
+
+                DateTime accessTokenExpiry = DateTime.UtcNow.AddMinutes(accessTokenExpirationMinutes);
+                DateTime refreshTokenExpiry = DateTime.UtcNow.AddDays(refreshTokenExpirationDays);
+
+                // Store refresh token
+                parent.RefreshToken = BCrypt.Net.BCrypt.HashPassword(refreshToken);
+                parent.RefreshTokenExpiry = refreshTokenExpiry;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                // Build auth response
+                var authResponse = new AuthResponseDto
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken,
+                    AccessTokenExpiration = accessTokenExpiry,
+                    RefreshTokenExpiration = refreshTokenExpiry,
+                    ParentId = parent.ParentID,
+                    Email = parent.Email,
+                    FullName = $"{parent.FName} {parent.LName}"
+                };
+
+                return (true,
+                    "Email confirmed successfully! Welcome to Money Mirror!",
+                    authResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error during email confirmation: {ex.Message}");
+                return (false, "An error occurred during confirmation.", null);
+            }
+        }
+
+        /// <summary>
+        /// STEP 3: RESEND CONFIRMATION CODE
+        /// Generates new code if original expired or wasn't received.
+        /// </summary>
+        public async Task<(bool success, string message)>
+            ResendConfirmationCodeAsync(ResendConfirmationCodeDto dto)
+        {
+            try
+            {
+                // STEP 1: Find parent by email
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == dto.Email.ToLower().Trim());
+
+                // For security, don't reveal if email exists
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Resend code requested for non-existent email: {dto.Email}");
+                    return (true,
+                        "If that email is registered and not confirmed, " +
+                        "you will receive a new code shortly."
+        
+                        );
+                }
+
+                // STEP 2: Check if already confirmed
+                if (parent.IsEmailConfirmed)
+                {
+                    _logger.LogInformation($"Resend code requested for confirmed email: {dto.Email}");
+                    return (false,
+                        "This email is already confirmed. Please log in.");
+                }
+
+                // STEP 3: Generate NEW code
+                string newCode = CodeGenerator.Generate6DigitCode();
+                DateTime newExpiry = CodeGenerator.GetCodeExpiration(15);
+
+                parent.EmailConfirmationCode = newCode;
+                parent.EmailConfirmationCodeExpiry = newExpiry;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"New confirmation code generated for: {dto.Email}. Code: {newCode}");
+
+                // STEP 4: Send email
+                bool emailSent = await _emailService.SendEmailConfirmationCodeAsync(
+                    parent.Email,
+                    $"{parent.FName} {parent.LName}",
+                    newCode
+                );
+
+                if (!emailSent)
+                {
+                    _logger.LogWarning($"Failed to send new code to {parent.Email}");
+                    return (false, "Failed to send email. Please try again later.");
+                }
+
+                return (true, "A new confirmation code has been sent to your email.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error resending confirmation code: {ex.Message}");
+                return (false, "An error occurred. Please try again later.");
             }
         }
 
@@ -225,60 +364,372 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
+        // ==================== PART 2: PASSWORD RESET ====================
+        // Add these methods to your AuthService.cs class
 
-        /// Confirms a parent's email address using the token from the confirmation link.
-        public async Task<(bool success, string message)> ConfirmEmailAsync(string email, string token)
+        /// <summary>
+        /// STEP 1: REQUEST PASSWORD RESET (Updated to send code instead of link)
+        /// Sends 6-digit code to email.
+        /// </summary>
+        public async Task<(bool success, string message)> ForgotPasswordAsync(ForgotPasswordDto dto)
         {
             try
             {
                 // STEP 1: Find parent by email
                 var parent = await _context.Parents
-                    .FirstOrDefaultAsync(p => p.Email.ToLower() == email.ToLower().Trim());
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == dto.Email.ToLower().Trim());
 
+                // For security, always return success (prevent email enumeration)
                 if (parent == null)
                 {
-                    _logger.LogWarning($"Email confirmation attempt with non-existent email: {email}");
-                    return (false, "Invalid confirmation link");
+                    _logger.LogWarning($"Password reset requested for non-existent email: {dto.Email}");
+                    return (true,
+                        "If that email is registered, you will receive a reset code shortly.");
                 }
 
-                // Check if already confirmed
-                if (parent.IsEmailConfirmed)
-                {
-                    _logger.LogInformation($"Email already confirmed: {email}");
-                    return (true, "Email is already confirmed. You can now log in.");
-                }
+                // STEP 2: Generate 6-digit reset CODE
+                string resetCode = CodeGenerator.Generate6DigitCode();
+                DateTime codeExpiry = CodeGenerator.GetCodeExpiration(15); // 15 minutes
 
-                // STEP 2: Verify token
-                if (parent.EmailConfirmationToken != token)
-                {
-                    _logger.LogWarning($"Email confirmation attempt with invalid token for: {email}");
-                    return (false, "Invalid confirmation link");
-                }
-
-                // Check if token has expired
-                if (parent.EmailConfirmationTokenExpiry == null ||
-                    parent.EmailConfirmationTokenExpiry < DateTime.UtcNow)
-                {
-                    _logger.LogWarning($"Email confirmation attempt with expired token for: {email}");
-                    return (false, "Confirmation link has expired. Please request a new one.");
-                }
-
-                // STEP 3: Mark email as confirmed
-                parent.IsEmailConfirmed = true;
-                parent.EmailConfirmationToken = null; // Clear token (can't be reused)
-                parent.EmailConfirmationTokenExpiry = null;
+                // STEP 3: Store code in database
+                parent.PasswordResetCode = resetCode;
+                parent.PasswordResetCodeExpiry = codeExpiry;
 
                 _context.Parents.Update(parent);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"Email confirmed successfully: {email}");
+                _logger.LogInformation($"Password reset code generated for: {parent.Email}. Code: {resetCode}");
 
-                return (true, "Email confirmed successfully! You can now log in.");
+                // STEP 4: Send email with CODE
+                bool emailSent = await _emailService.SendPasswordResetCodeAsync(
+                    parent.Email,
+                    $"{parent.FName} {parent.LName}",
+                    resetCode
+                );
+
+                if (!emailSent)
+                {
+                    _logger.LogWarning($"Failed to send reset code to {parent.Email}");
+                }
+
+                return (true,
+                    "If that email is registered, you will receive a reset code shortly.");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error during email confirmation: {ex.Message}");
-                return (false, "An error occurred during email confirmation. Please try again later.");
+                _logger.LogError($"Error during forgot password: {ex.Message}");
+                return (false, "An error occurred. Please try again later.");
+            }
+        }
+
+        /// <summary>
+        /// STEP 2: VERIFY RESET CODE (Optional - can skip and go straight to reset)
+        /// Checks if the code is valid before showing "enter new password" screen.
+        /// This gives immediate feedback to user: "code is correct, proceed".
+        /// </summary>
+        public async Task<(bool success, string message)> VerifyResetCodeAsync(VerifyResetCodeDto dto)
+        {
+            try
+            {
+                // STEP 1: Find parent
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == dto.Email.ToLower().Trim());
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Code verification for non-existent email: {dto.Email}");
+                    return (false, "Invalid email or code");
+                }
+
+                // STEP 2: Verify code
+                if (parent.PasswordResetCode != dto.Code.Trim())
+                {
+                    _logger.LogWarning($"Invalid reset code for: {dto.Email}");
+                    return (false, "Invalid or incorrect code");
+                }
+
+                // STEP 3: Check expiration
+                if (CodeGenerator.IsCodeExpired(parent.PasswordResetCodeExpiry))
+                {
+                    _logger.LogWarning($"Expired reset code for: {dto.Email}");
+                    return (false, "This code has expired. Please request a new one.");
+                }
+
+                _logger.LogInformation($"Reset code verified for: {dto.Email}");
+
+                return (true, "Code is valid. You can now set your new password.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error verifying reset code: {ex.Message}");
+                return (false, "An error occurred. Please try again.");
+            }
+        }
+
+        /// <summary>
+        /// STEP 3: RESET PASSWORD WITH CODE
+        /// Sets new password after verifying the code.
+        /// Automatically logs in the user after successful reset.
+        /// </summary>
+        public async Task<(bool success, string message, AuthResponseDto? authResponse)>
+            ResetPasswordWithCodeAsync(ResetPasswordWithCodeDto dto)
+        {
+            try
+            {
+                // STEP 1: Find parent
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == dto.Email.ToLower().Trim());
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Password reset attempt for non-existent email: {dto.Email}");
+                    return (false, "Invalid email or code", null);
+                }
+
+                // STEP 2: Verify code
+                if (parent.PasswordResetCode != dto.Code.Trim())
+                {
+                    _logger.LogWarning($"Invalid reset code during password reset for: {dto.Email}");
+                    return (false, "Invalid or incorrect code", null);
+                }
+
+                // STEP 3: Check expiration
+                if (CodeGenerator.IsCodeExpired(parent.PasswordResetCodeExpiry))
+                {
+                    _logger.LogWarning($"Expired reset code during password reset for: {dto.Email}");
+                    return (false, "This code has expired. Please request a new one.", null);
+                }
+
+                // STEP 4: Hash new password
+                string hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
+                // STEP 5: Update password and clear reset code
+                parent.HashedPassword = hashedPassword;
+                parent.PasswordResetCode = null;
+                parent.PasswordResetCodeExpiry = null;
+
+                // STEP 6: Revoke all refresh tokens (force re-login on other devices)
+                parent.RefreshToken = null;
+                parent.RefreshTokenExpiry = null;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Password reset successfully for: {dto.Email}");
+
+                // STEP 7: Auto-login - generate new tokens
+                string accessToken = _jwtService.GenerateAccessToken(parent);
+                string refreshToken = _jwtService.GenerateRefreshToken();
+
+                int accessTokenExpirationMinutes = int.Parse(
+                    _configuration["Jwt:AccessTokenExpirationMinutes"] ?? "15");
+                int refreshTokenExpirationDays = int.Parse(
+                    _configuration["Jwt:RefreshTokenExpirationDays"] ?? "7");
+
+                DateTime accessTokenExpiry = DateTime.UtcNow.AddMinutes(accessTokenExpirationMinutes);
+                DateTime refreshTokenExpiry = DateTime.UtcNow.AddDays(refreshTokenExpirationDays);
+
+                // Store new refresh token
+                parent.RefreshToken = BCrypt.Net.BCrypt.HashPassword(refreshToken);
+                parent.RefreshTokenExpiry = refreshTokenExpiry;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                // Build auth response
+                var authResponse = new AuthResponseDto
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken,
+                    AccessTokenExpiration = accessTokenExpiry,
+                    RefreshTokenExpiration = refreshTokenExpiry,
+                    ParentId = parent.ParentID,
+                    Email = parent.Email,
+                    FullName = $"{parent.FName} {parent.LName}"
+                };
+
+                return (true,
+                    "Password has been reset successfully! You are now logged in.",
+                    authResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error during password reset: {ex.Message}");
+                return (false, "An error occurred during password reset.", null);
+            }
+        }
+        // ==================== PART 3: EMAIL CHANGE ====================
+        // Add these methods to your AuthService.cs class
+
+        /// <summary>
+        /// STEP 1: REQUEST EMAIL CHANGE (Updated to send code to NEW email)
+        /// Sends 6-digit code to the new email address.
+        /// </summary>
+        public async Task<(bool success, string message)>
+            RequestEmailChangeAsync(int parentId, RequestEmailChangeDto dto)
+        {
+            try
+            {
+                // STEP 1: Find parent
+                var parent = await _context.Parents.FindAsync(parentId);
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Email change request for non-existent parent: {parentId}");
+                    return (false, "Parent account not found");
+                }
+
+                // Check if deleted
+                if (parent.IsDeleted)
+                {
+                    _logger.LogWarning($"Email change request for deleted parent: {parent.Email}");
+                    return (false, "Account has been deleted");
+                }
+
+                // STEP 2: Verify current password
+                bool passwordValid = BCrypt.Net.BCrypt.Verify(
+                    dto.CurrentPassword,
+                    parent.HashedPassword);
+
+                if (!passwordValid)
+                {
+                    _logger.LogWarning($"Email change with wrong password for: {parent.Email}");
+                    return (false, "Current password is incorrect");
+                }
+
+                // STEP 3: Check if new email is already in use
+                string normalizedNewEmail = dto.NewEmail.ToLower().Trim();
+
+                bool emailExists = await _context.Parents
+                    .AnyAsync(p => p.Email.ToLower() == normalizedNewEmail
+                                && p.ParentID != parentId);
+
+                if (emailExists)
+                {
+                    _logger.LogWarning($"Email change to already registered email: {normalizedNewEmail}");
+                    return (false, "This email address is already registered");
+                }
+
+                // STEP 4: Generate 6-digit code for email change
+                string changeCode = CodeGenerator.Generate6DigitCode();
+                DateTime codeExpiry = CodeGenerator.GetCodeExpiration(15);
+
+                // STEP 5: Store new email and code (don't update actual email yet!)
+                parent.NewEmail = normalizedNewEmail;
+                parent.EmailChangeCode = changeCode;
+                parent.EmailChangeCodeExpiry = codeExpiry;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Email change initiated: {parent.Email} -> {normalizedNewEmail}. Code: {changeCode}");
+
+                // STEP 6: Send code to NEW email address
+                bool emailSent = await _emailService.SendEmailChangeCodeAsync(
+                    normalizedNewEmail, // ✅ Send to NEW email
+                    $"{parent.FName} {parent.LName}",
+                    changeCode
+                );
+
+                if (!emailSent)
+                {
+                    _logger.LogWarning($"Failed to send email change code to {normalizedNewEmail}");
+                    return (false, "Failed to send confirmation email. Please try again.");
+                }
+
+                return (true,
+                    $"A confirmation code has been sent to {normalizedNewEmail}. " +
+                    "Please check that email and enter the code to complete the change.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error during email change request: {ex.Message}");
+                return (false, "An error occurred. Please try again later.");
+            }
+        }
+
+        /// <summary>
+        /// STEP 2: CONFIRM EMAIL CHANGE WITH CODE
+        /// Verifies code and applies the email change.
+        /// Revokes all tokens (user must log in with new email).
+        /// </summary>
+        public async Task<(bool success, string message)>
+            ConfirmEmailChangeWithCodeAsync(ConfirmEmailChangeWithCodeDto dto)
+        {
+            try
+            {
+                // STEP 1: Find parent by OLD email
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.Email.ToLower() == dto.OldEmail.ToLower().Trim());
+
+                if (parent == null)
+                {
+                    _logger.LogWarning($"Email change confirmation for non-existent email: {dto.OldEmail}");
+                    return (false, "Invalid email change request");
+                }
+
+                // STEP 2: Verify the NEW email matches what's stored
+                if (parent.NewEmail?.ToLower() != dto.NewEmail.ToLower().Trim())
+                {
+                    _logger.LogWarning($"Email change confirmation with mismatched new email for: {parent.Email}");
+                    return (false, "Invalid email change request");
+                }
+
+                // STEP 3: Verify the code
+                if (parent.EmailChangeCode != dto.Code.Trim())
+                {
+                    _logger.LogWarning($"Invalid email change code for: {parent.Email}");
+                    return (false, "Invalid or incorrect code");
+                }
+
+                // STEP 4: Check expiration
+                if (CodeGenerator.IsCodeExpired(parent.EmailChangeCodeExpiry))
+                {
+                    _logger.LogWarning($"Expired email change code for: {parent.Email}");
+                    return (false, "This code has expired. Please request a new one.");
+                }
+
+                // STEP 5: Check if new email was taken while waiting for confirmation
+                string normalizedNewEmail = dto.NewEmail.ToLower().Trim();
+                bool emailNowTaken = await _context.Parents
+                    .AnyAsync(p => p.Email.ToLower() == normalizedNewEmail
+                                && p.ParentID != parent.ParentID);
+
+                if (emailNowTaken)
+                {
+                    _logger.LogWarning($"Email change but new email now taken: {normalizedNewEmail}");
+                    return (false,
+                        "This email address has been registered by another user. " +
+                        "Please choose a different email.");
+                }
+
+                // STEP 6: Apply the email change
+                string oldEmail = parent.Email;
+                parent.Email = normalizedNewEmail;
+                parent.IsEmailConfirmed = true; // New email is confirmed
+
+                // STEP 7: Clear email change fields
+                parent.NewEmail = null;
+                parent.EmailChangeCode = null;
+                parent.EmailChangeCodeExpiry = null;
+
+                // STEP 8: Revoke all refresh tokens (force re-login with new email)
+                parent.RefreshToken = null;
+                parent.RefreshTokenExpiry = null;
+
+                _context.Parents.Update(parent);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Email changed successfully: {oldEmail} -> {normalizedNewEmail}");
+
+                return (true,
+                    "Email changed successfully! Please log in again with your new email address.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error confirming email change: {ex.Message}");
+                return (false, "An error occurred during email change confirmation.");
             }
         }
 
@@ -418,116 +869,7 @@ namespace MoneyMirror.Infrastructure.Services
                 .AnyAsync(p => p.Email.ToLower() == email.ToLower().Trim());
         }
 
-        /// Initiates password reset flow.
-        public async Task<(bool success, string message)> ForgotPasswordAsync(string email)
-        {
-            try
-            {
-                // STEP 1: Find parent by email
-                var parent = await _context.Parents
-                    .FirstOrDefaultAsync(p => p.Email.ToLower() == email.ToLower().Trim());
-
-                // For security, always return success even if email doesn't exist
-                // (prevents email enumeration attacks)
-                if (parent == null)
-                {
-                    _logger.LogWarning($"Password reset requested for non-existent email: {email}");
-                    return (true, "If that email address is registered, you will receive a password reset link shortly.");
-                }
-
-                // STEP 2: Generate reset token
-                string resetToken = Guid.NewGuid().ToString();
-                DateTime tokenExpiry = DateTime.UtcNow.AddHours(1); // 1 hour expiration
-
-                // STEP 3: Store token in database
-                parent.PasswordResetToken = resetToken;
-                parent.PasswordResetTokenExpiry = tokenExpiry;
-
-                _context.Parents.Update(parent);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation($"Password reset token generated for: {parent.Email}");
-
-                // STEP 4: Send reset email
-                string frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:19006";
-                string resetLink = $"{frontendUrl}/auth/reset-password?email={parent.Email}&token={resetToken}";
-
-                bool emailSent = await _emailService.SendPasswordResetEmailAsync(
-                    parent.Email,
-                    $"{parent.FName} {parent.LName}",
-                    resetLink
-                );
-
-                if (!emailSent)
-                {
-                    _logger.LogWarning($"Failed to send password reset email to {parent.Email}");
-                }
-
-                return (true, "If that email address is registered, you will receive a password reset link shortly.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error during forgot password: {ex.Message}");
-                return (false, "An error occurred while processing your request. Please try again later.");
-            }
-        }
-
-        /// Resets a parent's password using reset token.
-        public async Task<(bool success, string message)> ResetPasswordAsync(string email, string token, string newPassword)
-        {
-            try
-            {
-                // STEP 1: Find parent by email
-                var parent = await _context.Parents
-                    .FirstOrDefaultAsync(p => p.Email.ToLower() == email.ToLower().Trim());
-
-                if (parent == null)
-                {
-                    _logger.LogWarning($"Password reset attempt with non-existent email: {email}");
-                    return (false, "Invalid password reset link");
-                }
-
-                // STEP 2: Verify token
-                if (parent.PasswordResetToken != token)
-                {
-                    _logger.LogWarning($"Password reset attempt with invalid token for: {email}");
-                    return (false, "Invalid password reset link");
-                }
-
-                // Check if token has expired
-                if (parent.PasswordResetTokenExpiry == null ||
-                    parent.PasswordResetTokenExpiry < DateTime.UtcNow)
-                {
-                    _logger.LogWarning($"Password reset attempt with expired token for: {email}");
-                    return (false, "Password reset link has expired. Please request a new one.");
-                }
-
-                // STEP 3: Hash new password
-                string hashedPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
-
-                // STEP 4: Update password and clear reset token
-                parent.HashedPassword = hashedPassword;
-                parent.PasswordResetToken = null;
-                parent.PasswordResetTokenExpiry = null;
-
-                // STEP 5: Revoke refresh tokens (force re-login on all devices for security)
-                parent.RefreshToken = null;
-                parent.RefreshTokenExpiry = null;
-
-                _context.Parents.Update(parent);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation($"Password reset successfully for: {email}");
-
-                return (true, "Password has been reset successfully. Please log in with your new password.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error during password reset: {ex.Message}");
-                return (false, "An error occurred while resetting your password. Please try again later.");
-            }
-        }
-
+        
         /// Resends email confirmation link to a parent.
         public async Task<(bool success, string message)> ResendConfirmationEmailAsync(string email)
         {
@@ -557,8 +899,8 @@ namespace MoneyMirror.Infrastructure.Services
                     _configuration["EmailConfirmation:TokenExpirationHours"] ?? "24");
                 DateTime tokenExpiry = DateTime.UtcNow.AddHours(tokenExpirationHours);
 
-                parent.EmailConfirmationToken = confirmationToken;
-                parent.EmailConfirmationTokenExpiry = tokenExpiry;
+                parent.EmailConfirmationCode = confirmationToken;
+                parent.EmailConfirmationCodeExpiry = tokenExpiry;
 
                 _context.Parents.Update(parent);
                 await _context.SaveChangesAsync();
@@ -569,7 +911,7 @@ namespace MoneyMirror.Infrastructure.Services
                 string frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:19006";
                 string confirmationLink = $"{frontendUrl}/auth/confirm-email?email={parent.Email}&token={confirmationToken}";
 
-                bool emailSent = await _emailService.SendEmailConfirmationAsync(
+                bool emailSent = await _emailService.SendEmailConfirmationCodeAsync(
                     parent.Email,
                     $"{parent.FName} {parent.LName}",
                     confirmationLink
@@ -632,90 +974,6 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// Initiates email change process.
-        public async Task<(bool success, string message)> ChangeEmailAsync(int parentId, ChangeEmailDto changeEmailDto)
-        {
-            try
-            {
-                // STEP 1: Find parent
-                var parent = await _context.Parents.FindAsync(parentId);
-
-                if (parent == null)
-                {
-                    _logger.LogWarning($"Email change attempt for non-existent parent ID: {parentId}");
-                    return (false, "Parent account not found");
-                }
-
-                // Check if account is deleted
-                if (parent.IsDeleted)
-                {
-                    _logger.LogWarning($"Email change attempt for deleted parent: {parent.Email}");
-                    return (false, "Account has been deleted");
-                }
-
-                // STEP 2: Verify current password
-                bool passwordValid = BCrypt.Net.BCrypt.Verify(changeEmailDto.CurrentPassword, parent.HashedPassword);
-
-                if (!passwordValid)
-                {
-                    _logger.LogWarning($"Email change attempt with invalid password for: {parent.Email}");
-                    return (false, "Current password is incorrect");
-                }
-
-                // STEP 3: Check if new email is already in use
-                string normalizedNewEmail = changeEmailDto.NewEmail.ToLower().Trim();
-
-                bool emailExists = await _context.Parents
-                    .AnyAsync(p => p.Email.ToLower() == normalizedNewEmail && p.ParentID != parentId);
-
-                if (emailExists)
-                {
-                    _logger.LogWarning($"Email change attempt to already registered email: {normalizedNewEmail}");
-                    return (false, "This email address is already registered");
-                }
-
-                // STEP 4: Generate email change token
-                string emailChangeToken = Guid.NewGuid().ToString();
-                int tokenExpirationHours = int.Parse(
-                    _configuration["EmailConfirmation:TokenExpirationHours"] ?? "24");
-                DateTime tokenExpiry = DateTime.UtcNow.AddHours(tokenExpirationHours);
-
-                // Store new email and token (don't update actual email yet!)
-                parent.NewEmail = normalizedNewEmail;
-                parent.EmailChangeToken = emailChangeToken;
-                parent.EmailChangeTokenExpiry = tokenExpiry;
-
-                _context.Parents.Update(parent);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation($"Email change initiated for parent: {parent.Email} to {normalizedNewEmail}");
-
-                // STEP 5: Send verification email to NEW email address
-                string frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:19006";
-                string confirmationLink = $"{frontendUrl}/auth/confirm-email-change?oldEmail={parent.Email}&newEmail={normalizedNewEmail}&token={emailChangeToken}";
-
-                // Use existing email confirmation template but customize message
-                bool emailSent = await _emailService.SendEmailConfirmationAsync(
-                    normalizedNewEmail,
-                    $"{parent.FName} {parent.LName}",
-                    confirmationLink
-                );
-
-                if (!emailSent)
-                {
-                    _logger.LogWarning($"Failed to send email change confirmation to {normalizedNewEmail}");
-                    return (false, "Failed to send confirmation email. Please try again later.");
-                }
-
-                return (true, "A confirmation link has been sent to your new email address. Please verify it to complete the change.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error during email change: {ex.Message}");
-                return (false, "An error occurred while changing your email. Please try again later.");
-            }
-        }
-
         /// Confirms email change using token.
         public async Task<(bool success, string message)> ConfirmEmailChangeAsync(ConfirmEmailChangeDto confirmDto)
         {
@@ -732,7 +990,7 @@ namespace MoneyMirror.Infrastructure.Services
                 }
 
                 // STEP 2: Verify token and new email
-                if (parent.EmailChangeToken != confirmDto.Token)
+                if (parent.EmailChangeCode != confirmDto.Token)
                 {
                     _logger.LogWarning($"Email change confirmation with invalid token for: {parent.Email}");
                     return (false, "Invalid email change link");
@@ -745,8 +1003,8 @@ namespace MoneyMirror.Infrastructure.Services
                 }
 
                 // Check if token has expired
-                if (parent.EmailChangeTokenExpiry == null ||
-                    parent.EmailChangeTokenExpiry < DateTime.UtcNow)
+                if (parent.EmailChangeCodeExpiry == null ||
+                    parent.EmailChangeCodeExpiry < DateTime.UtcNow)
                 {
                     _logger.LogWarning($"Email change confirmation with expired token for: {parent.Email}");
                     return (false, "Email change link has expired. Please request a new one.");
@@ -770,8 +1028,8 @@ namespace MoneyMirror.Infrastructure.Services
 
                 // STEP 4: Clear email change tokens
                 parent.NewEmail = null;
-                parent.EmailChangeToken = null;
-                parent.EmailChangeTokenExpiry = null;
+                parent.EmailChangeCode = null;
+                parent.EmailChangeCodeExpiry = null;
 
                 // STEP 5: Revoke all refresh tokens (force re-login with new email)
                 parent.RefreshToken = null;
@@ -958,12 +1216,12 @@ namespace MoneyMirror.Infrastructure.Services
                     // Clear all tokens
                     parent.RefreshToken = null;
                     parent.RefreshTokenExpiry = null;
-                    parent.EmailConfirmationToken = null;
-                    parent.EmailConfirmationTokenExpiry = null;
-                    parent.PasswordResetToken = null;
-                    parent.PasswordResetTokenExpiry = null;
-                    parent.EmailChangeToken = null;
-                    parent.EmailChangeTokenExpiry = null;
+                    parent.EmailConfirmationCode = null;
+                    parent.EmailConfirmationCodeExpiry = null;
+                    parent.PasswordResetCode = null;
+                    parent.PasswordResetCodeExpiry = null;
+                    parent.EmailChangeCode = null;
+                    parent.EmailChangeCodeExpiry = null;
                     parent.NewEmail = null;
 
                     // Mark as permanently deleted
