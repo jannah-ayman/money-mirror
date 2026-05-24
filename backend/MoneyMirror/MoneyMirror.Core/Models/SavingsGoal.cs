@@ -27,13 +27,6 @@ namespace MoneyMirror.Core.Models
         public string Title { get; set; }
 
         /// <summary>
-        /// Detailed description of the goal.
-        /// Example: "I want to save for a blue mountain bike!"
-        /// </summary>
-        [MaxLength(1000)]
-        public string? Desc { get; set; }
-
-        /// <summary>
         /// Target amount the child needs to save to complete the goal.
         /// Stored as DECIMAL(10,2) for precise currency calculations.
         /// Example: 150.00 = $150.00 target
@@ -74,7 +67,7 @@ namespace MoneyMirror.Core.Models
 
         /// <summary>
         /// Current status of the goal.
-        /// Values: "Active", "Completed", "Abandoned"
+        /// Values: "Active", "Success", "Failure"
         /// </summary>
         [Required]
         [MaxLength(20)]
