@@ -53,6 +53,7 @@ namespace MoneyMirror.Infrastructure.Data
 
         /// QuizLogs table - child responses to story quizzes
         public DbSet<QuizLog> QuizLogs { get; set; }
+        public DbSet<QuizAnswer> QuizAnswers { get; set; }
 
         /// StoryQuizTemplate table - predefined story scenarios for quizzes
         public DbSet<StoryQuizTemplate> StoryQuizTemplates { get; set; }
@@ -341,34 +342,45 @@ namespace MoneyMirror.Infrastructure.Data
             });
 
             // ==================== QUIZ LOG ENTITY CONFIGURATION ====================
-
             modelBuilder.Entity<QuizLog>(entity =>
             {
-                // Index for analytics queries
                 entity.HasIndex(ql => new { ql.ChildID, ql.CompletedDate })
                       .HasDatabaseName("IX_QuizLog_Child_CompletedDate");
 
-                // Relationship with Child
+                // Unique: one answer per story per child
+                entity.HasIndex(ql => new { ql.ChildID, ql.StoryID })
+                      .IsUnique()
+                      .HasDatabaseName("IX_QuizLog_Child_Story_Unique");
+
                 entity.HasOne(ql => ql.Child)
                       .WithMany(c => c.QuizLogs)
                       .HasForeignKey(ql => ql.ChildID)
-                      .OnDelete(DeleteBehavior.Cascade); // Delete quiz logs if child deleted
+                      .OnDelete(DeleteBehavior.Cascade);
 
-                // Relationship with StoryQuizTemplate
                 entity.HasOne(ql => ql.StoryQuizTemplate)
-                      .WithMany()
+                      .WithMany(s => s.QuizLogs)
                       .HasForeignKey(ql => ql.StoryID)
-                      .OnDelete(DeleteBehavior.Restrict); // Don't allow deleting templates in use
+                      .OnDelete(DeleteBehavior.Restrict);
 
-                // Relationship with PersonalityType
-                entity.HasOne(ql => ql.PersonalityType)
-                      .WithMany(pt => pt.QuizLogs)
-                      .HasForeignKey(ql => ql.TypeID)
-                      .OnDelete(DeleteBehavior.Restrict); // Don't allow deleting types in use
+                entity.HasOne(ql => ql.QuizAnswer)
+                      .WithMany(a => a.QuizLogs)
+                      .HasForeignKey(ql => ql.AnswerID)
+                      .OnDelete(DeleteBehavior.Restrict);
 
-                // Default value
                 entity.Property(ql => ql.CompletedDate)
                       .HasDefaultValueSql("GETUTCDATE()");
+            });
+            modelBuilder.Entity<QuizAnswer>(entity =>
+            {
+                entity.HasOne(a => a.StoryQuizTemplate)
+                      .WithMany(s => s.Answers)
+                      .HasForeignKey(a => a.StoryID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(a => a.PersonalityType)
+                      .WithMany()
+                      .HasForeignKey(a => a.PersonalityTypeID)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // ==================== CHILD ACHIEVEMENT (Many-to-Many) ====================
@@ -423,12 +435,10 @@ namespace MoneyMirror.Infrastructure.Data
 
             modelBuilder.Entity<StoryQuizTemplate>(entity =>
             {
-                // Index for filtering by age range
-                entity.HasIndex(sqt => new { sqt.TargetAgeMin, sqt.TargetAgeMax })
+                entity.HasIndex(s => new { s.TargetAgeMin, s.TargetAgeMax })
                       .HasDatabaseName("IX_StoryQuiz_AgeRange");
 
-                // Default value
-                entity.Property(sqt => sqt.CreatedDate)
+                entity.Property(s => s.CreatedDate)
                       .HasDefaultValueSql("GETUTCDATE()");
             });
 
