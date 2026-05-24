@@ -74,6 +74,7 @@ builder.Services.AddScoped<IAllowanceService, AllowanceService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ICharacterService, CharacterService>();
 builder.Services.AddScoped<IAIPersonalityService, AIPersonalityService>();
+builder.Services.AddScoped<IGoalService, GoalService>();
 
 // ==================== JWT AUTHENTICATION CONFIGURATION ====================
 // Read JWT settings from appsettings.json
@@ -249,6 +250,10 @@ RecurringJob.AddOrUpdate<IChildService>(
     "update-children-ages",
     service => service.UpdateAllChildrenAgesAsync(),
     Cron.Daily(2));
+RecurringJob.AddOrUpdate<IGoalService>(
+    "fail-expired-goals",
+    service => service.FailExpiredGoalsAsync(),
+    Cron.Daily(1)); // Runs daily at 1:00 AM
 
 // ==================== RUN THE APPLICATION ====================
 Console.WriteLine("Money Mirror API is starting...");
