@@ -17,10 +17,6 @@ namespace MoneyMirror.Core.Models
 
         [Required]
         [MaxLength(2000)]
-        public string Scenario { get; set; }
-
-        [Required]
-        [MaxLength(500)]
         public string QuestionText { get; set; }
 
         [Required]

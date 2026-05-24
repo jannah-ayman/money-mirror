@@ -69,7 +69,6 @@ namespace MoneyMirror.Infrastructure.Services
                 {
                     StoryID = nextQuestion.StoryID,
                     Title = nextQuestion.Title,
-                    Scenario = nextQuestion.Scenario,
                     QuestionText = nextQuestion.QuestionText,
                     Answers = nextQuestion.Answers.Select(a => new QuizAnswerOptionDto
                     {
