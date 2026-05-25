@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using MoneyMirror.Core.DTOs.Achievement;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Core.Models;
 using MoneyMirror.Infrastructure.Data;
@@ -30,7 +31,6 @@ namespace MoneyMirror.Infrastructure.Services
                 _ => 0
             };
 
-            // Find badges in this category that match current count and aren't already earned
             var earnedIds = await _context.ChildAchievements
                 .Where(ca => ca.ChildID == childId)
                 .Select(ca => ca.AchievementTypeID)
@@ -51,13 +51,67 @@ namespace MoneyMirror.Infrastructure.Services
                     EarnedDate = DateTime.UtcNow
                 });
 
-                _logger.LogInformation(
-                    "Child {ChildId} unlocked achievement: {Name}", childId, achievement.Name);
-
-                // TODO: trigger notification to child when notifications are implemented
+                _logger.LogInformation("Child {ChildId} unlocked achievement: {Name}", childId, achievement.Name);
             }
 
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<(bool success, List<AchievementCategoryDto> categories, string errorMessage)>
+            GetMyAchievementsAsync(int childId)
+        {
+            try
+            {
+                var child = await _context.Children.FindAsync(childId);
+                if (child == null)
+                    return (false, null, "Child not found");
+
+                // Load all 12 badge types
+                var allBadges = await _context.AchievementTypes
+                    .OrderBy(at => at.Category)
+                    .ThenBy(at => at.Threshold)
+                    .ToListAsync();
+
+                // Load this child's earned achievements
+                var earned = await _context.ChildAchievements
+                    .Where(ca => ca.ChildID == childId)
+                    .ToListAsync();
+
+                var earnedDict = earned.ToDictionary(ca => ca.AchievementTypeID, ca => ca.EarnedDate);
+
+                var categoryCountMap = new Dictionary<string, int>
+                {
+                    { "Quiz",    child.QuizCount    },
+                    { "Goal",    child.GoalCount     },
+                    { "Expense", child.ExpenseCount  }
+                };
+
+                var categories = allBadges
+                    .GroupBy(at => at.Category)
+                    .Select(g => new AchievementCategoryDto
+                    {
+                        Category = g.Key,
+                        CurrentCount = categoryCountMap.GetValueOrDefault(g.Key, 0),
+                        Badges = g.Select(at => new AchievementBadgeDto
+                        {
+                            AchievementTypeID = at.AchievementTypeID,
+                            Name = at.Name,
+                            IconURL = at.IconURL,
+                            Threshold = at.Threshold,
+                            IsUnlocked = earnedDict.ContainsKey(at.AchievementTypeID),
+                            EarnedDate = earnedDict.TryGetValue(at.AchievementTypeID, out var d) ? d : null,
+                            CurrentCount = categoryCountMap.GetValueOrDefault(g.Key, 0)
+                        }).ToList()
+                    })
+                    .ToList();
+
+                return (true, categories, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting achievements for child {ChildId}", childId);
+                return (false, null, "An error occurred while loading your achievements");
+            }
         }
     }
 }
