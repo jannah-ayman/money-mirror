@@ -290,42 +290,32 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         /// <summary>
-        /// Private helper method that actually sends the email via SendGrid.
+        /// Private helper method that actually sends the email via Brevo.
         /// </summary>
         private async Task<bool> SendEmailAsync(string toEmail, string toName, string subject, string htmlContent)
         {
             try
             {
-                var client = new SendGridClient(_sendGridApiKey);
-                var from = new EmailAddress(_senderEmail, _senderName);
-                var to = new EmailAddress(toEmail, toName);
+                var config = new sib_api_v3_sdk.Client.Configuration();
+                config.ApiKey["api-key"] = _sendGridApiKey;
 
-                var msg = MailHelper.CreateSingleEmail(
-                    from,
-                    to,
-                    subject,
-                    plainTextContent: "Please view this email in an HTML-capable email client.",
+                var apiInstance = new sib_api_v3_sdk.Api.TransactionalEmailsApi(config);
+                var email = new sib_api_v3_sdk.Model.SendSmtpEmail(
+                    sender: new sib_api_v3_sdk.Model.SendSmtpEmailSender(_senderName, _senderEmail),
+                    to: new List<sib_api_v3_sdk.Model.SendSmtpEmailTo> {
+                new sib_api_v3_sdk.Model.SendSmtpEmailTo(toEmail, toName)
+                    },
+                    subject: subject,
                     htmlContent: htmlContent
                 );
 
-                var response = await client.SendEmailAsync(msg);
-
-                if (response.StatusCode == System.Net.HttpStatusCode.OK ||
-                    response.StatusCode == System.Net.HttpStatusCode.Accepted)
-                {
-                    _logger.LogInformation($"Email sent successfully to {toEmail}");
-                    return true;
-                }
-                else
-                {
-                    var body = await response.Body.ReadAsStringAsync();
-                    _logger.LogError($"Failed to send email to {toEmail}. Status: {response.StatusCode}, Body: {body}");
-                    return false;
-                }
+                await apiInstance.SendTransacEmailAsync(email);
+                _logger.LogInformation($"Email sent to {toEmail}");
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Exception while sending email to {toEmail}: {ex.Message}");
+                _logger.LogError($"Email failed: {ex.Message}");
                 return false;
             }
         }
