@@ -15,13 +15,13 @@ namespace MoneyMirror.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<ExpenseService> _logger;
+        private readonly IAchievementService _achievementService;
 
-        public ExpenseService(
-            ApplicationDbContext context,
-            ILogger<ExpenseService> logger)
+        public ExpenseService(ApplicationDbContext context, ILogger<ExpenseService> logger, IAchievementService achievementService)
         {
             _context = context;
             _logger = logger;
+            _achievementService = achievementService;
         }
 
         // ==================== HELPER METHOD: VERIFY PARENT-CHILD RELATIONSHIP ====================
@@ -39,80 +39,43 @@ namespace MoneyMirror.Infrastructure.Services
         // ==================== EXPENSE LOGGING ====================
 
         public async Task<(bool success, ExpenseResponseDto? expense, decimal newBalance, string errorMessage)>
-     LogExpenseAsync(int childId, LogExpenseDto dto)
+            LogExpenseAsync(int childId, LogExpenseDto dto)
         {
-            // ✅ STEP 1: Get the execution strategy from EF Core
             var strategy = _context.Database.CreateExecutionStrategy();
 
-            // ✅ STEP 2: Execute everything inside the strategy
             return await strategy.ExecuteAsync(async () =>
             {
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
                 try
                 {
-                    // STEP 3: Get child and verify they exist
                     var child = await _context.Children.FindAsync(childId);
 
                     if (child == null)
-                    {
-                        _logger.LogWarning($"Expense log attempt for non-existent child {childId}");
                         return (false, null, 0, "Child not found");
-                    }
 
-                    _logger.LogInformation($"Child {childId} current balance: {child.CurrentBalance}");
-
-                    // STEP 4: Validate child has enough balance
                     if (child.CurrentBalance < dto.MoneyAmount)
-                    {
-                        _logger.LogWarning($"Child {childId} attempted to spend {dto.MoneyAmount} but only has {child.CurrentBalance}");
                         return (false, null, child.CurrentBalance,
                             $"Insufficient balance. You have {child.CurrentBalance:F2} but tried to spend {dto.MoneyAmount:F2}");
-                    }
 
-                    // STEP 5: Verify category exists
                     var category = await _context.ExpenseCategories.FindAsync(dto.CategoryID);
-
                     if (category == null)
-                    {
-                        _logger.LogWarning($"Invalid category ID {dto.CategoryID} for expense");
                         return (false, null, child.CurrentBalance, "Invalid category selected");
-                    }
 
-                    _logger.LogInformation($"Category found: {category.Name}");
-
-                    // ⭐ STEP 5.5: NEW - Check if ItemName is required (category = "Other")
                     bool isOtherCategory = category.Name.Equals("Other", StringComparison.OrdinalIgnoreCase);
 
                     if (isOtherCategory && string.IsNullOrWhiteSpace(dto.ItemName))
-                    {
-                        _logger.LogWarning($"ItemName is required for 'Other' category but was not provided");
-                        return (false, null, child.CurrentBalance,
-                            "Please provide an item name when category is 'Other'");
-                    }
+                        return (false, null, child.CurrentBalance, "Please provide an item name when category is 'Other'");
 
-                    // If category is NOT "Other", we don't need ItemName - set it to null
-                    string? finalItemName = isOtherCategory
-                        ? dto.ItemName?.Trim()
-                        : null;
+                    string? finalItemName = isOtherCategory ? dto.ItemName?.Trim() : null;
 
-                    _logger.LogInformation($"Using ItemName: {finalItemName ?? "(none)"}");
-
-                    // STEP 6: Verify mood exists
                     var mood = await _context.Moods.FindAsync(dto.MoodID);
-
                     if (mood == null)
-                    {
-                        _logger.LogWarning($"Invalid mood ID {dto.MoodID} for expense");
                         return (false, null, child.CurrentBalance, "Invalid mood selected");
-                    }
 
-                    _logger.LogInformation($"Mood found: {mood.Description}");
-
-                    // STEP 7: Create the expense record
                     var expense = new Core.Models.Expense
                     {
-                        ItemName = finalItemName, // ⭐ Use the finalized ItemName (null if not "Other")
+                        ItemName = finalItemName,
                         MoneyAmount = dto.MoneyAmount,
                         LogDate = DateTime.UtcNow,
                         Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
@@ -122,20 +85,16 @@ namespace MoneyMirror.Infrastructure.Services
                     };
 
                     _context.Expenses.Add(expense);
-                    _logger.LogInformation($"Expense record created for child {childId}");
 
-                    // STEP 8: Update child's balance (DECREASE it)
-                    decimal oldBalance = child.CurrentBalance;
                     child.CurrentBalance -= dto.MoneyAmount;
+                    child.ExpenseCount++;
                     _context.Children.Update(child);
-                    _logger.LogInformation($"Balance updated: {oldBalance} -> {child.CurrentBalance}");
 
-                    // STEP 9: Create transaction record
                     string transactionDesc = isOtherCategory && !string.IsNullOrWhiteSpace(finalItemName)
                         ? $"Spent on {finalItemName}"
                         : $"Spent on {category.Name}";
 
-                    var transactionRecord = new Transaction
+                    _context.Transactions.Add(new Transaction
                     {
                         Type = "Expense",
                         Amount = dto.MoneyAmount,
@@ -145,27 +104,21 @@ namespace MoneyMirror.Infrastructure.Services
                         ChildID = childId,
                         ParentID = null,
                         AllowanceID = null
-                    };
+                    });
 
-                    _context.Transactions.Add(transactionRecord);
-                    _logger.LogInformation($"Transaction record created");
-
-                    // STEP 10: Save everything to database
                     await _context.SaveChangesAsync();
-                    _logger.LogInformation($"Changes saved to database");
-
                     await transaction.CommitAsync();
-                    _logger.LogInformation($"Transaction committed");
+
+                    await _achievementService.CheckAndUnlockAsync(childId, "Expense");
 
                     _logger.LogInformation(
-                        $"Child {childId} logged expense: Category={category.Name}, ItemName={finalItemName ?? "(none)"}, Amount={dto.MoneyAmount}. New balance: {child.CurrentBalance}");
+                        "Child {ChildId} logged expense: Category={Category}, Amount={Amount}. New balance: {Balance}",
+                        childId, category.Name, dto.MoneyAmount, child.CurrentBalance);
 
-                    // STEP 11: Build response DTO
-                    // ⭐ Only include ItemName in response if category was "Other"
                     var expenseResponse = new ExpenseResponseDto
                     {
                         ExpenseID = expense.ExpenseID,
-                        ItemName = isOtherCategory ? finalItemName : null, // ⭐ Hide ItemName unless "Other"
+                        ItemName = isOtherCategory ? finalItemName : null,
                         CategoryName = category.Name,
                         MoodDescription = mood.Description,
                         Amount = expense.MoneyAmount,
@@ -178,9 +131,7 @@ namespace MoneyMirror.Infrastructure.Services
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
-                    _logger.LogError($"Error logging expense for child {childId}: {ex.Message}");
-                    _logger.LogError($"Stack trace: {ex.StackTrace}");
-
+                    _logger.LogError(ex, "Error logging expense for child {ChildId}", childId);
                     return (false, null, 0, $"Error: {ex.Message}");
                 }
             });

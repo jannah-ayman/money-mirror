@@ -12,10 +12,13 @@ namespace MoneyMirror.Infrastructure.Services
         private readonly ApplicationDbContext _context;
         private readonly ILogger<GoalService> _logger;
 
-        public GoalService(ApplicationDbContext context, ILogger<GoalService> logger)
+        private readonly IAchievementService _achievementService;
+
+        public GoalService(ApplicationDbContext context, ILogger<GoalService> logger, IAchievementService achievementService)
         {
             _context = context;
             _logger = logger;
+            _achievementService = achievementService;
         }
 
         private async Task<bool> IsParentLinkedToChildAsync(int parentId, int childId) =>
@@ -161,7 +164,6 @@ namespace MoneyMirror.Infrastructure.Services
                 return (false, new List<GoalResponseDto>(), "An error occurred while retrieving goals.");
             }
         }
-
         public async Task<(bool success, decimal newBalance, decimal newGoalAmount, string errorMessage)>
             AddMoneyToGoalAsync(int childId, int goalId, AddMoneyToGoalDto dto)
         {
@@ -180,8 +182,10 @@ namespace MoneyMirror.Infrastructure.Services
 
                     if (goal.Status != "Active")
                         return (false, 0m, 0m, "You can only add money to active goals.");
+
                     if (goal.EndDate.HasValue && goal.EndDate.Value < DateTime.UtcNow)
                         return (false, 0m, 0m, "This goal has expired and can no longer receive money.");
+
                     var child = await _context.Children.FindAsync(childId);
                     if (child == null)
                         return (false, 0m, 0m, "Child not found.");
@@ -193,7 +197,6 @@ namespace MoneyMirror.Infrastructure.Services
                         return (false, child.CurrentBalance, goal.CurrentAmount,
                             $"Insufficient balance. You have {child.CurrentBalance:F2} but tried to add {dto.Amount:F2}.");
 
-                    // Cap at what the goal actually needs
                     decimal remaining = goal.TargetAmount - goal.CurrentAmount;
                     decimal actualAmount = Math.Min(dto.Amount, remaining);
 
@@ -202,7 +205,6 @@ namespace MoneyMirror.Infrastructure.Services
 
                     _context.Children.Update(child);
 
-                    // Create transaction record
                     _context.Transactions.Add(new Transaction
                     {
                         Type = "GoalTransfer",
@@ -213,12 +215,13 @@ namespace MoneyMirror.Infrastructure.Services
                         ChildID = childId
                     });
 
-                    // Check completion
+                    bool goalJustCompleted = false;
+
                     if (goal.CurrentAmount >= goal.TargetAmount)
                     {
                         goal.Status = "Success";
+                        goalJustCompleted = true;
 
-                        // Credit reward if challenge
                         if (goal.IsChallenge && goal.RewardValue.HasValue && goal.RewardValue.Value > 0)
                         {
                             child.CurrentBalance += goal.RewardValue.Value;
@@ -237,12 +240,18 @@ namespace MoneyMirror.Infrastructure.Services
                             _logger.LogInformation("Challenge reward of {Reward} credited to child {ChildId}", goal.RewardValue.Value, childId);
                         }
 
+                        child.GoalCount++;
+                        _context.Children.Update(child);
+
                         _logger.LogInformation("Goal {GoalId} completed by child {ChildId}", goalId, childId);
                     }
 
                     _context.SavingsGoals.Update(goal);
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+
+                    if (goalJustCompleted)
+                        await _achievementService.CheckAndUnlockAsync(childId, "Goal");
 
                     return (true, child.CurrentBalance, goal.CurrentAmount, string.Empty);
                 }
