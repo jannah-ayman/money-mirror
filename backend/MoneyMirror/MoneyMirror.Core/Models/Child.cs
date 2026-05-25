@@ -45,15 +45,20 @@ namespace MoneyMirror.Core.Models
         public bool IsPersonalityFinalized { get; set; } = false;
 
         [Required]
+        public int QuizCount { get; set; } = 0;
+
+        [Required]
+        public int GoalCount { get; set; } = 0;
+
+        [Required]
+        public int ExpenseCount { get; set; } = 0;
+
+        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int? TypeID { get; set; }
 
         /// Selected character type (Nova, Luna, Cosmo, Aura).
-        /// Foreign key to Character table.
-        /// The space character this child has chosen.
-        /// Null if child hasn't selected a character yet.
-        /// </summary>
         public int? CharacterID { get; set; }
 
         // ==================== NAVIGATION PROPERTIES ====================

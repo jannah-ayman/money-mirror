@@ -14,10 +14,13 @@ namespace MoneyMirror.Infrastructure.Services
         private const int DailyQuizLimit = 2;
         private const int WeeklySummaryCount = 7;
 
-        public QuizService(ApplicationDbContext context, ILogger<QuizService> logger)
+        private readonly IAchievementService _achievementService;
+
+        public QuizService(ApplicationDbContext context, ILogger<QuizService> logger, IAchievementService achievementService)
         {
             _context = context;
             _logger = logger;
+            _achievementService = achievementService;
         }
 
         public async Task<(bool success, NextQuizQuestionDto? question, string message)>
@@ -87,7 +90,7 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         public async Task<(bool success, SubmitQuizAnswerResponseDto? response, string errorMessage)>
-            SubmitAnswerAsync(int childId, SubmitQuizAnswerDto dto)
+    SubmitAnswerAsync(int childId, SubmitQuizAnswerDto dto)
         {
             try
             {
@@ -102,14 +105,12 @@ namespace MoneyMirror.Infrastructure.Services
                 if (answer == null)
                     return (false, null, "Invalid answer");
 
-                // Verify child hasn't already answered this story
                 bool alreadyAnswered = await _context.QuizLogs
                     .AnyAsync(q => q.ChildID == childId && q.StoryID == answer.StoryID);
 
                 if (alreadyAnswered)
                     return (false, null, "You already answered this question");
 
-                // Save the log
                 var log = new Core.Models.QuizLog
                 {
                     ChildID = childId,
@@ -119,7 +120,13 @@ namespace MoneyMirror.Infrastructure.Services
                 };
 
                 _context.QuizLogs.Add(log);
+
+                child.QuizCount++;
+                _context.Children.Update(child);
+
                 await _context.SaveChangesAsync();
+
+                await _achievementService.CheckAndUnlockAsync(childId, "Quiz");
 
                 _logger.LogInformation(
                     "Child {ChildId} answered StoryID {StoryId} with AnswerID {AnswerId}",

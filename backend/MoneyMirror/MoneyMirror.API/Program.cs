@@ -75,6 +75,7 @@ builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ICharacterService, CharacterService>();
 builder.Services.AddScoped<IAIPersonalityService, AIPersonalityService>();
 builder.Services.AddScoped<IQuizService, QuizService>();
+builder.Services.AddScoped<IAchievementService, AchievementService>();
 
 // ==================== JWT AUTHENTICATION CONFIGURATION ====================
 // Read JWT settings from appsettings.json
