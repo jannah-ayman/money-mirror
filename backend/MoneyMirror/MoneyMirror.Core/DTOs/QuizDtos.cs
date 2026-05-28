@@ -10,7 +10,6 @@
     {
         public int StoryID { get; set; }
         public string Title { get; set; }
-        public string Scenario { get; set; }
         public string QuestionText { get; set; }
         public List<QuizAnswerOptionDto> Answers { get; set; }
     }
