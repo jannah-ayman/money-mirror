@@ -11,6 +11,7 @@
     {
         public int AchievementTypeID { get; set; }
         public string Name { get; set; }
+        public string? Description { get; set; }
         public string? IconURL { get; set; }
         public int Threshold { get; set; }
         public bool IsUnlocked { get; set; }

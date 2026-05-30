@@ -15,7 +15,9 @@ namespace MoneyMirror.Core.Models
         [Required]
         [MaxLength(200)]
         public string Name { get; set; }
-
+        
+        [MaxLength(500)]
+        public string? Description { get; set; }
         [Required]
         [MaxLength(20)]
         public string Category { get; set; } // "Quiz", "Goal", "Expense"

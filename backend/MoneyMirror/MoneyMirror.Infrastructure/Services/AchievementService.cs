@@ -96,6 +96,7 @@ namespace MoneyMirror.Infrastructure.Services
                         {
                             AchievementTypeID = at.AchievementTypeID,
                             Name = at.Name,
+                            Description = at.Description,
                             IconURL = at.IconURL,
                             Threshold = at.Threshold,
                             IsUnlocked = earnedDict.ContainsKey(at.AchievementTypeID),

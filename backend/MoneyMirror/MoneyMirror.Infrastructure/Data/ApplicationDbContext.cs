@@ -407,7 +407,7 @@ namespace MoneyMirror.Infrastructure.Data
                       .HasDefaultValueSql("GETUTCDATE()");
             });
 
-            
+
 
             // ==================== ADVICE ENTITY CONFIGURATION ====================
 
@@ -473,23 +473,18 @@ namespace MoneyMirror.Infrastructure.Data
             });
 
             modelBuilder.Entity<AchievementType>().HasData(
-    // Quiz badges
-    new AchievementType { AchievementTypeID = 1, Name = "First Step", IconURL = "/images/badges/first-step.png", Category = "Quiz", Threshold = 1 },
-    new AchievementType { AchievementTypeID = 2, Name = "Quiz Explorer", IconURL = "/images/badges/quiz-explorer.png", Category = "Quiz", Threshold = 10 },
-    new AchievementType { AchievementTypeID = 3, Name = "Quiz Master",  IconURL = "/images/badges/quiz-master.png", Category = "Quiz", Threshold = 20 },
-    new AchievementType { AchievementTypeID = 4, Name = "Quiz Legend", IconURL = "/images/badges/quiz-legend.png", Category = "Quiz", Threshold = 50 },
-
-    // Goal badges
-    new AchievementType { AchievementTypeID = 5, Name = "Goal Getter",  IconURL = "/images/badges/goal-getter.png", Category = "Goal", Threshold = 1 },
-    new AchievementType { AchievementTypeID = 6, Name = "Determined",  IconURL = "/images/badges/determined.png", Category = "Goal", Threshold = 3 },
-    new AchievementType { AchievementTypeID = 7, Name = "Achiever", IconURL = "/images/badges/achiever.png", Category = "Goal", Threshold = 5 },
-    new AchievementType { AchievementTypeID = 8, Name = "Champion",  IconURL = "/images/badges/champion.png", Category = "Goal", Threshold = 10 },
-
-    // Expense badges
-    new AchievementType { AchievementTypeID = 9, Name = "First Purchase",IconURL = "/images/badges/first-purchase.png", Category = "Expense", Threshold = 1 },
-    new AchievementType { AchievementTypeID = 10, Name = "Expense Tracker",IconURL = "/images/badges/expense-tracker.png", Category = "Expense", Threshold = 20 },
-    new AchievementType { AchievementTypeID = 11, Name = "Money Logger", IconURL = "/images/badges/money-logger.png", Category = "Expense", Threshold = 40 },
-    new AchievementType { AchievementTypeID = 12, Name = "Financial Pro",  IconURL = "/images/badges/financial-pro.png", Category = "Expense", Threshold = 100 }
+    new AchievementType { AchievementTypeID = 1, Name = "First Step", Description = "Answered your first quiz question!", IconURL = "/images/badges/first-step.png", Category = "Quiz", Threshold = 1 },
+new AchievementType { AchievementTypeID = 2, Name = "Quiz Explorer", Description = "Answered 10 quiz questions.", IconURL = "/images/badges/quiz-explorer.png", Category = "Quiz", Threshold = 10 },
+new AchievementType { AchievementTypeID = 3, Name = "Quiz Master", Description = "Answered 20 quiz questions.", IconURL = "/images/badges/quiz-master.png", Category = "Quiz", Threshold = 20 },
+new AchievementType { AchievementTypeID = 4, Name = "Quiz Legend", Description = "Answered 50 quiz questions!", IconURL = "/images/badges/quiz-legend.png", Category = "Quiz", Threshold = 50 },
+new AchievementType { AchievementTypeID = 5, Name = "Goal Getter", Description = "Completed your first savings goal!", IconURL = "/images/badges/goal-getter.png", Category = "Goal", Threshold = 1 },
+new AchievementType { AchievementTypeID = 6, Name = "Determined", Description = "Completed 3 savings goals.", IconURL = "/images/badges/determined.png", Category = "Goal", Threshold = 3 },
+new AchievementType { AchievementTypeID = 7, Name = "Achiever", Description = "Completed 5 savings goals.", IconURL = "/images/badges/achiever.png", Category = "Goal", Threshold = 5 },
+new AchievementType { AchievementTypeID = 8, Name = "Champion", Description = "Completed 10 savings goals!", IconURL = "/images/badges/champion.png", Category = "Goal", Threshold = 10 },
+new AchievementType { AchievementTypeID = 9, Name = "First Purchase", Description = "Logged your first expense.", IconURL = "/images/badges/first-purchase.png", Category = "Expense", Threshold = 1 },
+new AchievementType { AchievementTypeID = 10, Name = "Expense Tracker", Description = "Logged 20 expenses.", IconURL = "/images/badges/expense-tracker.png", Category = "Expense", Threshold = 20 },
+new AchievementType { AchievementTypeID = 11, Name = "Money Logger", Description = "Logged 40 expenses.", IconURL = "/images/badges/money-logger.png", Category = "Expense", Threshold = 40 },
+new AchievementType { AchievementTypeID = 12, Name = "Financial Pro", Description = "Logged 100 expenses!", IconURL = "/images/badges/financial-pro.png", Category = "Expense", Threshold = 100 }
 );
             // ==================== SEED DATA (Optional) ====================
             // Uncomment if you want to seed initial data like categories, moods, etc.
