@@ -20,5 +20,16 @@ namespace MoneyMirror.Core.Interfaces
             AddMoneyToGoalAsync(int childId, int goalId, AddMoneyToGoalDto dto);
 
         Task<int> FailExpiredGoalsAsync();
+        Task<(bool success, string message, string errorMessage)>
+    DeletePersonalGoalAsync(int childId, int goalId);
+
+        Task<(bool success, string message, string errorMessage)>
+            DeleteChallengeAsync(int parentId, int childId, int goalId);
+
+        Task<(bool success, GoalResponseDto? goal, string errorMessage)>
+            EditPersonalGoalAsync(int childId, int goalId, EditPersonalGoalDto dto);
+
+        Task<(bool success, GoalResponseDto? goal, string errorMessage)>
+            EditChallengeAsync(int parentId, int childId, int goalId, EditChallengeDto dto);
     }
 }

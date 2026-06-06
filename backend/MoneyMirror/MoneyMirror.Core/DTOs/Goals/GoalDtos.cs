@@ -33,4 +33,19 @@
         public string Status { get; set; }
         public decimal? RewardValue { get; set; }
     }
+    public class EditPersonalGoalDto
+    {
+        public string Title { get; set; }
+        public decimal TargetAmount { get; set; }
+        public DateTime? EndDate { get; set; }
+    }
+
+    public class EditChallengeDto
+    {
+        public string Title { get; set; }
+        public DateTime EndDate { get; set; }
+        // TargetAmount and RewardValue only editable if currentAmount == 0
+        public decimal? TargetAmount { get; set; }
+        public decimal? RewardValue { get; set; }
+    }
 }

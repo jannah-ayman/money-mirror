@@ -130,5 +130,81 @@ namespace MoneyMirror.API.Controllers
 
             return Ok(ApiResponse<List<GoalResponseDto>>.SuccessResponse(goals, message));
         }
+        /// DELETE /api/goal/personal/{goalId}
+        [HttpDelete("personal/{goalId}")]
+        [Authorize(Roles = "Child")]
+        public async Task<ActionResult<ApiResponse<object>>> DeletePersonalGoal(int goalId)
+        {
+            var childIdClaim = User.FindFirst("ChildId")?.Value;
+            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims."));
+
+            var (success, message, errorMessage) = await _goalService.DeletePersonalGoalAsync(childId, goalId);
+
+            if (!success)
+                return BadRequest(ApiResponse<object>.ErrorResponse(errorMessage));
+
+            _logger.LogInformation("Child {ChildId} deleted personal goal {GoalId}", childId, goalId);
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+
+        /// DELETE /api/goal/{childId}/challenge/{goalId}
+        [HttpDelete("{childId}/challenge/{goalId}")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<object>>> DeleteChallenge(int childId, int goalId)
+        {
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims."));
+
+            var (success, message, errorMessage) = await _goalService.DeleteChallengeAsync(parentId, childId, goalId);
+
+            if (!success)
+                return BadRequest(ApiResponse<object>.ErrorResponse(errorMessage));
+
+            _logger.LogInformation("Parent {ParentId} deleted challenge {GoalId} for child {ChildId}", parentId, goalId, childId);
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
+        }
+
+        /// PUT /api/goal/personal/{goalId}
+        [HttpPut("personal/{goalId}")]
+        [Authorize(Roles = "Child")]
+        public async Task<ActionResult<ApiResponse<GoalResponseDto>>> EditPersonalGoal(
+            int goalId,
+            [FromBody] EditPersonalGoalDto dto)
+        {
+            var childIdClaim = User.FindFirst("ChildId")?.Value;
+            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
+                return BadRequest(ApiResponse<GoalResponseDto>.ErrorResponse("Invalid token claims."));
+
+            var (success, goal, errorMessage) = await _goalService.EditPersonalGoalAsync(childId, goalId, dto);
+
+            if (!success)
+                return BadRequest(ApiResponse<GoalResponseDto>.ErrorResponse(errorMessage));
+
+            return Ok(ApiResponse<GoalResponseDto>.SuccessResponse(goal, "Goal updated successfully."));
+        }
+
+        /// PUT /api/goal/{childId}/challenge/{goalId}
+        [HttpPut("{childId}/challenge/{goalId}")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<GoalResponseDto>>> EditChallenge(
+            int childId,
+            int goalId,
+            [FromBody] EditChallengeDto dto)
+        {
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+                return BadRequest(ApiResponse<GoalResponseDto>.ErrorResponse("Invalid token claims."));
+
+            var (success, goal, errorMessage) = await _goalService.EditChallengeAsync(parentId, childId, goalId, dto);
+
+            if (!success)
+                return BadRequest(ApiResponse<GoalResponseDto>.ErrorResponse(errorMessage));
+
+            return Ok(ApiResponse<GoalResponseDto>.SuccessResponse(goal, "Challenge updated successfully."));
+        }
     }
 }

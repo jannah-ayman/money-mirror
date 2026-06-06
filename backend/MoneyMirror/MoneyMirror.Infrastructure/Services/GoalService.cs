@@ -183,7 +183,7 @@ namespace MoneyMirror.Infrastructure.Services
                     if (goal.Status != "Active")
                         return (false, 0m, 0m, "You can only add money to active goals.");
 
-                    if (goal.EndDate.HasValue && goal.EndDate.Value < DateTime.UtcNow)
+                    if (goal.EndDate.HasValue && goal.EndDate.Value.Date < DateTime.UtcNow.Date)
                         return (false, 0m, 0m, "This goal has expired and can no longer receive money.");
 
                     var child = await _context.Children.FindAsync(childId);
@@ -297,5 +297,216 @@ namespace MoneyMirror.Infrastructure.Services
 
             return failedCount;
         }
+        public async Task<(bool success, string message, string errorMessage)>
+    DeletePersonalGoalAsync(int childId, int goalId)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var goal = await _context.SavingsGoals
+                        .FirstOrDefaultAsync(g => g.GoalID == goalId && g.ChildID == childId && !g.IsChallenge);
+
+                    if (goal == null)
+                        return (false, string.Empty, "Goal not found.");
+
+                    if (goal.Status != "Active")
+                        return (false, string.Empty, "Only active goals can be deleted.");
+
+                    if (goal.CurrentAmount > 0)
+                    {
+                        var child = await _context.Children.FindAsync(childId);
+                        if (child == null)
+                            return (false, string.Empty, "Child not found.");
+
+                        child.CurrentBalance += goal.CurrentAmount;
+                        _context.Children.Update(child);
+
+                        _context.Transactions.Add(new Transaction
+                        {
+                            Type = "GoalRefund",
+                            Amount = goal.CurrentAmount,
+                            BalanceAfter = child.CurrentBalance,
+                            Description = $"Refund from deleted goal: {goal.Title}",
+                            TransactionDate = DateTime.UtcNow,
+                            ChildID = childId
+                        });
+                    }
+
+                    _context.SavingsGoals.Remove(goal);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation("Child {ChildId} deleted personal goal {GoalId}", childId, goalId);
+
+                    return (true, "Goal deleted successfully.", string.Empty);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error deleting personal goal {GoalId}", goalId);
+                    return (false, string.Empty, "An error occurred while deleting the goal.");
+                }
+            });
+        }
+
+        public async Task<(bool success, string message, string errorMessage)>
+            DeleteChallengeAsync(int parentId, int childId, int goalId)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    if (!await IsParentLinkedToChildAsync(parentId, childId))
+                        return (false, string.Empty, "You are not authorized to manage this child's goals.");
+
+                    var goal = await _context.SavingsGoals
+                        .FirstOrDefaultAsync(g => g.GoalID == goalId
+                                               && g.ChildID == childId
+                                               && g.ParentID == parentId
+                                               && g.IsChallenge);
+
+                    if (goal == null)
+                        return (false, string.Empty, "Challenge not found.");
+
+                    if (goal.Status != "Active")
+                        return (false, string.Empty, "Only active challenges can be deleted.");
+
+                    if (goal.CurrentAmount > 0)
+                    {
+                        var child = await _context.Children.FindAsync(childId);
+                        if (child == null)
+                            return (false, string.Empty, "Child not found.");
+
+                        child.CurrentBalance += goal.CurrentAmount;
+                        _context.Children.Update(child);
+
+                        _context.Transactions.Add(new Transaction
+                        {
+                            Type = "GoalRefund",
+                            Amount = goal.CurrentAmount,
+                            BalanceAfter = child.CurrentBalance,
+                            Description = $"Refund from deleted challenge: {goal.Title}",
+                            TransactionDate = DateTime.UtcNow,
+                            ChildID = childId,
+                            ParentID = parentId
+                        });
+                    }
+
+                    _context.SavingsGoals.Remove(goal);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation("Parent {ParentId} deleted challenge {GoalId} for child {ChildId}", parentId, goalId, childId);
+
+                    return (true, "Challenge deleted successfully.", string.Empty);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error deleting challenge {GoalId}", goalId);
+                    return (false, string.Empty, "An error occurred while deleting the challenge.");
+                }
+            });
+        }
+
+        public async Task<(bool success, GoalResponseDto? goal, string errorMessage)>
+            EditPersonalGoalAsync(int childId, int goalId, EditPersonalGoalDto dto)
+        {
+            try
+            {
+                var goal = await _context.SavingsGoals
+                    .FirstOrDefaultAsync(g => g.GoalID == goalId && g.ChildID == childId && !g.IsChallenge);
+
+                if (goal == null)
+                    return (false, null, "Goal not found.");
+
+                if (goal.Status != "Active")
+                    return (false, null, "Only active goals can be edited.");
+
+                if (dto.EndDate.HasValue && dto.EndDate.Value <= DateTime.UtcNow)
+                    return (false, null, "End date must be in the future.");
+
+                // If lowering targetAmount below what's already saved, auto-complete the goal
+                if (dto.TargetAmount <= goal.CurrentAmount && goal.CurrentAmount > 0)
+                    return (false, null, $"Target amount cannot be less than or equal to the amount already saved ({goal.CurrentAmount:F2}).");
+
+                goal.Title = dto.Title.Trim();
+                goal.TargetAmount = dto.TargetAmount;
+                goal.EndDate = dto.EndDate;
+
+                _context.SavingsGoals.Update(goal);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Child {ChildId} edited personal goal {GoalId}", childId, goalId);
+
+                return (true, MapToDto(goal), string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error editing personal goal {GoalId}", goalId);
+                return (false, null, "An error occurred while editing the goal.");
+            }
+        }
+
+        public async Task<(bool success, GoalResponseDto? goal, string errorMessage)>
+            EditChallengeAsync(int parentId, int childId, int goalId, EditChallengeDto dto)
+        {
+            try
+            {
+                if (!await IsParentLinkedToChildAsync(parentId, childId))
+                    return (false, null, "You are not authorized to manage this child's goals.");
+
+                var goal = await _context.SavingsGoals
+                    .FirstOrDefaultAsync(g => g.GoalID == goalId
+                                           && g.ChildID == childId
+                                           && g.ParentID == parentId
+                                           && g.IsChallenge);
+
+                if (goal == null)
+                    return (false, null, "Challenge not found.");
+
+                if (goal.Status != "Active")
+                    return (false, null, "Only active challenges can be edited.");
+
+                if (dto.EndDate <= DateTime.UtcNow)
+                    return (false, null, "End date must be in the future.");
+
+                goal.Title = dto.Title.Trim();
+                goal.EndDate = dto.EndDate;
+
+                // TargetAmount and RewardValue only editable if no money deposited yet
+                if (goal.CurrentAmount > 0 && (dto.TargetAmount.HasValue || dto.RewardValue.HasValue))
+                    return (false, null, "Target amount and reward cannot be changed after the child has started saving.");
+
+                if (goal.CurrentAmount == 0)
+                {
+                    if (dto.TargetAmount.HasValue)
+                        goal.TargetAmount = dto.TargetAmount.Value;
+
+                    if (dto.RewardValue.HasValue)
+                        goal.RewardValue = dto.RewardValue.Value;
+                }
+
+                _context.SavingsGoals.Update(goal);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Parent {ParentId} edited challenge {GoalId} for child {ChildId}", parentId, goalId, childId);
+
+                return (true, MapToDto(goal), string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error editing challenge {GoalId}", goalId);
+                return (false, null, "An error occurred while editing the challenge.");
+            }
+        }
+
     }
 }
