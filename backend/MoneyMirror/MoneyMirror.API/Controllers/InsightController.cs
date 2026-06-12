@@ -43,16 +43,13 @@ namespace MoneyMirror.API.Controllers
 
         /// GET /api/insight/{childId}/fun-facts
         /// [Child only]
-        [HttpGet("{childId}/fun-facts")]
+        [HttpGet("fun-facts")]
         [Authorize(Roles = "Child")]
-        public async Task<ActionResult<ApiResponse<FunFactsResponseDto>>> GetFunFacts(int childId)
+        public async Task<ActionResult<ApiResponse<FunFactsResponseDto>>> GetFunFacts()
         {
             var childIdClaim = User.FindFirst("ChildId")?.Value;
-            if (childIdClaim == null || !int.TryParse(childIdClaim, out int tokenChildId))
+            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
                 return BadRequest(ApiResponse<FunFactsResponseDto>.ErrorResponse("Invalid token claims"));
-
-            if (tokenChildId != childId)
-                return BadRequest(ApiResponse<FunFactsResponseDto>.ErrorResponse("You can only view your own fun facts"));
 
             var (success, response, errorMessage) = await _insightService.GetFunFactsAsync(childId);
 
@@ -61,5 +58,6 @@ namespace MoneyMirror.API.Controllers
 
             return Ok(ApiResponse<FunFactsResponseDto>.SuccessResponse(response, "Fun facts retrieved successfully! 🎉"));
         }
+
     }
 }

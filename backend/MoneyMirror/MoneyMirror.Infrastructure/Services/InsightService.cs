@@ -249,7 +249,9 @@ namespace MoneyMirror.Infrastructure.Services
                 response.FunFacts.Add(BuildTopCategoryFunFact(expenses));
 
                 // ---- Slot 3: Top mood ----
-                response.FunFacts.Add(BuildTopMoodFunFact(expenses));
+                var moodFact = BuildTopMoodFunFact(expenses);
+                if (moodFact != null)
+                    response.FunFacts.Add(moodFact);
 
                 // ---- Slot 4: Biggest purchase this month ----
                 response.FunFacts.Add(BuildBiggestPurchaseFunFact(expenses));
@@ -301,29 +303,24 @@ namespace MoneyMirror.Infrastructure.Services
             };
         }
 
-        private FunFactDto BuildTopMoodFunFact(List<Core.Models.Expense> expenses)
+        private FunFactDto? BuildTopMoodFunFact(List<Core.Models.Expense> expenses)
         {
-            var moodGroups = expenses
+            if (!expenses.Any())
+                return null;
+
+            var topMood = expenses
                 .GroupBy(e => e.Mood.Description)
                 .Select(g => new { Mood = g.Key, Count = g.Count() })
                 .OrderByDescending(g => g.Count)
-                .ToList();
+                .First();
 
-            var topMood = moodGroups.FirstOrDefault(g => g.Count >= MinExpensesThreshold);
-
-            if (topMood == null)
-            {
-                return new FunFactDto
-                {
-                    Observation = "😊 How are you feeling when you spend?",
-                    Tip = "Try picking a mood every time you log a purchase — it helps you understand your spending habits!"
-                };
-            }
+            if (!topMood.Mood.Equals("Happy", StringComparison.OrdinalIgnoreCase))
+                return null;
 
             return new FunFactDto
             {
-                Observation = $"{GetMoodEmoji(topMood.Mood)} You spend the most when you're {topMood.Mood}!",
-                Tip = "Try waiting a day before buying something when you're excited — you might change your mind!"
+                Observation = "😊 You spend the most when you're Happy!",
+                Tip = "It's great to enjoy spending — just make sure you're also saving a little each time!"
             };
         }
 

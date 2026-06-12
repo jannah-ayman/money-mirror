@@ -487,27 +487,58 @@ new AchievementType { AchievementTypeID = 11, Name = "Money Logger", Description
 new AchievementType { AchievementTypeID = 12, Name = "Financial Pro", Description = "Logged 100 expenses!", IconURL = "/images/badges/financial-pro.png", Category = "Expense", Threshold = 100 }
 );
             // ==================== SEED DATA (Optional) ====================
-            // Uncomment if you want to seed initial data like categories, moods, etc.
-
-            /*
-            // Seed Expense Categories
-            modelBuilder.Entity<ExpenseCategory>().HasData(
-                new ExpenseCategory { CategoryID = 1, Name = "Toys" },
-                new ExpenseCategory { CategoryID = 2, Name = "Food & Snacks" },
-                new ExpenseCategory { CategoryID = 3, Name = "Books" },
-                new ExpenseCategory { CategoryID = 4, Name = "Clothes" },
-                new ExpenseCategory { CategoryID = 5, Name = "Entertainment" }
-            );
-
-            // Seed Moods
-            modelBuilder.Entity<Mood>().HasData(
-                new Mood { MoodID = 1, Emoji = "😊", Description = "Happy" },
-                new Mood { MoodID = 2, Emoji = "😢", Description = "Sad" },
-                new Mood { MoodID = 3, Emoji = "😐", Description = "Neutral" },
-                new Mood { MoodID = 4, Emoji = "😍", Description = "Excited" },
-                new Mood { MoodID = 5, Emoji = "😔", Description = "Regretful" }
-            );
-            */
+            modelBuilder.Entity<PersonalityType>().HasData(
+    new PersonalityType
+    {
+        TypeID = 1,
+        ParentName = "Pending Analysis",
+        ChildName = "Money Explorer",
+        Desc = "We're still learning about your money personality! Keep logging expenses and taking quizzes.",
+        Traits = "[]",
+        StaticRecommendation = "[]",
+        FunFacts = "Every money expert started somewhere — you're just getting started!"
+    },
+    new PersonalityType
+    {
+        TypeID = 2,
+        ParentName = "Impulsive Spender",
+        ChildName = "Speedy Spender",
+        Desc = "Quick purchases driven by excitement, low savings ratios.",
+        Traits = "[\"Buys quickly\",\"Gets excited about new things\",\"Struggles to save\"]",
+        StaticRecommendation = "[\"Wait 24 hours before buying\",\"Set a weekly spending limit\",\"Try a savings jar\"]",
+        FunFacts = "Did you know? Speedy Spenders are super fun and spontaneous — the trick is to pause for just one day before buying!"
+    },
+    new PersonalityType
+    {
+        TypeID = 3,
+        ParentName = "Prudent Saver",
+        ChildName = "Treasure Keeper",
+        Desc = "High savings ratios and deliberate spending decisions.",
+        Traits = "[\"Thinks before buying\",\"Saves consistently\",\"Rarely regrets purchases\"]",
+        StaticRecommendation = "[\"Set a savings goal each month\",\"Reward yourself occasionally\",\"Track your savings growth\"]",
+        FunFacts = "Did you know? Treasure Keepers are rare — only the wisest kids know how to grow their coins into something amazing!"
+    },
+    new PersonalityType
+    {
+        TypeID = 4,
+        ParentName = "Goal-Oriented Planner",
+        ChildName = "Dream Builder",
+        Desc = "Steady goal contributions and balanced spending.",
+        Traits = "[\"Plans purchases ahead\",\"Contributes to goals regularly\",\"Balances fun and saving\"]",
+        StaticRecommendation = "[\"Break big goals into smaller steps\",\"Celebrate milestones\",\"Keep your goal visible\"]",
+        FunFacts = "Did you know? Dream Builders are natural achievers — every coin you save is one step closer to your dream!"
+    },
+    new PersonalityType
+    {
+        TypeID = 5,
+        ParentName = "Bargain Hunter",
+        ChildName = "Deal Detective",
+        Desc = "Smart spending focused on value and deals.",
+        Traits = "[\"Compares prices\",\"Loves a good deal\",\"Spends wisely\"]",
+        StaticRecommendation = "[\"Make a list before shopping\",\"Look for sales and discounts\",\"Avoid buying just because it's cheap\"]",
+        FunFacts = "Did you know? Deal Detectives have a superpower — they can spot a great deal from a mile away!"
+    }
+);
         }
     }
 }
