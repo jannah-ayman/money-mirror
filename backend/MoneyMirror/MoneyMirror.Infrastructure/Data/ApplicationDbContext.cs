@@ -518,9 +518,7 @@ namespace MoneyMirror.Infrastructure.Data
                 new Mood { MoodID = 2, Description = "Sad" },
                 new Mood { MoodID = 3, Description = "Neutral" },
                 new Mood { MoodID = 4, Description = "Excited" },
-                new Mood { MoodID = 5, Description = "Regretful" },
-                new Mood { MoodID = 6, Description = "Cool" },
-                new Mood { MoodID = 7, Description = "Thoughtful" }
+                new Mood { MoodID = 5, Description = "Regretful" }
             );
             modelBuilder.Entity<AchievementType>().HasData(
                 new AchievementType { AchievementTypeID = 1, Name = "First Step", Description = "Answered your first quiz question!", IconURL = "/images/badges/first-step.png", Category = "Quiz", Threshold = 1 },
