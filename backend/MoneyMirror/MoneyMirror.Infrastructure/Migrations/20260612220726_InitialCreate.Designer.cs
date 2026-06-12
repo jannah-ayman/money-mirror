@@ -12,8 +12,8 @@ using MoneyMirror.Infrastructure.Data;
 namespace MoneyMirror.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260524195646_Update-QuizTemplate")]
-    partial class UpdateQuizTemplate
+    [Migration("20260612220726_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,13 +33,16 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AchievementTypeID"));
 
-                    b.Property<string>("Criteria")
+                    b.Property<string>("Category")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("IconURL")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
@@ -48,9 +51,122 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<int>("Threshold")
+                        .HasColumnType("int");
+
                     b.HasKey("AchievementTypeID");
 
                     b.ToTable("AchievementTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            AchievementTypeID = 1,
+                            Category = "Quiz",
+                            Description = "Answered your first quiz question!",
+                            IconURL = "/images/badges/first-step.png",
+                            Name = "First Step",
+                            Threshold = 1
+                        },
+                        new
+                        {
+                            AchievementTypeID = 2,
+                            Category = "Quiz",
+                            Description = "Answered 10 quiz questions.",
+                            IconURL = "/images/badges/quiz-explorer.png",
+                            Name = "Quiz Explorer",
+                            Threshold = 10
+                        },
+                        new
+                        {
+                            AchievementTypeID = 3,
+                            Category = "Quiz",
+                            Description = "Answered 20 quiz questions.",
+                            IconURL = "/images/badges/quiz-master.png",
+                            Name = "Quiz Master",
+                            Threshold = 20
+                        },
+                        new
+                        {
+                            AchievementTypeID = 4,
+                            Category = "Quiz",
+                            Description = "Answered 50 quiz questions!",
+                            IconURL = "/images/badges/quiz-legend.png",
+                            Name = "Quiz Legend",
+                            Threshold = 50
+                        },
+                        new
+                        {
+                            AchievementTypeID = 5,
+                            Category = "Goal",
+                            Description = "Completed your first savings goal!",
+                            IconURL = "/images/badges/goal-getter.png",
+                            Name = "Goal Getter",
+                            Threshold = 1
+                        },
+                        new
+                        {
+                            AchievementTypeID = 6,
+                            Category = "Goal",
+                            Description = "Completed 3 savings goals.",
+                            IconURL = "/images/badges/determined.png",
+                            Name = "Determined",
+                            Threshold = 3
+                        },
+                        new
+                        {
+                            AchievementTypeID = 7,
+                            Category = "Goal",
+                            Description = "Completed 5 savings goals.",
+                            IconURL = "/images/badges/achiever.png",
+                            Name = "Achiever",
+                            Threshold = 5
+                        },
+                        new
+                        {
+                            AchievementTypeID = 8,
+                            Category = "Goal",
+                            Description = "Completed 10 savings goals!",
+                            IconURL = "/images/badges/champion.png",
+                            Name = "Champion",
+                            Threshold = 10
+                        },
+                        new
+                        {
+                            AchievementTypeID = 9,
+                            Category = "Expense",
+                            Description = "Logged your first expense.",
+                            IconURL = "/images/badges/first-purchase.png",
+                            Name = "First Purchase",
+                            Threshold = 1
+                        },
+                        new
+                        {
+                            AchievementTypeID = 10,
+                            Category = "Expense",
+                            Description = "Logged 20 expenses.",
+                            IconURL = "/images/badges/expense-tracker.png",
+                            Name = "Expense Tracker",
+                            Threshold = 20
+                        },
+                        new
+                        {
+                            AchievementTypeID = 11,
+                            Category = "Expense",
+                            Description = "Logged 40 expenses.",
+                            IconURL = "/images/badges/money-logger.png",
+                            Name = "Money Logger",
+                            Threshold = 40
+                        },
+                        new
+                        {
+                            AchievementTypeID = 12,
+                            Category = "Expense",
+                            Description = "Logged 100 expenses!",
+                            IconURL = "/images/badges/financial-pro.png",
+                            Name = "Financial Pro",
+                            Threshold = 100
+                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Advice", b =>
@@ -194,6 +310,36 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .HasDatabaseName("IX_Character_Name_Unique");
 
                     b.ToTable("Characters");
+
+                    b.HasData(
+                        new
+                        {
+                            CharacterID = 1,
+                            DefaultImageUrl = "/images/characters/nova/profile.png",
+                            Description = "Cool astronaut who loves street style and music",
+                            Name = "Nova"
+                        },
+                        new
+                        {
+                            CharacterID = 2,
+                            DefaultImageUrl = "/images/characters/cosmo/profile.png",
+                            Description = "Ninja superhero astronaut always ready for action",
+                            Name = "Cosmo"
+                        },
+                        new
+                        {
+                            CharacterID = 3,
+                            DefaultImageUrl = "/images/characters/luna/profile.png",
+                            Description = "Graceful ballerina astronaut in a pink skirt",
+                            Name = "Luna"
+                        },
+                        new
+                        {
+                            CharacterID = 4,
+                            DefaultImageUrl = "/images/characters/stella/profile.png",
+                            Description = "Laid back astronaut in a hoodie who loves bubblegum",
+                            Name = "Stella"
+                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.CharacterState", b =>
@@ -229,6 +375,168 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .HasDatabaseName("IX_CharacterState_Character_Screen_Unique");
 
                     b.ToTable("CharacterStates");
+
+                    b.HasData(
+                        new
+                        {
+                            StateID = 6,
+                            CharacterID = 1,
+                            ImageUrl = "/images/characters/nova/expenses.png",
+                            Message = "Let's see what you copped this week, astronaut.",
+                            ScreenContext = "Expenses"
+                        },
+                        new
+                        {
+                            StateID = 7,
+                            CharacterID = 2,
+                            ImageUrl = "/images/characters/cosmo/expenses.png",
+                            Message = "Time to investigate your spending like a true hero.",
+                            ScreenContext = "Expenses"
+                        },
+                        new
+                        {
+                            StateID = 8,
+                            CharacterID = 3,
+                            ImageUrl = "/images/characters/luna/expenses.png",
+                            Message = "Every purchase tells a story. Let's review yours.",
+                            ScreenContext = "Expenses"
+                        },
+                        new
+                        {
+                            StateID = 9,
+                            CharacterID = 4,
+                            ImageUrl = "/images/characters/stella/expenses.png",
+                            Message = "No stress, let's just vibe and see what you bought.",
+                            ScreenContext = "Expenses"
+                        },
+                        new
+                        {
+                            StateID = 10,
+                            CharacterID = 1,
+                            ImageUrl = "/images/characters/nova/goals.png",
+                            Message = "Your bank account looking real nice right now.",
+                            ScreenContext = "Goals"
+                        },
+                        new
+                        {
+                            StateID = 11,
+                            CharacterID = 2,
+                            ImageUrl = "/images/characters/cosmo/goals.png",
+                            Message = "Your savings power is charging up fast.",
+                            ScreenContext = "Goals"
+                        },
+                        new
+                        {
+                            StateID = 12,
+                            CharacterID = 3,
+                            ImageUrl = "/images/characters/luna/goals.png",
+                            Message = "Your savings are dancing beautifully toward your dreams.",
+                            ScreenContext = "Goals"
+                        },
+                        new
+                        {
+                            StateID = 14,
+                            CharacterID = 4,
+                            ImageUrl = "/images/characters/stella/goals.png",
+                            Message = "Pretty cool how your money's stacking up like that.",
+                            ScreenContext = "Goals"
+                        },
+                        new
+                        {
+                            StateID = 15,
+                            CharacterID = 1,
+                            ImageUrl = "/images/characters/nova/profile.png",
+                            Message = "Yo, what's good? Time to check those space credits.",
+                            ScreenContext = "Profile"
+                        },
+                        new
+                        {
+                            StateID = 16,
+                            CharacterID = 2,
+                            ImageUrl = "/images/characters/cosmo/profile.png",
+                            Message = "Looking strong, money warrior. Keep training.",
+                            ScreenContext = "Profile"
+                        },
+                        new
+                        {
+                            StateID = 17,
+                            CharacterID = 3,
+                            ImageUrl = "/images/characters/luna/profile.png",
+                            Message = "Welcome back, little star. Shall we begin?",
+                            ScreenContext = "Profile"
+                        },
+                        new
+                        {
+                            StateID = 18,
+                            CharacterID = 4,
+                            ImageUrl = "/images/characters/stella/profile.png",
+                            Message = "Hey there, space buddy. Just chilling and checking in.",
+                            ScreenContext = "Profile"
+                        },
+                        new
+                        {
+                            StateID = 19,
+                            CharacterID = 1,
+                            ImageUrl = "/images/characters/nova/badges.png",
+                            Message = "Another badge? You're on fire with this.",
+                            ScreenContext = "Badges"
+                        },
+                        new
+                        {
+                            StateID = 20,
+                            CharacterID = 2,
+                            ImageUrl = "/images/characters/cosmo/badges.png",
+                            Message = "Another victory unlocked. You're unstoppable.",
+                            ScreenContext = "Badges"
+                        },
+                        new
+                        {
+                            StateID = 23,
+                            CharacterID = 3,
+                            ImageUrl = "/images/characters/luna/badges.png",
+                            Message = "Each achievement is like a perfect spin.",
+                            ScreenContext = "Badges"
+                        },
+                        new
+                        {
+                            StateID = 29,
+                            CharacterID = 4,
+                            ImageUrl = "/images/characters/stella/badges.png",
+                            Message = "Nice, another one. You're doing your thing.",
+                            ScreenContext = "Badges"
+                        },
+                        new
+                        {
+                            StateID = 32,
+                            CharacterID = 1,
+                            ImageUrl = "/images/characters/nova/quiz.png",
+                            Message = "Aight, let's test that money brain of yours.",
+                            ScreenContext = "Quiz"
+                        },
+                        new
+                        {
+                            StateID = 33,
+                            CharacterID = 2,
+                            ImageUrl = "/images/characters/cosmo/quiz.png",
+                            Message = "Think fast, space cadet. Show me your skills.",
+                            ScreenContext = "Quiz"
+                        },
+                        new
+                        {
+                            StateID = 34,
+                            CharacterID = 3,
+                            ImageUrl = "/images/characters/luna/quiz.png",
+                            Message = "Let's gracefully glide through these questions together.",
+                            ScreenContext = "Quiz"
+                        },
+                        new
+                        {
+                            StateID = 35,
+                            CharacterID = 4,
+                            ImageUrl = "/images/characters/stella/quiz.png",
+                            Message = "Take it easy, no rush. You got this.",
+                            ScreenContext = "Quiz"
+                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Child", b =>
@@ -258,6 +566,9 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.Property<DateTime>("DOB")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("ExpenseCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("FName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -266,6 +577,9 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.Property<string>("Gender")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("GoalCount")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsPersonalityFinalized")
                         .HasColumnType("bit");
@@ -279,6 +593,9 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("QuizCount")
+                        .HasColumnType("int");
 
                     b.Property<string>("RefreshToken")
                         .HasMaxLength(500)
@@ -387,6 +704,33 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasKey("CategoryID");
 
                     b.ToTable("ExpenseCategories");
+
+                    b.HasData(
+                        new
+                        {
+                            CategoryID = 1,
+                            Name = "Snacks / Food"
+                        },
+                        new
+                        {
+                            CategoryID = 2,
+                            Name = "Games / Toys"
+                        },
+                        new
+                        {
+                            CategoryID = 3,
+                            Name = "Gifts"
+                        },
+                        new
+                        {
+                            CategoryID = 4,
+                            Name = "School Supplies"
+                        },
+                        new
+                        {
+                            CategoryID = 5,
+                            Name = "Other"
+                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.InitialProfilingQuestionnaire", b =>
@@ -469,6 +813,43 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasKey("MoodID");
 
                     b.ToTable("Moods");
+
+                    b.HasData(
+                        new
+                        {
+                            MoodID = 1,
+                            Description = "Happy"
+                        },
+                        new
+                        {
+                            MoodID = 2,
+                            Description = "Sad"
+                        },
+                        new
+                        {
+                            MoodID = 3,
+                            Description = "Neutral"
+                        },
+                        new
+                        {
+                            MoodID = 4,
+                            Description = "Excited"
+                        },
+                        new
+                        {
+                            MoodID = 5,
+                            Description = "Regretful"
+                        },
+                        new
+                        {
+                            MoodID = 6,
+                            Description = "Cool"
+                        },
+                        new
+                        {
+                            MoodID = 7,
+                            Description = "Thoughtful"
+                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Notification", b =>
@@ -681,6 +1062,58 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasKey("TypeID");
 
                     b.ToTable("PersonalityTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            TypeID = 1,
+                            ChildName = "Money Explorer",
+                            Desc = "We're still getting to know your child's financial personality. As they use the app and log expenses, we'll build a complete picture of their money habits and provide personalized guidance.",
+                            FunFacts = "Every money expert started somewhere — you're just getting started!",
+                            ParentName = "Pending Analysis",
+                            StaticRecommendation = "[\"Keep encouraging your child to log their expenses regularly\", \"Guide your child to try saving for a specific goal\", \"Have your child complete the story quizzes to help us better understand their money personality\"]",
+                            Traits = "[\"Discovering spending patterns\", \"Building financial profile\", \"Learning money habits\"]"
+                        },
+                        new
+                        {
+                            TypeID = 2,
+                            ChildName = "Speedy Spender",
+                            Desc = "Quick purchases driven by excitement, low savings ratios.",
+                            FunFacts = "Did you know? Speedy Spenders are super fun and spontaneous — the trick is to pause for just one day before buying!",
+                            ParentName = "Impulsive Spender",
+                            StaticRecommendation = "[\"Encourage a 24-hour waiting rule before they make non-essential purchases.\", \"Introduce a visual savings jar or progress bar so they can see their money build up.\", \"Work together to create a simple shopping list before visiting stores or online apps.\", \"Suggest setting aside a flat 20% of their allowance instantly into savings before spending any.\"]",
+                            Traits = "[\"Buys quickly\",\"Gets excited about new things\",\"Struggles to save\"]"
+                        },
+                        new
+                        {
+                            TypeID = 3,
+                            ChildName = "Treasure Keeper",
+                            Desc = "High savings ratios and deliberate spending decisions.",
+                            FunFacts = "Did you know? Treasure Keepers are rare — only the wisest kids know how to grow their coins into something amazing!",
+                            ParentName = "Prudent Saver",
+                            StaticRecommendation = "[\"Help them set exciting, long-term savings goals so they don't hold onto money out of fear.\", \"Give them permission to enjoy some 'fun spending' to avoid eventual saving burnout.\", \"Introduce basic age-appropriate concepts of investing or earning interest on accumulated funds.\"]",
+                            Traits = "[\"Thinks before buying\",\"Saves consistently\",\"Rarely regrets purchases\"]"
+                        },
+                        new
+                        {
+                            TypeID = 4,
+                            ChildName = "Dream Builder",
+                            Desc = "Balanced approach to spending and saving, with steady goal contributions. Plans purchases carefully.",
+                            FunFacts = "Did you know? Dream Builders are natural achievers — every coin you save is one step closer to your dream!",
+                            ParentName = "Goal-Oriented Planner",
+                            StaticRecommendation = "[\"Help them break down very large, daunting savings goals into smaller, reachable milestones.\", \"Celebrate or match their savings when they cross a major milestone to reward consistency.\", \"Keep their targeted goals visually prominent in conversation to sustain their natural planning habits.\"]",
+                            Traits = "[\"Creates clear savings goals\", \"Balances fun spending with saving\", \"Tracks progress regularly\", \"Plans purchases in advance\", \"Stays motivated by dreams\"]"
+                        },
+                        new
+                        {
+                            TypeID = 5,
+                            ChildName = "Deal Detective",
+                            Desc = "Emphasizes value and deals, strategic spending. Loves finding the best prices and getting good value.",
+                            FunFacts = "Did you know? Deal Detectives have a superpower — they can spot a great deal from a mile away!",
+                            ParentName = "Bargain Hunter",
+                            StaticRecommendation = "[\"Remind them to make a strict shopping list so they don't buy things simply because they are 'on sale'.\", \"Challenge them to find coupon codes or comparison shop to engage their detective strengths productively.\", \"Teach them about quality vs. price so they understand that cheap doesn't always mean high value.\"]",
+                            Traits = "[\"Compares prices before buying\", \"Loves finding good deals\", \"Waits for sales\", \"Values getting the most for money\", \"Shares deals with others\"]"
+                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.QuizAnswer", b =>
