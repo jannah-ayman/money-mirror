@@ -626,8 +626,11 @@ namespace MoneyMirror.Infrastructure.Services
 
         private static void AddTableHeader(TableDescriptor table, params string[] headers)
         {
-            foreach (var h in headers)
-                table.Header(header => header.Cell().Background("#F0F0F0").Padding(4).Text(h).Bold());
+            table.Header(header =>
+            {
+                foreach (var h in headers)
+                    header.Cell().Background("#F0F0F0").Padding(4).Text(h).Bold();
+            });
         }
 
         private static void AddTableRow(TableDescriptor table, params string[] values)
