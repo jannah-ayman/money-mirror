@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MoneyMirror.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using MoneyMirror.Infrastructure.Data;
 namespace MoneyMirror.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260612205056_UpdatePersonalityTypeParentRecommendations")]
+    partial class UpdatePersonalityTypeParentRecommendations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -307,36 +310,6 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .HasDatabaseName("IX_Character_Name_Unique");
 
                     b.ToTable("Characters");
-
-                    b.HasData(
-                        new
-                        {
-                            CharacterID = 1,
-                            DefaultImageUrl = "/images/characters/nova/profile.png",
-                            Description = "Cool astronaut who loves street style and music",
-                            Name = "Nova"
-                        },
-                        new
-                        {
-                            CharacterID = 2,
-                            DefaultImageUrl = "/images/characters/cosmo/profile.png",
-                            Description = "Ninja superhero astronaut always ready for action",
-                            Name = "Cosmo"
-                        },
-                        new
-                        {
-                            CharacterID = 3,
-                            DefaultImageUrl = "/images/characters/luna/profile.png",
-                            Description = "Graceful ballerina astronaut in a pink skirt",
-                            Name = "Luna"
-                        },
-                        new
-                        {
-                            CharacterID = 4,
-                            DefaultImageUrl = "/images/characters/stella/profile.png",
-                            Description = "Laid back astronaut in a hoodie who loves bubblegum",
-                            Name = "Stella"
-                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.CharacterState", b =>
@@ -372,168 +345,6 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .HasDatabaseName("IX_CharacterState_Character_Screen_Unique");
 
                     b.ToTable("CharacterStates");
-
-                    b.HasData(
-                        new
-                        {
-                            StateID = 6,
-                            CharacterID = 1,
-                            ImageUrl = "/images/characters/nova/expenses.png",
-                            Message = "Let's see what you copped this week, astronaut.",
-                            ScreenContext = "Expenses"
-                        },
-                        new
-                        {
-                            StateID = 7,
-                            CharacterID = 2,
-                            ImageUrl = "/images/characters/cosmo/expenses.png",
-                            Message = "Time to investigate your spending like a true hero.",
-                            ScreenContext = "Expenses"
-                        },
-                        new
-                        {
-                            StateID = 8,
-                            CharacterID = 3,
-                            ImageUrl = "/images/characters/luna/expenses.png",
-                            Message = "Every purchase tells a story. Let's review yours.",
-                            ScreenContext = "Expenses"
-                        },
-                        new
-                        {
-                            StateID = 9,
-                            CharacterID = 4,
-                            ImageUrl = "/images/characters/stella/expenses.png",
-                            Message = "No stress, let's just vibe and see what you bought.",
-                            ScreenContext = "Expenses"
-                        },
-                        new
-                        {
-                            StateID = 10,
-                            CharacterID = 1,
-                            ImageUrl = "/images/characters/nova/goals.png",
-                            Message = "Your bank account looking real nice right now.",
-                            ScreenContext = "Goals"
-                        },
-                        new
-                        {
-                            StateID = 11,
-                            CharacterID = 2,
-                            ImageUrl = "/images/characters/cosmo/goals.png",
-                            Message = "Your savings power is charging up fast.",
-                            ScreenContext = "Goals"
-                        },
-                        new
-                        {
-                            StateID = 12,
-                            CharacterID = 3,
-                            ImageUrl = "/images/characters/luna/goals.png",
-                            Message = "Your savings are dancing beautifully toward your dreams.",
-                            ScreenContext = "Goals"
-                        },
-                        new
-                        {
-                            StateID = 14,
-                            CharacterID = 4,
-                            ImageUrl = "/images/characters/stella/goals.png",
-                            Message = "Pretty cool how your money's stacking up like that.",
-                            ScreenContext = "Goals"
-                        },
-                        new
-                        {
-                            StateID = 15,
-                            CharacterID = 1,
-                            ImageUrl = "/images/characters/nova/profile.png",
-                            Message = "Yo, what's good? Time to check those space credits.",
-                            ScreenContext = "Profile"
-                        },
-                        new
-                        {
-                            StateID = 16,
-                            CharacterID = 2,
-                            ImageUrl = "/images/characters/cosmo/profile.png",
-                            Message = "Looking strong, money warrior. Keep training.",
-                            ScreenContext = "Profile"
-                        },
-                        new
-                        {
-                            StateID = 17,
-                            CharacterID = 3,
-                            ImageUrl = "/images/characters/luna/profile.png",
-                            Message = "Welcome back, little star. Shall we begin?",
-                            ScreenContext = "Profile"
-                        },
-                        new
-                        {
-                            StateID = 18,
-                            CharacterID = 4,
-                            ImageUrl = "/images/characters/stella/profile.png",
-                            Message = "Hey there, space buddy. Just chilling and checking in.",
-                            ScreenContext = "Profile"
-                        },
-                        new
-                        {
-                            StateID = 19,
-                            CharacterID = 1,
-                            ImageUrl = "/images/characters/nova/badges.png",
-                            Message = "Another badge? You're on fire with this.",
-                            ScreenContext = "Badges"
-                        },
-                        new
-                        {
-                            StateID = 20,
-                            CharacterID = 2,
-                            ImageUrl = "/images/characters/cosmo/badges.png",
-                            Message = "Another victory unlocked. You're unstoppable.",
-                            ScreenContext = "Badges"
-                        },
-                        new
-                        {
-                            StateID = 23,
-                            CharacterID = 3,
-                            ImageUrl = "/images/characters/luna/badges.png",
-                            Message = "Each achievement is like a perfect spin.",
-                            ScreenContext = "Badges"
-                        },
-                        new
-                        {
-                            StateID = 29,
-                            CharacterID = 4,
-                            ImageUrl = "/images/characters/stella/badges.png",
-                            Message = "Nice, another one. You're doing your thing.",
-                            ScreenContext = "Badges"
-                        },
-                        new
-                        {
-                            StateID = 32,
-                            CharacterID = 1,
-                            ImageUrl = "/images/characters/nova/quiz.png",
-                            Message = "Aight, let's test that money brain of yours.",
-                            ScreenContext = "Quiz"
-                        },
-                        new
-                        {
-                            StateID = 33,
-                            CharacterID = 2,
-                            ImageUrl = "/images/characters/cosmo/quiz.png",
-                            Message = "Think fast, space cadet. Show me your skills.",
-                            ScreenContext = "Quiz"
-                        },
-                        new
-                        {
-                            StateID = 34,
-                            CharacterID = 3,
-                            ImageUrl = "/images/characters/luna/quiz.png",
-                            Message = "Let's gracefully glide through these questions together.",
-                            ScreenContext = "Quiz"
-                        },
-                        new
-                        {
-                            StateID = 35,
-                            CharacterID = 4,
-                            ImageUrl = "/images/characters/stella/quiz.png",
-                            Message = "Take it easy, no rush. You got this.",
-                            ScreenContext = "Quiz"
-                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Child", b =>
@@ -701,33 +512,6 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasKey("CategoryID");
 
                     b.ToTable("ExpenseCategories");
-
-                    b.HasData(
-                        new
-                        {
-                            CategoryID = 1,
-                            Name = "Snacks / Food"
-                        },
-                        new
-                        {
-                            CategoryID = 2,
-                            Name = "Games / Toys"
-                        },
-                        new
-                        {
-                            CategoryID = 3,
-                            Name = "Gifts"
-                        },
-                        new
-                        {
-                            CategoryID = 4,
-                            Name = "School Supplies"
-                        },
-                        new
-                        {
-                            CategoryID = 5,
-                            Name = "Other"
-                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.InitialProfilingQuestionnaire", b =>
@@ -810,43 +594,6 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasKey("MoodID");
 
                     b.ToTable("Moods");
-
-                    b.HasData(
-                        new
-                        {
-                            MoodID = 1,
-                            Description = "Happy"
-                        },
-                        new
-                        {
-                            MoodID = 2,
-                            Description = "Sad"
-                        },
-                        new
-                        {
-                            MoodID = 3,
-                            Description = "Neutral"
-                        },
-                        new
-                        {
-                            MoodID = 4,
-                            Description = "Excited"
-                        },
-                        new
-                        {
-                            MoodID = 5,
-                            Description = "Regretful"
-                        },
-                        new
-                        {
-                            MoodID = 6,
-                            Description = "Cool"
-                        },
-                        new
-                        {
-                            MoodID = 7,
-                            Description = "Thoughtful"
-                        });
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Notification", b =>

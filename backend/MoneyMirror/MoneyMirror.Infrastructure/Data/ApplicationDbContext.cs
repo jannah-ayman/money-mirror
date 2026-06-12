@@ -471,74 +471,125 @@ namespace MoneyMirror.Infrastructure.Data
                 entity.Property(t => t.TransactionDate)
                       .HasDefaultValueSql("GETUTCDATE()");
             });
+            // ==================== SEED DATA (EXPENSE CATEGORIES) ====================
+            modelBuilder.Entity<ExpenseCategory>().HasData(
+                new ExpenseCategory { CategoryID = 1, Name = "Snacks / Food" },
+                new ExpenseCategory { CategoryID = 2, Name = "Games / Toys" },
+                new ExpenseCategory { CategoryID = 3, Name = "Gifts" },
+                new ExpenseCategory { CategoryID = 4, Name = "School Supplies" },
+                new ExpenseCategory { CategoryID = 5, Name = "Other" }
+            );
 
+            // ==================== SEED DATA (CHARACTERS) ====================
+            modelBuilder.Entity<Character>().HasData(
+                new Character { CharacterID = 1, Name = "Nova", Description = "Cool astronaut who loves street style and music", DefaultImageUrl = "/images/characters/nova/profile.png" },
+                new Character { CharacterID = 2, Name = "Cosmo", Description = "Ninja superhero astronaut always ready for action", DefaultImageUrl = "/images/characters/cosmo/profile.png" },
+                new Character { CharacterID = 3, Name = "Luna", Description = "Graceful ballerina astronaut in a pink skirt", DefaultImageUrl = "/images/characters/luna/profile.png" },
+                new Character { CharacterID = 4, Name = "Stella", Description = "Laid back astronaut in a hoodie who loves bubblegum", DefaultImageUrl = "/images/characters/stella/profile.png" }
+            );
+
+            // ==================== SEED DATA (CHARACTER STATES) ====================
+            modelBuilder.Entity<CharacterState>().HasData(
+                new CharacterState { StateID = 6, CharacterID = 1, ScreenContext = "Expenses", ImageUrl = "/images/characters/nova/expenses.png", Message = "Let's see what you copped this week, astronaut." },
+                new CharacterState { StateID = 7, CharacterID = 2, ScreenContext = "Expenses", ImageUrl = "/images/characters/cosmo/expenses.png", Message = "Time to investigate your spending like a true hero." },
+                new CharacterState { StateID = 8, CharacterID = 3, ScreenContext = "Expenses", ImageUrl = "/images/characters/luna/expenses.png", Message = "Every purchase tells a story. Let's review yours." },
+                new CharacterState { StateID = 9, CharacterID = 4, ScreenContext = "Expenses", ImageUrl = "/images/characters/stella/expenses.png", Message = "No stress, let's just vibe and see what you bought." },
+                new CharacterState { StateID = 10, CharacterID = 1, ScreenContext = "Goals",  ImageUrl = "/images/characters/nova/goals.png", Message = "Your bank account looking real nice right now." },
+                new CharacterState { StateID = 11, CharacterID = 2, ScreenContext = "Goals", ImageUrl = "/images/characters/cosmo/goals.png", Message = "Your savings power is charging up fast." },
+                new CharacterState { StateID = 12, CharacterID = 3, ScreenContext = "Goals", ImageUrl = "/images/characters/luna/goals.png", Message = "Your savings are dancing beautifully toward your dreams." },
+                new CharacterState { StateID = 14, CharacterID = 4, ScreenContext = "Goals", ImageUrl = "/images/characters/stella/goals.png", Message = "Pretty cool how your money's stacking up like that." },
+                new CharacterState { StateID = 15, CharacterID = 1, ScreenContext = "Profile", ImageUrl = "/images/characters/nova/profile.png", Message = "Yo, what's good? Time to check those space credits." },
+                new CharacterState { StateID = 16, CharacterID = 2, ScreenContext = "Profile", ImageUrl = "/images/characters/cosmo/profile.png", Message = "Looking strong, money warrior. Keep training." },
+                new CharacterState { StateID = 17, CharacterID = 3, ScreenContext = "Profile", ImageUrl = "/images/characters/luna/profile.png", Message = "Welcome back, little star. Shall we begin?" },
+                new CharacterState { StateID = 18, CharacterID = 4, ScreenContext = "Profile", ImageUrl = "/images/characters/stella/profile.png", Message = "Hey there, space buddy. Just chilling and checking in." },
+                new CharacterState { StateID = 19, CharacterID = 1, ScreenContext = "Badges", ImageUrl = "/images/characters/nova/badges.png", Message = "Another badge? You're on fire with this." },
+                new CharacterState { StateID = 20, CharacterID = 2, ScreenContext = "Badges", ImageUrl = "/images/characters/cosmo/badges.png", Message = "Another victory unlocked. You're unstoppable." },
+                new CharacterState { StateID = 23, CharacterID = 3, ScreenContext = "Badges", ImageUrl = "/images/characters/luna/badges.png", Message = "Each achievement is like a perfect spin." },
+                new CharacterState { StateID = 29, CharacterID = 4, ScreenContext = "Badges", ImageUrl = "/images/characters/stella/badges.png", Message = "Nice, another one. You're doing your thing." },
+                new CharacterState { StateID = 32, CharacterID = 1, ScreenContext = "Quiz", ImageUrl = "/images/characters/nova/quiz.png", Message = "Aight, let's test that money brain of yours." },
+                new CharacterState { StateID = 33, CharacterID = 2, ScreenContext = "Quiz", ImageUrl = "/images/characters/cosmo/quiz.png", Message = "Think fast, space cadet. Show me your skills." },
+                new CharacterState { StateID = 34, CharacterID = 3, ScreenContext = "Quiz", ImageUrl = "/images/characters/luna/quiz.png", Message = "Let's gracefully glide through these questions together." },
+                new CharacterState { StateID = 35, CharacterID = 4, ScreenContext = "Quiz", ImageUrl = "/images/characters/stella/quiz.png", Message = "Take it easy, no rush. You got this." }
+            );
+
+            // ==================== SEED DATA (MOODS) ====================
+            modelBuilder.Entity<Mood>().HasData(
+                new Mood { MoodID = 1, Description = "Happy" },
+                new Mood { MoodID = 2, Description = "Sad" },
+                new Mood { MoodID = 3, Description = "Neutral" },
+                new Mood { MoodID = 4, Description = "Excited" },
+                new Mood { MoodID = 5, Description = "Regretful" },
+                new Mood { MoodID = 6, Description = "Cool" },
+                new Mood { MoodID = 7, Description = "Thoughtful" }
+            );
             modelBuilder.Entity<AchievementType>().HasData(
-    new AchievementType { AchievementTypeID = 1, Name = "First Step", Description = "Answered your first quiz question!", IconURL = "/images/badges/first-step.png", Category = "Quiz", Threshold = 1 },
-new AchievementType { AchievementTypeID = 2, Name = "Quiz Explorer", Description = "Answered 10 quiz questions.", IconURL = "/images/badges/quiz-explorer.png", Category = "Quiz", Threshold = 10 },
-new AchievementType { AchievementTypeID = 3, Name = "Quiz Master", Description = "Answered 20 quiz questions.", IconURL = "/images/badges/quiz-master.png", Category = "Quiz", Threshold = 20 },
-new AchievementType { AchievementTypeID = 4, Name = "Quiz Legend", Description = "Answered 50 quiz questions!", IconURL = "/images/badges/quiz-legend.png", Category = "Quiz", Threshold = 50 },
-new AchievementType { AchievementTypeID = 5, Name = "Goal Getter", Description = "Completed your first savings goal!", IconURL = "/images/badges/goal-getter.png", Category = "Goal", Threshold = 1 },
-new AchievementType { AchievementTypeID = 6, Name = "Determined", Description = "Completed 3 savings goals.", IconURL = "/images/badges/determined.png", Category = "Goal", Threshold = 3 },
-new AchievementType { AchievementTypeID = 7, Name = "Achiever", Description = "Completed 5 savings goals.", IconURL = "/images/badges/achiever.png", Category = "Goal", Threshold = 5 },
-new AchievementType { AchievementTypeID = 8, Name = "Champion", Description = "Completed 10 savings goals!", IconURL = "/images/badges/champion.png", Category = "Goal", Threshold = 10 },
-new AchievementType { AchievementTypeID = 9, Name = "First Purchase", Description = "Logged your first expense.", IconURL = "/images/badges/first-purchase.png", Category = "Expense", Threshold = 1 },
-new AchievementType { AchievementTypeID = 10, Name = "Expense Tracker", Description = "Logged 20 expenses.", IconURL = "/images/badges/expense-tracker.png", Category = "Expense", Threshold = 20 },
-new AchievementType { AchievementTypeID = 11, Name = "Money Logger", Description = "Logged 40 expenses.", IconURL = "/images/badges/money-logger.png", Category = "Expense", Threshold = 40 },
-new AchievementType { AchievementTypeID = 12, Name = "Financial Pro", Description = "Logged 100 expenses!", IconURL = "/images/badges/financial-pro.png", Category = "Expense", Threshold = 100 }
-);
-            // ==================== SEED DATA (Optional) ====================
+                new AchievementType { AchievementTypeID = 1, Name = "First Step", Description = "Answered your first quiz question!", IconURL = "/images/badges/first-step.png", Category = "Quiz", Threshold = 1 },
+                new AchievementType { AchievementTypeID = 2, Name = "Quiz Explorer", Description = "Answered 10 quiz questions.", IconURL = "/images/badges/quiz-explorer.png", Category = "Quiz", Threshold = 10 },
+                new AchievementType { AchievementTypeID = 3, Name = "Quiz Master", Description = "Answered 20 quiz questions.", IconURL = "/images/badges/quiz-master.png", Category = "Quiz", Threshold = 20 },
+                new AchievementType { AchievementTypeID = 4, Name = "Quiz Legend", Description = "Answered 50 quiz questions!", IconURL = "/images/badges/quiz-legend.png", Category = "Quiz", Threshold = 50 },
+                new AchievementType { AchievementTypeID = 5, Name = "Goal Getter", Description = "Completed your first savings goal!", IconURL = "/images/badges/goal-getter.png", Category = "Goal", Threshold = 1 },
+                new AchievementType { AchievementTypeID = 6, Name = "Determined", Description = "Completed 3 savings goals.", IconURL = "/images/badges/determined.png", Category = "Goal", Threshold = 3 },
+                new AchievementType { AchievementTypeID = 7, Name = "Achiever", Description = "Completed 5 savings goals.", IconURL = "/images/badges/achiever.png", Category = "Goal", Threshold = 5 },
+                new AchievementType { AchievementTypeID = 8, Name = "Champion", Description = "Completed 10 savings goals!", IconURL = "/images/badges/champion.png", Category = "Goal", Threshold = 10 },
+                new AchievementType { AchievementTypeID = 9, Name = "First Purchase", Description = "Logged your first expense.", IconURL = "/images/badges/first-purchase.png", Category = "Expense", Threshold = 1 },
+                new AchievementType { AchievementTypeID = 10, Name = "Expense Tracker", Description = "Logged 20 expenses.", IconURL = "/images/badges/expense-tracker.png", Category = "Expense", Threshold = 20 },
+                new AchievementType { AchievementTypeID = 11, Name = "Money Logger", Description = "Logged 40 expenses.", IconURL = "/images/badges/money-logger.png", Category = "Expense", Threshold = 40 },
+                new AchievementType { AchievementTypeID = 12, Name = "Financial Pro", Description = "Logged 100 expenses!", IconURL = "/images/badges/financial-pro.png", Category = "Expense", Threshold = 100 }
+            );
+
+            // ==================== SEED DATA (PERSONALITY TYPES) ====================
             modelBuilder.Entity<PersonalityType>().HasData(
-    new PersonalityType
-    {
-        TypeID = 1,
-        ParentName = "Pending Analysis",
-        ChildName = "Money Explorer",
-        Desc = "We're still learning about your money personality! Keep logging expenses and taking quizzes.",
-        Traits = "[]",
-        StaticRecommendation = "[]",
-        FunFacts = "Every money expert started somewhere — you're just getting started!"
-    },
-    new PersonalityType
-    {
-        TypeID = 2,
-        ParentName = "Impulsive Spender",
-        ChildName = "Speedy Spender",
-        Desc = "Quick purchases driven by excitement, low savings ratios.",
-        Traits = "[\"Buys quickly\",\"Gets excited about new things\",\"Struggles to save\"]",
-        StaticRecommendation = "[\"Wait 24 hours before buying\",\"Set a weekly spending limit\",\"Try a savings jar\"]",
-        FunFacts = "Did you know? Speedy Spenders are super fun and spontaneous — the trick is to pause for just one day before buying!"
-    },
-    new PersonalityType
-    {
-        TypeID = 3,
-        ParentName = "Prudent Saver",
-        ChildName = "Treasure Keeper",
-        Desc = "High savings ratios and deliberate spending decisions.",
-        Traits = "[\"Thinks before buying\",\"Saves consistently\",\"Rarely regrets purchases\"]",
-        StaticRecommendation = "[\"Set a savings goal each month\",\"Reward yourself occasionally\",\"Track your savings growth\"]",
-        FunFacts = "Did you know? Treasure Keepers are rare — only the wisest kids know how to grow their coins into something amazing!"
-    },
-    new PersonalityType
-    {
-        TypeID = 4,
-        ParentName = "Goal-Oriented Planner",
-        ChildName = "Dream Builder",
-        Desc = "Steady goal contributions and balanced spending.",
-        Traits = "[\"Plans purchases ahead\",\"Contributes to goals regularly\",\"Balances fun and saving\"]",
-        StaticRecommendation = "[\"Break big goals into smaller steps\",\"Celebrate milestones\",\"Keep your goal visible\"]",
-        FunFacts = "Did you know? Dream Builders are natural achievers — every coin you save is one step closer to your dream!"
-    },
-    new PersonalityType
-    {
-        TypeID = 5,
-        ParentName = "Bargain Hunter",
-        ChildName = "Deal Detective",
-        Desc = "Smart spending focused on value and deals.",
-        Traits = "[\"Compares prices\",\"Loves a good deal\",\"Spends wisely\"]",
-        StaticRecommendation = "[\"Make a list before shopping\",\"Look for sales and discounts\",\"Avoid buying just because it's cheap\"]",
-        FunFacts = "Did you know? Deal Detectives have a superpower — they can spot a great deal from a mile away!"
-    }
-);
+                new PersonalityType
+                {
+                    TypeID = 1,
+                    ParentName = "Pending Analysis",
+                    ChildName = "Money Explorer",
+                    Desc = "We're still getting to know your child's financial personality. As they use the app and log expenses, we'll build a complete picture of their money habits and provide personalized guidance.",
+                    Traits = "[\"Discovering spending patterns\", \"Building financial profile\", \"Learning money habits\"]",
+                    FunFacts = "Every money expert started somewhere — you're just getting started!",
+                    StaticRecommendation = "[\"Keep encouraging your child to log their expenses regularly\", \"Guide your child to try saving for a specific goal\", \"Have your child complete the story quizzes to help us better understand their money personality\"]"
+                },
+                new PersonalityType
+                {
+                    TypeID = 2,
+                    ParentName = "Impulsive Spender",
+                    ChildName = "Speedy Spender",
+                    Desc = "Quick purchases driven by excitement, low savings ratios.",
+                    Traits = "[\"Buys quickly\",\"Gets excited about new things\",\"Struggles to save\"]",
+                    FunFacts = "Did you know? Speedy Spenders are super fun and spontaneous — the trick is to pause for just one day before buying!",
+                    StaticRecommendation = "[\"Encourage a 24-hour waiting rule before they make non-essential purchases.\", \"Introduce a visual savings jar or progress bar so they can see their money build up.\", \"Work together to create a simple shopping list before visiting stores or online apps.\", \"Suggest setting aside a flat 20% of their allowance instantly into savings before spending any.\"]"
+                },
+                new PersonalityType
+                {
+                    TypeID = 3,
+                    ParentName = "Prudent Saver",
+                    ChildName = "Treasure Keeper",
+                    Desc = "High savings ratios and deliberate spending decisions.",
+                    Traits = "[\"Thinks before buying\",\"Saves consistently\",\"Rarely regrets purchases\"]",
+                    FunFacts = "Did you know? Treasure Keepers are rare — only the wisest kids know how to grow their coins into something amazing!",
+                    StaticRecommendation = "[\"Help them set exciting, long-term savings goals so they don't hold onto money out of fear.\", \"Give them permission to enjoy some 'fun spending' to avoid eventual saving burnout.\", \"Introduce basic age-appropriate concepts of investing or earning interest on accumulated funds.\"]"
+                },
+                new PersonalityType
+                {
+                    TypeID = 4,
+                    ParentName = "Goal-Oriented Planner",
+                    ChildName = "Dream Builder",
+                    Desc = "Balanced approach to spending and saving, with steady goal contributions. Plans purchases carefully.",
+                    Traits = "[\"Creates clear savings goals\", \"Balances fun spending with saving\", \"Tracks progress regularly\", \"Plans purchases in advance\", \"Stays motivated by dreams\"]",
+                    FunFacts = "Did you know? Dream Builders are natural achievers — every coin you save is one step closer to your dream!",
+                    StaticRecommendation = "[\"Help them break down very large, daunting savings goals into smaller, reachable milestones.\", \"Celebrate or match their savings when they cross a major milestone to reward consistency.\", \"Keep their targeted goals visually prominent in conversation to sustain their natural planning habits.\"]",
+                },
+                new PersonalityType
+                {
+                    TypeID = 5,
+                    ParentName = "Bargain Hunter",
+                    ChildName = "Deal Detective",
+                    Desc = "Emphasizes value and deals, strategic spending. Loves finding the best prices and getting good value.",
+                    Traits = "[\"Compares prices before buying\", \"Loves finding good deals\", \"Waits for sales\", \"Values getting the most for money\", \"Shares deals with others\"]",
+                    FunFacts = "Did you know? Deal Detectives have a superpower — they can spot a great deal from a mile away!",
+                    StaticRecommendation = "[\"Remind them to make a strict shopping list so they don't buy things simply because they are 'on sale'.\", \"Challenge them to find coupon codes or comparison shop to engage their detective strengths productively.\", \"Teach them about quality vs. price so they understand that cheap doesn't always mean high value.\"]"
+                }
+            );
         }
     }
 }
