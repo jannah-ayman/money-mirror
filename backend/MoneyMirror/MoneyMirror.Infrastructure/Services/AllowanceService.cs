@@ -226,7 +226,7 @@ namespace MoneyMirror.Infrastructure.Services
                         Type = "BonusCredit",
                         Amount = dto.Amount,
                         BalanceAfter = child.CurrentBalance,
-                        Description = dto.Reason, // Use parent's reason as description
+                        Description = dto.Reason?.Trim(), // Trims out accidental whitespace if they just typed spaces
                         TransactionDate = DateTime.UtcNow,
                         ChildID = childId,
                         ParentID = parentId,

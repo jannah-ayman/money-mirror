@@ -72,12 +72,8 @@ namespace MoneyMirror.API.Validators.Allowance
 
             // ==================== Reason Validation ====================
             RuleFor(x => x.Reason)
-                .NotEmpty()
-                .WithMessage("Please provide a reason for this bonus")
                 .MaximumLength(500)
-                .WithMessage("Reason cannot exceed 500 characters")
-                .MinimumLength(3)
-                .WithMessage("Reason must be at least 3 characters");
+                .WithMessage("Reason cannot exceed 500 characters");
         }
     }
 }

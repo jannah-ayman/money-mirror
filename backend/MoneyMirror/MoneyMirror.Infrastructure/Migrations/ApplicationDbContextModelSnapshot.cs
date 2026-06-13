@@ -53,7 +53,7 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     b.HasKey("AchievementTypeID");
 
-                    b.ToTable("AchievementTypes");
+                    b.ToTable("AchievementTypes", (string)null);
 
                     b.HasData(
                         new
@@ -215,7 +215,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasIndex("ChildID", "IsRead")
                         .HasDatabaseName("IX_Advice_Child_IsRead");
 
-                    b.ToTable("Advices");
+                    b.ToTable("Advices", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Allowance", b =>
@@ -277,7 +277,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasIndex("ChildID", "SetDate")
                         .HasDatabaseName("IX_Allowance_Child_SetDate");
 
-                    b.ToTable("Allowances");
+                    b.ToTable("Allowances", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Character", b =>
@@ -309,7 +309,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Character_Name_Unique");
 
-                    b.ToTable("Characters");
+                    b.ToTable("Characters", (string)null);
 
                     b.HasData(
                         new
@@ -374,7 +374,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_CharacterState_Character_Screen_Unique");
 
-                    b.ToTable("CharacterStates");
+                    b.ToTable("CharacterStates", (string)null);
 
                     b.HasData(
                         new
@@ -618,7 +618,7 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     b.HasIndex("TypeID");
 
-                    b.ToTable("Children");
+                    b.ToTable("Children", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.ChildAchievement", b =>
@@ -638,7 +638,7 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     b.HasIndex("AchievementTypeID");
 
-                    b.ToTable("ChildAchievements");
+                    b.ToTable("ChildAchievements", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Expense", b =>
@@ -686,7 +686,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasIndex("ChildID", "LogDate")
                         .HasDatabaseName("IX_Expense_Child_LogDate");
 
-                    b.ToTable("Expenses");
+                    b.ToTable("Expenses", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.ExpenseCategory", b =>
@@ -704,7 +704,7 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     b.HasKey("CategoryID");
 
-                    b.ToTable("ExpenseCategories");
+                    b.ToTable("ExpenseCategories", (string)null);
 
                     b.HasData(
                         new
@@ -795,7 +795,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_InitialProfiling_ChildID_Unique");
 
-                    b.ToTable("InitialProfilingQuestionnaires");
+                    b.ToTable("InitialProfilingQuestionnaires", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Mood", b =>
@@ -813,7 +813,7 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     b.HasKey("MoodID");
 
-                    b.ToTable("Moods");
+                    b.ToTable("Moods", (string)null);
 
                     b.HasData(
                         new
@@ -906,7 +906,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .HasDatabaseName("IX_Notification_Parent_IsRead")
                         .HasFilter("[ParentID] IS NOT NULL");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Parent", b =>
@@ -997,7 +997,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Parent_Email_Unique");
 
-                    b.ToTable("Parents");
+                    b.ToTable("Parents", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.ParentChild", b =>
@@ -1012,7 +1012,7 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     b.HasIndex("ChildID");
 
-                    b.ToTable("ParentChildren");
+                    b.ToTable("ParentChildren", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.PersonalityType", b =>
@@ -1052,7 +1052,7 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     b.HasKey("TypeID");
 
-                    b.ToTable("PersonalityTypes");
+                    b.ToTable("PersonalityTypes", (string)null);
 
                     b.HasData(
                         new
@@ -1137,7 +1137,7 @@ namespace MoneyMirror.Infrastructure.Migrations
 
                     b.HasIndex("StoryID");
 
-                    b.ToTable("QuizAnswers");
+                    b.ToTable("QuizAnswers", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.QuizLog", b =>
@@ -1180,7 +1180,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_QuizLog_Child_Story_Unique");
 
-                    b.ToTable("QuizLogs");
+                    b.ToTable("QuizLogs", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.SavingsGoal", b =>
@@ -1240,7 +1240,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasIndex("ChildID", "Status")
                         .HasDatabaseName("IX_SavingsGoal_Child_Status");
 
-                    b.ToTable("SavingsGoals");
+                    b.ToTable("SavingsGoals", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.StoryQuizTemplate", b =>
@@ -1277,7 +1277,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasIndex("TargetAgeMin", "TargetAgeMax")
                         .HasDatabaseName("IX_StoryQuiz_AgeRange");
 
-                    b.ToTable("StoryQuizTemplates");
+                    b.ToTable("StoryQuizTemplates", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Transaction", b =>
@@ -1330,7 +1330,7 @@ namespace MoneyMirror.Infrastructure.Migrations
                     b.HasIndex("Type", "TransactionDate")
                         .HasDatabaseName("IX_Transaction_Type_TransactionDate");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Transactions", (string)null);
                 });
 
             modelBuilder.Entity("MoneyMirror.Core.Models.Advice", b =>
