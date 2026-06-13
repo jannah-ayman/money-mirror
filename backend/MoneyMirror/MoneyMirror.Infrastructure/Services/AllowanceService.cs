@@ -362,7 +362,11 @@ namespace MoneyMirror.Infrastructure.Services
                     query = query.Where(t => t.TransactionDate <= endDate.Value);
                 }
 
-                if (type != "All")
+                if (type == "AllowanceAndBonus")
+                {
+                    query = query.Where(t => t.Type == "AllowanceCredit" || t.Type == "BonusCredit");
+                }
+                else if (type != "All")
                 {
                     query = query.Where(t => t.Type == type);
                 }
