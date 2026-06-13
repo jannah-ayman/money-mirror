@@ -86,6 +86,27 @@ namespace MoneyMirror.API.Controllers
 
             return Ok(ApiResponse<List<GoalResponseDto>>.SuccessResponse(goals, message));
         }
+        /// POST /api/goal/{goalId}/refund-failed
+        [HttpPost("{goalId}/refund-failed")]
+        [Authorize(Roles = "Child")]
+        public async Task<ActionResult<ApiResponse<object>>> RefundFailedGoal(int goalId)
+        {
+            var childIdClaim = User.FindFirst("ChildId")?.Value;
+            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims."));
+
+            var (success, newBalance, errorMessage) = await _goalService.RefundFailedGoalAsync(childId, goalId);
+
+            if (!success)
+                return BadRequest(ApiResponse<object>.ErrorResponse(errorMessage));
+
+            _logger.LogInformation("Child {ChildId} refunded failed goal {GoalId}", childId, goalId);
+
+            return Ok(ApiResponse<object>.SuccessResponse(
+                new { NewBalance = newBalance },
+                "Money returned to your balance! 💰"
+            ));
+        }
 
         // ==================== PARENT ENDPOINTS ====================
 

@@ -73,7 +73,8 @@ namespace MoneyMirror.Infrastructure.Services
                         Gender = string.IsNullOrWhiteSpace(dto.Gender) ? null : dto.Gender.Trim(),
                         LoginCode = await GenerateUniqueLoginCodeAsync(),
                         CreatedAt = DateTime.UtcNow,
-                        IsPersonalityFinalized = false // ✅ Start as false
+                        IsPersonalityFinalized = false,
+                        CharacterID = 1 // Default: Nova
                     };
 
                     _context.Children.Add(child);
