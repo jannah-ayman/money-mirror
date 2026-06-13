@@ -439,9 +439,8 @@ namespace MoneyMirror.Infrastructure.Services
                 }
             });
         }
-
         public async Task<(bool success, GoalResponseDto? goal, string errorMessage)>
-     EditPersonalGoalAsync(int childId, int goalId, EditPersonalGoalDto dto)
+            EditPersonalGoalAsync(int childId, int goalId, EditPersonalGoalDto dto)
         {
             try
             {
@@ -454,11 +453,7 @@ namespace MoneyMirror.Infrastructure.Services
                 if (goal.Status != "Active")
                     return (false, null, "Only active goals can be edited.");
 
-                if (dto.EndDate.HasValue && dto.EndDate.Value <= DateTime.UtcNow)
-                    return (false, null, "End date must be in the future.");
-
                 goal.Title = dto.Title.Trim();
-                goal.EndDate = dto.EndDate;
 
                 _context.SavingsGoals.Update(goal);
                 await _context.SaveChangesAsync();
