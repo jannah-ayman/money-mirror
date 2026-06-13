@@ -249,9 +249,7 @@ namespace MoneyMirror.Infrastructure.Services
                 response.FunFacts.Add(BuildTopCategoryFunFact(expenses));
 
                 // ---- Slot 3: Top mood ----
-                var moodFact = BuildTopMoodFunFact(expenses);
-                if (moodFact != null)
-                    response.FunFacts.Add(moodFact);
+                response.FunFacts.Add(BuildTopMoodFunFact(expenses));
 
                 // ---- Slot 4: Biggest purchase this month ----
                 response.FunFacts.Add(BuildBiggestPurchaseFunFact(expenses));
@@ -303,10 +301,16 @@ namespace MoneyMirror.Infrastructure.Services
             };
         }
 
-        private FunFactDto? BuildTopMoodFunFact(List<Core.Models.Expense> expenses)
+        private FunFactDto BuildTopMoodFunFact(List<Core.Models.Expense> expenses)
         {
             if (!expenses.Any())
-                return null;
+            {
+                return new FunFactDto
+                {
+                    Observation = "😊 Log expenses to discover your spending mood!",
+                    Tip = "Tracking how you feel when you spend helps you make smarter money choices."
+                };
+            }
 
             var topMood = expenses
                 .GroupBy(e => e.Mood.Description)
@@ -314,16 +318,40 @@ namespace MoneyMirror.Infrastructure.Services
                 .OrderByDescending(g => g.Count)
                 .First();
 
-            if (!topMood.Mood.Equals("Happy", StringComparison.OrdinalIgnoreCase))
-                return null;
-
-            return new FunFactDto
+            return topMood.Mood.ToLower() switch
             {
-                Observation = "😊 You spend the most when you're Happy!",
-                Tip = "It's great to enjoy spending — just make sure you're also saving a little each time!"
+                "happy" => new FunFactDto
+                {
+                    Observation = "😊 You spend the most when you're Happy!",
+                    Tip = "It's great to enjoy spending — just make sure you're also saving a little each time!"
+                },
+                "excited" => new FunFactDto
+                {
+                    Observation = "🤩 You spend the most when you're Excited!",
+                    Tip = "Excitement can lead to great buys — but try waiting a day before big purchases to be sure."
+                },
+                "sad" => new FunFactDto
+                {
+                    Observation = "😢 You tend to spend more when you're feeling Sad.",
+                    Tip = "It's okay to treat yourself sometimes — just try not to let sad feelings drive big spending decisions."
+                },
+                "regretful" => new FunFactDto
+                {
+                    Observation = "😔 You often feel Regretful after spending.",
+                    Tip = "Regretting a purchase is a sign you're learning! Try asking yourself if you really need it before buying."
+                },
+                "neutral" => new FunFactDto
+                {
+                    Observation = "😐 Most of your spending happens when you're feeling Neutral.",
+                    Tip = "Calm spending is actually a great habit — you're not buying on impulse!"
+                },
+                _ => new FunFactDto
+                {
+                    Observation = $"Your most common spending mood is {topMood.Mood}!",
+                    Tip = "Knowing how you feel when you spend is the first step to smarter money choices."
+                }
             };
         }
-
         private FunFactDto BuildBiggestPurchaseFunFact(List<Core.Models.Expense> expenses)
         {
             var now = DateTime.UtcNow;
