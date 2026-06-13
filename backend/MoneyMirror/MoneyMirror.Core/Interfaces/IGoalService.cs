@@ -31,5 +31,8 @@ namespace MoneyMirror.Core.Interfaces
 
         Task<(bool success, GoalResponseDto? goal, string errorMessage)>
             EditChallengeAsync(int parentId, int childId, int goalId, EditChallengeDto dto);
+        Task<(bool success, decimal newBalance, string errorMessage)>
+        RefundFailedGoalAsync(int childId, int goalId);
     }
+
 }

@@ -272,6 +272,7 @@ namespace MoneyMirror.Infrastructure.Services
                 var now = DateTime.UtcNow;
 
                 var expiredGoals = await _context.SavingsGoals
+                    .Include(g => g.Child)
                     .Where(g => g.Status == "Active"
                              && g.EndDate.HasValue
                              && g.EndDate.Value < now
@@ -282,13 +283,36 @@ namespace MoneyMirror.Infrastructure.Services
                 {
                     goal.Status = "Failure";
                     failedCount++;
+
+                    // Auto-refund challenges only
+                    if (goal.IsChallenge && goal.CurrentAmount > 0)
+                    {
+                        var child = goal.Child;
+                        decimal refundAmount = goal.CurrentAmount;
+
+                        child.CurrentBalance += refundAmount;
+                        goal.CurrentAmount = 0;
+
+                        _context.Transactions.Add(new Transaction
+                        {
+                            Type = "GoalRefund",
+                            Amount = refundAmount,
+                            BalanceAfter = child.CurrentBalance,
+                            Description = $"Refund from failed challenge: {goal.Title}",
+                            TransactionDate = DateTime.UtcNow,
+                            ChildID = goal.ChildID,
+                            ParentID = goal.ParentID
+                        });
+
+                        _context.Children.Update(child);
+                        _logger.LogInformation("Auto-refunded failed challenge {GoalId} — {Amount} returned to child {ChildId}", goal.GoalID, refundAmount, goal.ChildID);
+                    }
+
                     _logger.LogInformation("Goal {GoalId} marked as Failure (expired)", goal.GoalID);
                 }
 
                 if (failedCount > 0)
                     await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Fail expired goals job: {Count} goal(s) marked as Failure", failedCount);
             }
             catch (Exception ex)
             {
@@ -415,7 +439,6 @@ namespace MoneyMirror.Infrastructure.Services
                 }
             });
         }
-
         public async Task<(bool success, GoalResponseDto? goal, string errorMessage)>
             EditPersonalGoalAsync(int childId, int goalId, EditPersonalGoalDto dto)
         {
@@ -430,21 +453,10 @@ namespace MoneyMirror.Infrastructure.Services
                 if (goal.Status != "Active")
                     return (false, null, "Only active goals can be edited.");
 
-                if (dto.EndDate.HasValue && dto.EndDate.Value <= DateTime.UtcNow)
-                    return (false, null, "End date must be in the future.");
-
-                // If lowering targetAmount below what's already saved, auto-complete the goal
-                if (dto.TargetAmount <= goal.CurrentAmount && goal.CurrentAmount > 0)
-                    return (false, null, $"Target amount cannot be less than or equal to the amount already saved ({goal.CurrentAmount:F2}).");
-
                 goal.Title = dto.Title.Trim();
-                goal.TargetAmount = dto.TargetAmount;
-                goal.EndDate = dto.EndDate;
 
                 _context.SavingsGoals.Update(goal);
                 await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Child {ChildId} edited personal goal {GoalId}", childId, goalId);
 
                 return (true, MapToDto(goal), string.Empty);
             }
@@ -454,7 +466,6 @@ namespace MoneyMirror.Infrastructure.Services
                 return (false, null, "An error occurred while editing the goal.");
             }
         }
-
         public async Task<(bool success, GoalResponseDto? goal, string errorMessage)>
             EditChallengeAsync(int parentId, int childId, int goalId, EditChallengeDto dto)
         {
@@ -506,6 +517,63 @@ namespace MoneyMirror.Infrastructure.Services
                 _logger.LogError(ex, "Error editing challenge {GoalId}", goalId);
                 return (false, null, "An error occurred while editing the challenge.");
             }
+
+        }
+        public async Task<(bool success, decimal newBalance, string errorMessage)>
+     RefundFailedGoalAsync(int childId, int goalId)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var goal = await _context.SavingsGoals
+                        .FirstOrDefaultAsync(g => g.GoalID == goalId && g.ChildID == childId && !g.IsChallenge);
+
+                    if (goal == null)
+                        return (false, 0m, "Goal not found.");
+
+                    if (goal.Status != "Failure")
+                        return (false, 0m, "Only failed goals can be refunded.");
+
+                    if (goal.CurrentAmount <= 0)
+                        return (false, 0m, "No saved amount to refund.");
+
+                    var child = await _context.Children.FindAsync(childId);
+                    if (child == null)
+                        return (false, 0m, "Child not found.");
+
+                    decimal refundAmount = goal.CurrentAmount;
+                    child.CurrentBalance += refundAmount;
+                    goal.CurrentAmount = 0;
+
+                    _context.Children.Update(child);
+
+                    _context.Transactions.Add(new Transaction
+                    {
+                        Type = "GoalRefund",
+                        Amount = refundAmount,
+                        BalanceAfter = child.CurrentBalance,
+                        Description = $"Refund from failed goal: {goal.Title}",
+                        TransactionDate = DateTime.UtcNow,
+                        ChildID = childId
+                    });
+
+                    _context.SavingsGoals.Remove(goal);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return (true, child.CurrentBalance, string.Empty);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error refunding failed goal {GoalId}", goalId);
+                    return (false, 0m, "An error occurred while refunding the goal.");
+                }
+            });
         }
 
     }

@@ -39,10 +39,10 @@ namespace MoneyMirror.API.Validators.Goals
 
             RuleFor(x => x.RewardValue)
                 .GreaterThan(0).WithMessage("Reward must be greater than zero.")
-                .LessThanOrEqualTo(50000).WithMessage("Reward cannot exceed 50,000.");
+                .LessThanOrEqualTo(50000).WithMessage("Reward cannot exceed 50,000.")
+                .When(x => x.RewardValue.HasValue && x.RewardValue.Value > 0);
         }
     }
-
     public class AddMoneyToGoalDtoValidator : AbstractValidator<AddMoneyToGoalDto>
     {
         public AddMoneyToGoalDtoValidator()
@@ -59,14 +59,6 @@ namespace MoneyMirror.API.Validators.Goals
             RuleFor(x => x.Title)
                 .NotEmpty().WithMessage("Goal title is required.")
                 .MaximumLength(200).WithMessage("Title cannot exceed 200 characters.");
-
-            RuleFor(x => x.TargetAmount)
-                .GreaterThan(0).WithMessage("Target amount must be greater than zero.")
-                .LessThanOrEqualTo(100000).WithMessage("Target amount cannot exceed 100,000.");
-
-            RuleFor(x => x.EndDate)
-                .GreaterThan(DateTime.UtcNow).WithMessage("End date must be in the future.")
-                .When(x => x.EndDate.HasValue);
         }
     }
 

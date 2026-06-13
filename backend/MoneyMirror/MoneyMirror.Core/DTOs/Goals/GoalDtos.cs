@@ -12,7 +12,7 @@
         public string Title { get; set; }
         public decimal TargetAmount { get; set; }
         public DateTime EndDate { get; set; }
-        public decimal RewardValue { get; set; }
+        public decimal ?RewardValue { get; set; }
     }
 
     public class AddMoneyToGoalDto
@@ -36,8 +36,7 @@
     public class EditPersonalGoalDto
     {
         public string Title { get; set; }
-        public decimal TargetAmount { get; set; }
-        public DateTime? EndDate { get; set; }
+      
     }
 
     public class EditChallengeDto
