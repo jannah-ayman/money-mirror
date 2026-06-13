@@ -30,17 +30,12 @@ namespace MoneyMirror.Core.Models
         public int Age { get; set; }
 
         [MaxLength(10)]
-        public string? Gender { get; set; }
+        public string Gender { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(10,2)")]
         public decimal CurrentBalance { get; set; } = 0.00m;
 
-        /// Indicates whether the personality profile has been finalized by AI analysis.
-        /// False = using temporary "Pending Analysis" personality type
-        /// True = real AI analysis has been completed and personality type is final
-        /// This flag allows the app to function with placeholder data while AI team
-        /// develops the real personality classification logic.
         [Required]
         public bool IsPersonalityFinalized { get; set; } = false;
 
@@ -62,11 +57,7 @@ namespace MoneyMirror.Core.Models
         public int? CharacterID { get; set; }
 
         // ==================== NAVIGATION PROPERTIES ====================
-        // Add this to the navigation properties section
-
-        /// <summary>
-        /// Reference to the child's selected space character.
-        /// </summary>
+        
         [ForeignKey("CharacterID")]
         public virtual Character SelectedCharacter { get; set; }
 
