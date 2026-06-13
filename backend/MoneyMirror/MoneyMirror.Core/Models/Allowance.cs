@@ -77,6 +77,7 @@ namespace MoneyMirror.Core.Models
         /// </summary>
         [Required]
         public bool IsRecurring { get; set; } = true;
+        public string? Reason { get; set; }
 
         /// <summary>
         /// For Daily allowances: Hour of day (0-23) when allowance should be credited.

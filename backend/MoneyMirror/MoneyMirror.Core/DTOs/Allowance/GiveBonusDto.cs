@@ -16,15 +16,7 @@
         /// </summary>
         public decimal Amount { get; set; }
 
-        /// <summary>
-        /// Reason for giving this bonus.
-        /// Shown in transaction history for both parent and child.
-        /// Examples:
-        /// - "Excellent report card!"
-        /// - "Helped with chores all week"
-        /// - "Birthday gift"
-        /// Required - helps track why bonuses were given.
-        /// </summary>
-        public string Reason { get; set; }
+       
+        public string? Reason { get; set; }
     }
 }
