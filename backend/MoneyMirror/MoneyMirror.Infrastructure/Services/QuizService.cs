@@ -144,57 +144,57 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        public async Task<List<ChildQuizSummaryDto>> GetWeeklyQuizSummariesAsync()
-        {
-            try
-            {
-                // Personality type IDs - these must match DB seed data
-                // Expected: 2=Impulsive, 3=Prudent Saver, 4=Goal-Oriented Planner, 5=Bargain Hunter
-                // (1 is Pending Analysis)
-                // We group by the PersonalityTypeID on the chosen answer
+        //public async Task<List<ChildQuizSummaryDto>> GetWeeklyQuizSummariesAsync()
+        //{
+        //    try
+        //    {
+        //        // Personality type IDs - these must match DB seed data
+        //        // Expected: 2=Impulsive, 3=Prudent Saver, 4=Goal-Oriented Planner, 5=Bargain Hunter
+        //        // (1 is Pending Analysis)
+        //        // We group by the PersonalityTypeID on the chosen answer
 
-                var childIds = await _context.Children
-                    .Select(c => c.ChildID)
-                    .ToListAsync();
+        //        var childIds = await _context.Children
+        //            .Select(c => c.ChildID)
+        //            .ToListAsync();
 
-                var summaries = new List<ChildQuizSummaryDto>();
+        //        var summaries = new List<ChildQuizSummaryDto>();
 
-                foreach (var childId in childIds)
-                {
-                    var last7 = await _context.QuizLogs
-                        .Include(q => q.QuizAnswer)
-                            .ThenInclude(a => a.PersonalityType)
-                        .Where(q => q.ChildID == childId)
-                        .OrderByDescending(q => q.CompletedDate)
-                        .Take(WeeklySummaryCount)
-                        .ToListAsync();
+        //        foreach (var childId in childIds)
+        //        {
+        //            var last7 = await _context.QuizLogs
+        //                .Include(q => q.QuizAnswer)
+        //                    .ThenInclude(a => a.PersonalityType)
+        //                .Where(q => q.ChildID == childId)
+        //                .OrderByDescending(q => q.CompletedDate)
+        //                .Take(WeeklySummaryCount)
+        //                .ToListAsync();
 
-                    if (!last7.Any()) continue;
+        //            if (!last7.Any()) continue;
 
-                    var summary = new ChildQuizSummaryDto { ChildID = childId };
+        //            var summary = new ChildQuizSummaryDto { ChildID = childId };
 
-                    foreach (var log in last7)
-                    {
-                        var typeName = log.QuizAnswer?.PersonalityType?.ParentName;
-                        switch (typeName)
-                        {
-                            case "Impulsive Spender": summary.Impulsive++; break;
-                            case "Prudent Saver": summary.Saver++; break;
-                            case "Goal-Oriented Planner": summary.Planner++; break;
-                            case "Bargain Hunter": summary.Bargain++; break;
-                        }
-                    }
+        //            foreach (var log in last7)
+        //            {
+        //                var typeName = log.QuizAnswer?.PersonalityType?.ParentName;
+        //                switch (typeName)
+        //                {
+        //                    case "Impulsive Spender": summary.Impulsive++; break;
+        //                    case "Prudent Saver": summary.Saver++; break;
+        //                    case "Goal-Oriented Planner": summary.Planner++; break;
+        //                    case "Bargain Hunter": summary.Bargain++; break;
+        //                }
+        //            }
 
-                    summaries.Add(summary);
-                }
+        //            summaries.Add(summary);
+        //        }
 
-                return summaries;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error generating weekly quiz summaries");
-                return new List<ChildQuizSummaryDto>();
-            }
-        }
+        //        return summaries;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error generating weekly quiz summaries");
+        //        return new List<ChildQuizSummaryDto>();
+        //    }
+        //}
     }
 }

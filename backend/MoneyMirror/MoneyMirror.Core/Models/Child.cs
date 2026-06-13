@@ -55,9 +55,14 @@ namespace MoneyMirror.Core.Models
 
         /// Selected character type (Nova, Luna, Cosmo, Aura).
         public int? CharacterID { get; set; }
+        public decimal? ImpulsiveSpenderScore { get; set; }
+        public decimal? PrudentSaverScore { get; set; }
+        public decimal? GoalOrientedPlannerScore { get; set; }
+        public decimal? BargainHunterScore { get; set; }
+        public DateTime? LastPersonalityUpdateDate { get; set; }
 
         // ==================== NAVIGATION PROPERTIES ====================
-        
+
         [ForeignKey("CharacterID")]
         public virtual Character SelectedCharacter { get; set; }
 
@@ -82,9 +87,6 @@ namespace MoneyMirror.Core.Models
         [ForeignKey("TypeID")]
         public virtual PersonalityType? PersonalityType { get; set; }
 
-        /// Collection of parent-child relationships.
-        /// Uses ParentChild junction table for many-to-many relationship.
-        /// One child can be managed by multiple parents (e.g., divorced parents).
         public virtual ICollection<ParentChild> ParentChildren { get; set; } = new List<ParentChild>();
 
         /// Collection of notifications sent to this child.

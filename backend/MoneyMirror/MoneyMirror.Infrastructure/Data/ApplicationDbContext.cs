@@ -75,6 +75,8 @@ namespace MoneyMirror.Infrastructure.Data
 
         /// Advice table - AI-generated personalized financial tips
         public DbSet<Advice> Advices { get; set; }
+        public DbSet<AnalysisAdviceTemplate> AnalysisAdviceTemplates { get; set; }
+
         /// Transactions table - records all financial movements (allowances, bonuses, expenses)
         public DbSet<Transaction> Transactions { get; set; }
 
@@ -430,7 +432,110 @@ namespace MoneyMirror.Infrastructure.Data
                 entity.Property(a => a.GeneratedDate)
                       .HasDefaultValueSql("GETUTCDATE()");
             });
-
+            modelBuilder.Entity<AnalysisAdviceTemplate>().HasData(
+                // ==================== ALERTS ====================
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 1,
+                    Title = "Emotional Spending Alert",
+                    Description = "Your child spends a large portion of their money when in a specific emotional state, which may indicate mood-driven impulse purchases.",
+                    ActionSteps = "[\"Introduce a 24-hour waiting rule before any purchase over 20 EGP\",\"Talk to your child about how their mood affects their decisions\",\"Create a wish list to revisit purchases when they feel calmer\"]",
+                    Type = "Alert",
+                    TriggerKey = "HIGH_MOOD_SPENDING",
+                    Priority = 1
+                },
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 2,
+                    Title = "Low Savings Rate",
+                    Description = "Your child is saving very little of their allowance, spending most of it before the next payment cycle.",
+                    ActionSteps = "[\"Set an automatic savings rule: put aside 20% of allowance immediately\",\"Use a visible savings goal to motivate consistent saving\",\"Discuss what they are saving toward to build purpose\"]",
+                    Type = "Alert",
+                    TriggerKey = "LOW_SAVINGS_RATIO",
+                    Priority = 1
+                },
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 3,
+                    Title = "High Spending Frequency",
+                    Description = "Your child is making purchases very frequently relative to their allowance cycle, which may lead to running out of money early.",
+                    ActionSteps = "[\"Help your child plan their spending at the start of each allowance cycle\",\"Set a weekly spending limit together\",\"Review purchases together at the end of each week\"]",
+                    Type = "Alert",
+                    TriggerKey = "HIGH_SPENDING_FREQUENCY",
+                    Priority = 2
+                },
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 4,
+                    Title = "Category Over-Focus",
+                    Description = "Your child is spending the majority of their money on a single category, showing limited variety in their purchasing decisions.",
+                    ActionSteps = "[\"Encourage your child to explore other categories like books or school supplies\",\"Set a soft limit on spending in their dominant category per cycle\",\"Talk about balancing needs vs. wants\"]",
+                    Type = "Alert",
+                    TriggerKey = "IMPULSIVE_CATEGORY_FOCUS",
+                    Priority = 2
+                },
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 5,
+                    Title = "No Active Savings Goals",
+                    Description = "Your child currently has no active savings goals, which removes a key motivation to save and plan ahead.",
+                    ActionSteps = "[\"Sit together and pick one thing your child wants to save for\",\"Set a realistic target amount and timeline\",\"Check in on progress weekly to keep motivation high\"]",
+                    Type = "Alert",
+                    TriggerKey = "NO_ACTIVE_GOALS",
+                    Priority = 2
+                },
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 6,
+                    Title = "Balance Draining Fast",
+                    Description = "Your child's balance has dropped significantly since their last allowance, suggesting rapid spending after receiving money.",
+                    ActionSteps = "[\"Discuss the concept of making money last through the full cycle\",\"Try splitting the allowance into spending and saving portions immediately\",\"Review what large purchases were made and whether they were planned\"]",
+                    Type = "Alert",
+                    TriggerKey = "LOW_BALANCE_DRAIN",
+                    Priority = 1
+                },
+                // ==================== STRENGTHS ====================
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 7,
+                    Title = "Goal Achiever",
+                    Description = "Your child has been completing savings goals consistently, showing strong financial discipline and follow-through.",
+                    ActionSteps = "[\"Celebrate this achievement with non-monetary praise\",\"Help set a new, slightly more ambitious goal\",\"Share their success to reinforce the behavior\"]",
+                    Type = "Strength",
+                    TriggerKey = "GOAL_STREAK",
+                    Priority = 1
+                },
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 8,
+                    Title = "Consistent Tracker",
+                    Description = "Your child has been logging their expenses regularly, building a strong habit of financial awareness.",
+                    ActionSteps = "[\"Praise their consistency to reinforce the habit\",\"Review logged expenses together to deepen their understanding\",\"Use the data to help them spot their own patterns\"]",
+                    Type = "Strength",
+                    TriggerKey = "CONSISTENT_LOGGING",
+                    Priority = 2
+                },
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 9,
+                    Title = "Emotionally Balanced Spender",
+                    Description = "Your child's spending is distributed across different moods without any single emotional state dominating their purchases.",
+                    ActionSteps = "[\"Acknowledge this balance as a sign of developing impulse control\",\"Continue open conversations about how feelings relate to money decisions\",\"Encourage them to keep reflecting on their mood when spending\"]",
+                    Type = "Strength",
+                    TriggerKey = "BALANCED_MOOD_SPENDING",
+                    Priority = 3
+                },
+                new AnalysisAdviceTemplate
+                {
+                    AdviceTemplateID = 10,
+                    Title = "Steady Saver",
+                    Description = "Your child has made meaningful progress toward at least one savings goal, showing patience and planning ability.",
+                    ActionSteps = "[\"Highlight how close they are to their goal to keep momentum\",\"Discuss what they will do once they reach it\",\"Suggest adding a stretch goal for extra motivation\"]",
+                    Type = "Strength",
+                    TriggerKey = "SAVING_PROGRESS",
+                    Priority = 2
+                }
+            );
             // ==================== STORY QUIZ TEMPLATE CONFIGURATION ====================
 
             modelBuilder.Entity<StoryQuizTemplate>(entity =>

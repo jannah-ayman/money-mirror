@@ -13,6 +13,6 @@ namespace MoneyMirror.Core.Interfaces
             SubmitAnswerAsync(int childId, SubmitQuizAnswerDto dto);
 
         // Called by weekly Hangfire job - returns summary of last 7 answers per child
-        Task<List<ChildQuizSummaryDto>> GetWeeklyQuizSummariesAsync();
+        //Task<List<ChildQuizSummaryDto>> GetWeeklyQuizSummariesAsync();
     }
 }
