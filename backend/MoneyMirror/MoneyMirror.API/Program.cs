@@ -11,7 +11,7 @@ using System.Text;
 using Hangfire;
 using Hangfire.SqlServer;
 using System.Text.Json.Serialization;
-
+using MoneyMirror.Infrastructure.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,6 +81,8 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IInsightService, InsightService>();
 builder.Services.AddScoped<IAnalysisService, AnalysisService>(); 
 builder.Services.AddScoped<IWeeklyPersonalityUpdateService, WeeklyPersonalityUpdateService>();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ==================== JWT AUTHENTICATION CONFIGURATION ====================
 // Read JWT settings from appsettings.json
@@ -227,7 +229,7 @@ app.UseAuthentication();
 
 // 5. AUTHORIZATION (checks if user has permission)
 app.UseAuthorization();
-
+app.MapHub<NotificationHub>("/hubs/notifications");
 // 6. HANGFIRE DASHBOARD (optional - for monitoring background jobs)
 // Access at: https://localhost:7XXX/hangfire
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
@@ -265,6 +267,11 @@ RecurringJob.AddOrUpdate<IWeeklyPersonalityUpdateService>(
     "weekly-personality-update",
     service => service.RunWeeklyUpdateAsync(),
     Cron.Weekly(DayOfWeek.Saturday, 4)); // Every Saturday at 4 AM
+// Schedule daily expense reminder notifications at 4:00 PM
+RecurringJob.AddOrUpdate<INotificationService>(
+    "daily-expense-reminders",
+    service => service.SendDailyExpenseRemindersAsync(),
+    "0 16 * * *"); // Runs daily at 4:00 PM
 
 // ==================== RUN THE APPLICATION ====================
 Console.WriteLine("Money Mirror API is starting...");

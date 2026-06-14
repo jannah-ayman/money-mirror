@@ -63,7 +63,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                 try
                 {
-                    // STEP 1: CREATE CHILD (same as before)
+                    // STEP 1: CREATE CHILD 
                     var child = new Child
                     {
                         FName = dto.ChildFirstName,

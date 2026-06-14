@@ -11,11 +11,13 @@ namespace MoneyMirror.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AchievementService> _logger;
+        private readonly INotificationService _notificationService;
 
-        public AchievementService(ApplicationDbContext context, ILogger<AchievementService> logger)
+        public AchievementService(ApplicationDbContext context, ILogger<AchievementService> logger, INotificationService notificationService)
         {
             _context = context;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task CheckAndUnlockAsync(int childId, string category)
@@ -51,9 +53,21 @@ namespace MoneyMirror.Infrastructure.Services
                     EarnedDate = DateTime.UtcNow
                 });
 
+                await _notificationService.NotifyChildAsync(
+                    childId,
+                    "New Badge Unlocked! 🏅",
+                    $"You just earned the \"{achievement.Name}\" badge! Check your trophy case.",
+                    "/achievements"
+                );
+                await _notificationService.NotifyAllParentsOfChildAsync(
+                    childId,
+                    "Achievement Unlocked! 🎖️",
+                    $"{child.FName} earned the \"{achievement.Name}\" badge!",
+                    $"/children/{childId}/achievements"
+                );
+
                 _logger.LogInformation("Child {ChildId} unlocked achievement: {Name}", childId, achievement.Name);
             }
-
             await _context.SaveChangesAsync();
         }
 

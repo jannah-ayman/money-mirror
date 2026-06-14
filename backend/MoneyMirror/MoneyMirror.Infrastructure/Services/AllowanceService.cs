@@ -15,13 +15,16 @@ namespace MoneyMirror.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AllowanceService> _logger;
+        private readonly INotificationService _notificationService;
 
         public AllowanceService(
             ApplicationDbContext context,
-            ILogger<AllowanceService> logger)
+            ILogger<AllowanceService> logger,
+            INotificationService notificationService)
         {
             _context = context;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         // ==================== HELPER METHOD: VERIFY PARENT-CHILD RELATIONSHIP ====================
@@ -739,7 +742,18 @@ namespace MoneyMirror.Infrastructure.Services
                     // STEP 4: Save and commit
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
-
+                    await _notificationService.NotifyChildAsync(
+                            allowance.ChildID,
+                            "Allowance Received! 🎉",
+                            $"You just received {allowance.Amount:F2} EGP! Check your balance.",
+                            "/balance"
+                        );
+                    await _notificationService.NotifyAllParentsOfChildAsync(
+                        allowance.ChildID,
+                        "Allowance Sent 💰",
+                        $"{allowance.Child.FName} received their {allowance.Type.ToLower()} allowance of {allowance.Amount:F2} EGP.",
+                        $"/children/{allowance.ChildID}"
+                    );
                     _logger.LogInformation(
                         $"✅ Credited {allowance.Amount} to child {allowance.ChildID}. New balance: {allowance.Child.CurrentBalance}");
                 }
