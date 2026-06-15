@@ -264,7 +264,19 @@ namespace MoneyMirror.Infrastructure.Services
                     _context.SavingsGoals.Update(goal);
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+                    if (!goalJustCompleted)
+                    {
+                        decimal progressPercent = goal.TargetAmount > 0
+                            ? Math.Round((goal.CurrentAmount / goal.TargetAmount) * 100, 1)
+                            : 0;
 
+                        await _notificationService.NotifyAllParentsOfChildAsync(
+                            childId,
+                            "Goal Progress! 💪",
+                            $"{child.FName} added {actualAmount:F2} EGP to their \"{goal.Title}\" goal. Progress: {progressPercent}%",
+                            $"/children/{childId}/goals"
+                        );
+                    }
                     if (goalJustCompleted)
                         await _achievementService.CheckAndUnlockAsync(childId, "Goal");
                     if (goalJustCompleted)
@@ -463,11 +475,16 @@ namespace MoneyMirror.Infrastructure.Services
                             ParentID = parentId
                         });
                     }
-
+                    var goalTitle = goal.Title;
                     _context.SavingsGoals.Remove(goal);
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
-
+                    await _notificationService.NotifyChildAsync(
+                            childId,
+                            "Challenge Removed 📢",
+                            $"Your parent removed the \"{goalTitle}\" challenge goal.",
+                            "/goals"
+                        );
                     _logger.LogInformation("Parent {ParentId} deleted challenge {GoalId} for child {ChildId}", parentId, goalId, childId);
 
                     return (true, "Challenge deleted successfully.", string.Empty);

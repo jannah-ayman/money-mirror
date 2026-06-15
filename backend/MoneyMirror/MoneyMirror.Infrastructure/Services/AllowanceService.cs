@@ -124,7 +124,20 @@ namespace MoneyMirror.Infrastructure.Services
                 // STEP 4: Save changes to database
                 // This actually executes the UPDATE or INSERT in the database
                 await _context.SaveChangesAsync();
+                string schedule = dto.Type switch
+                {
+                    "Daily" => $"every day at {dto.DailyHour:D2}:00",
+                    "Weekly" => $"every {dto.WeeklyDay}",
+                    "Monthly" => $"on the {dto.MonthlyDay} of each month",
+                    _ => dto.Type
+                };
 
+                await _notificationService.NotifyChildAsync(
+                    childId,
+                    "Allowance Updated! 📅",
+                    $"Your allowance has been updated to {dto.Amount:F2} EGP {schedule}.",
+                    "/balance"
+                );
                 return (true, "Allowance settings updated successfully");
             }
             catch (Exception ex)
@@ -241,7 +254,14 @@ namespace MoneyMirror.Infrastructure.Services
                     // STEP 5: Save changes and commit transaction
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
-
+                    await _notificationService.NotifyChildAsync(
+                        childId,
+                        "Bonus Received! 🎁",
+                        string.IsNullOrWhiteSpace(dto.Reason)
+                            ? $"Your parent just gave you {dto.Amount:F2} EGP bonus!"
+                            : $"Your parent just gave you {dto.Amount:F2} EGP bonus: {dto.Reason}",
+                        "/balance"
+                    );
                     _logger.LogInformation($"Bonus of {dto.Amount} given to child {childId} by parent {parentId}. New balance: {child.CurrentBalance}");
 
                     return (true, child.CurrentBalance, string.Empty);
