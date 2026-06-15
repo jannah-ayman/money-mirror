@@ -16,12 +16,15 @@ namespace MoneyMirror.Infrastructure.Services
         private readonly ApplicationDbContext _context;
         private readonly ILogger<ExpenseService> _logger;
         private readonly IAchievementService _achievementService;
+        private readonly INotificationService _notificationService;
 
-        public ExpenseService(ApplicationDbContext context, ILogger<ExpenseService> logger, IAchievementService achievementService)
+        public ExpenseService(ApplicationDbContext context, ILogger<ExpenseService> logger, IAchievementService achievementService, INotificationService notificationService
+)
         {
             _context = context;
             _logger = logger;
             _achievementService = achievementService;
+            _notificationService = notificationService;
         }
 
         // ==================== HELPER METHOD: VERIFY PARENT-CHILD RELATIONSHIP ====================
@@ -110,7 +113,12 @@ namespace MoneyMirror.Infrastructure.Services
                     await transaction.CommitAsync();
 
                     await _achievementService.CheckAndUnlockAsync(childId, "Expense");
-
+                    await _notificationService.NotifyAllParentsOfChildAsync(
+                            childId,
+                            "New Expense Logged 💸",
+                            $"{child.FName} just spent {dto.MoneyAmount:F2} EGP on {category.Name}.",
+                            $"/children/{childId}/expenses"
+                        );
                     _logger.LogInformation(
                         "Child {ChildId} logged expense: Category={Category}, Amount={Amount}. New balance: {Balance}",
                         childId, category.Name, dto.MoneyAmount, child.CurrentBalance);

@@ -13,12 +13,14 @@ namespace MoneyMirror.Infrastructure.Services
         private readonly ILogger<GoalService> _logger;
 
         private readonly IAchievementService _achievementService;
+        private readonly INotificationService _notificationService;
 
-        public GoalService(ApplicationDbContext context, ILogger<GoalService> logger, IAchievementService achievementService)
+        public GoalService(ApplicationDbContext context, ILogger<GoalService> logger, IAchievementService achievementService, INotificationService notificationService  )
         {
             _context = context;
             _logger = logger;
             _achievementService = achievementService;
+            _notificationService = notificationService;
         }
 
         private async Task<bool> IsParentLinkedToChildAsync(int parentId, int childId) =>
@@ -62,11 +64,18 @@ namespace MoneyMirror.Infrastructure.Services
                     ChildID = childId,
                     StartDate = DateTime.UtcNow
                 };
-
+                var child = await _context.Children.FindAsync(childId);
+                if (child == null)
+                    return (false, null, "Child not found.");
                 _context.SavingsGoals.Add(goal);
                 await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Child {ChildId} created personal goal: {Title}", childId, goal.Title);
+                await _notificationService.NotifyAllParentsOfChildAsync(
+                childId,
+                "New Goal Created! 🎯",
+                $"{child.FName} just created a new savings goal: \"{goal.Title}\".",
+                $"/children/{childId}/goals"
+            );
+              _logger.LogInformation("Child {ChildId} created personal goal: {Title}", childId, goal.Title);
 
                 return (true, MapToDto(goal), string.Empty);
             }
@@ -108,6 +117,12 @@ namespace MoneyMirror.Infrastructure.Services
 
                 _context.SavingsGoals.Add(goal);
                 await _context.SaveChangesAsync();
+                await _notificationService.NotifyChildAsync(
+                    childId,
+                    "New Challenge! 🏅",
+                    $"Your parent set you a new challenge: \"{goal.Title}\". Can you do it?",
+                    $"/goals/{goal.GoalID}"
+                );
 
                 _logger.LogInformation("Parent {ParentId} created challenge for child {ChildId}: {Title}", parentId, childId, goal.Title);
 
@@ -249,10 +264,36 @@ namespace MoneyMirror.Infrastructure.Services
                     _context.SavingsGoals.Update(goal);
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+                    if (!goalJustCompleted)
+                    {
+                        decimal progressPercent = goal.TargetAmount > 0
+                            ? Math.Round((goal.CurrentAmount / goal.TargetAmount) * 100, 1)
+                            : 0;
 
+                        await _notificationService.NotifyAllParentsOfChildAsync(
+                            childId,
+                            "Goal Progress! 💪",
+                            $"{child.FName} added {actualAmount:F2} EGP to their \"{goal.Title}\" goal. Progress: {progressPercent}%",
+                            $"/children/{childId}/goals"
+                        );
+                    }
                     if (goalJustCompleted)
                         await _achievementService.CheckAndUnlockAsync(childId, "Goal");
-
+                    if (goalJustCompleted)
+                    {
+                        await _notificationService.NotifyChildAsync(
+                            childId,
+                            "Goal Completed! 🎉",
+                            $"Amazing! You reached your \"{goal.Title}\" goal!",
+                            $"/goals/{goal.GoalID}"
+                        );
+                        await _notificationService.NotifyAllParentsOfChildAsync(
+                            childId,
+                            "Goal Completed! 🏆",
+                            $"{child.FName} just completed their \"{goal.Title}\" savings goal!",
+                            $"/children/{childId}/goals"
+                        );
+                    }
                     return (true, child.CurrentBalance, goal.CurrentAmount, string.Empty);
                 }
                 catch (Exception ex)
@@ -283,6 +324,18 @@ namespace MoneyMirror.Infrastructure.Services
                 {
                     goal.Status = "Failure";
                     failedCount++;
+                    await _notificationService.NotifyChildAsync(
+                        goal.ChildID,
+                        "Challenge Expired ⏰",
+                        $"Your \"{goal.Title}\" goal has expired. Keep trying!",
+                        "/goals"
+                    );
+                    await _notificationService.NotifyAllParentsOfChildAsync(
+                        goal.ChildID,
+                        "Goal Expired",
+                        $"{goal.Child.FName}'s \"{goal.Title}\" goal expired without completion.",
+                        $"/children/{goal.ChildID}/goals"
+                    );
 
                     // Auto-refund challenges only
                     if (goal.IsChallenge && goal.CurrentAmount > 0)
@@ -422,11 +475,16 @@ namespace MoneyMirror.Infrastructure.Services
                             ParentID = parentId
                         });
                     }
-
+                    var goalTitle = goal.Title;
                     _context.SavingsGoals.Remove(goal);
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
-
+                    await _notificationService.NotifyChildAsync(
+                            childId,
+                            "Challenge Removed 📢",
+                            $"Your parent removed the \"{goalTitle}\" challenge goal.",
+                            "/goals"
+                        );
                     _logger.LogInformation("Parent {ParentId} deleted challenge {GoalId} for child {ChildId}", parentId, goalId, childId);
 
                     return (true, "Challenge deleted successfully.", string.Empty);

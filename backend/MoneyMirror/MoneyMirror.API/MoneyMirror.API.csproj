@@ -1,54 +1,58 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Validators\Character\**" />
-    <Compile Remove="wwwroot\images\aura\**" />
-    <Compile Remove="wwwroot\images\cosmo\**" />
-    <Compile Remove="wwwroot\images\luna\**" />
-    <Compile Remove="wwwroot\images\nova\**" />
-    <Compile Remove="wwwroot\images\stella\**" />
-    <Content Remove="Validators\Character\**" />
-    <Content Remove="wwwroot\images\aura\**" />
-    <Content Remove="wwwroot\images\cosmo\**" />
-    <Content Remove="wwwroot\images\luna\**" />
-    <Content Remove="wwwroot\images\nova\**" />
-    <Content Remove="wwwroot\images\stella\**" />
-    <EmbeddedResource Remove="Validators\Character\**" />
-    <EmbeddedResource Remove="wwwroot\images\aura\**" />
-    <EmbeddedResource Remove="wwwroot\images\cosmo\**" />
-    <EmbeddedResource Remove="wwwroot\images\luna\**" />
-    <EmbeddedResource Remove="wwwroot\images\nova\**" />
-    <EmbeddedResource Remove="wwwroot\images\stella\**" />
-    <None Remove="Validators\Character\**" />
-    <None Remove="wwwroot\images\aura\**" />
-    <None Remove="wwwroot\images\cosmo\**" />
-    <None Remove="wwwroot\images\luna\**" />
-    <None Remove="wwwroot\images\nova\**" />
-    <None Remove="wwwroot\images\stella\**" />
-  </ItemGroup>
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.22" />
-    <PackageReference Include="Hangfire.SqlServer" Version="1.8.22" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.23" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.23">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Remove="Validators\Character\**" />
+		<Compile Remove="wwwroot\images\aura\**" />
+		<Compile Remove="wwwroot\images\cosmo\**" />
+		<Compile Remove="wwwroot\images\luna\**" />
+		<Compile Remove="wwwroot\images\nova\**" />
+		<Compile Remove="wwwroot\images\stella\**" />
+		<Content Remove="Validators\Character\**" />
+		<Content Remove="wwwroot\images\aura\**" />
+		<Content Remove="wwwroot\images\cosmo\**" />
+		<Content Remove="wwwroot\images\luna\**" />
+		<Content Remove="wwwroot\images\nova\**" />
+		<Content Remove="wwwroot\images\stella\**" />
+		<EmbeddedResource Remove="Validators\Character\**" />
+		<EmbeddedResource Remove="wwwroot\images\aura\**" />
+		<EmbeddedResource Remove="wwwroot\images\cosmo\**" />
+		<EmbeddedResource Remove="wwwroot\images\luna\**" />
+		<EmbeddedResource Remove="wwwroot\images\nova\**" />
+		<EmbeddedResource Remove="wwwroot\images\stella\**" />
+		<None Remove="Validators\Character\**" />
+		<None Remove="wwwroot\images\aura\**" />
+		<None Remove="wwwroot\images\cosmo\**" />
+		<None Remove="wwwroot\images\luna\**" />
+		<None Remove="wwwroot\images\nova\**" />
+		<None Remove="wwwroot\images\stella\**" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\MoneyMirror.Core\MoneyMirror.Core.csproj" />
-    <ProjectReference Include="..\MoneyMirror.Infrastructure\MoneyMirror.Infrastructure.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="FluentValidation" Version="12.1.1" />
+		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+		<PackageReference Include="Hangfire.AspNetCore" Version="1.8.22" />
+		<PackageReference Include="Hangfire.SqlServer" Version="1.8.22" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.23" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.23">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\MoneyMirror.Core\MoneyMirror.Core.csproj" />
+		<ProjectReference Include="..\MoneyMirror.Infrastructure\MoneyMirror.Infrastructure.csproj" />
+	</ItemGroup>
 
 </Project>
