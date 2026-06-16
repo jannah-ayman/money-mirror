@@ -138,19 +138,5 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        [HttpGet("test")]
-        [AllowAnonymous]
-        public ActionResult<ApiResponse<object>> Test()
-        {
-            return Ok(ApiResponse<object>.SuccessResponse(
-                new
-                {
-                    Message = "Character controller is working!",
-                    AvailableCharacters = new[] { "Nova", "Luna", "Cosmo", "Aura" },
-                    TotalStates = 10
-                },
-                "Test successful"
-            ));
-        }
     }
 }

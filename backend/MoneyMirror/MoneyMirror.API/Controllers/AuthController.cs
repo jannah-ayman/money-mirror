@@ -219,24 +219,6 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// Test endpoint to verify authentication is working.
-        /// GET /api/auth/test-protected
-        /// Requires valid JWT token in Authorization header.
-        /// <returns>Success message with parent info</returns>
-        [HttpGet("test-protected")]
-        [Authorize]
-        public ActionResult<ApiResponse<object>> TestProtected()
-        {
-            var parentId = User.FindFirst("ParentId")?.Value;
-            var email = User.FindFirst("email")?.Value;
-            var name = User.FindFirst("name")?.Value;
-
-            return Ok(ApiResponse<object>.SuccessResponse(
-                new { ParentId = parentId, Email = email, Name = name },
-                "You are authenticated!"
-            ));
-        }
-
         
         // ==================== PASSWORD RESET ====================
 

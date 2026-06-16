@@ -183,31 +183,5 @@ namespace MoneyMirror.API.Controllers
                 $"Found {moods.Count} mood{(moods.Count == 1 ? "" : "s")}"
             ));
         }
-
-        // ==================== TEST ENDPOINT ====================
-
-        /// <summary>
-        /// Test endpoint to verify expense controller is working.
-        /// GET /api/expense/test
-        /// </summary>
-        [HttpGet("test")]
-        [Authorize]
-        public ActionResult<ApiResponse<object>> Test()
-        {
-            var role = User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
-            var childId = User.FindFirst("ChildId")?.Value;
-            var parentId = User.FindFirst("ParentId")?.Value;
-
-            return Ok(ApiResponse<object>.SuccessResponse(
-                new
-                {
-                    Message = "Expense controller is working!",
-                    Role = role,
-                    ChildId = childId,
-                    ParentId = parentId
-                },
-                "Test successful"
-            ));
-        }
     }
 }

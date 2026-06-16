@@ -223,29 +223,6 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// Test endpoint to verify child endpoints are working.
-        /// GET /api/children/test
-        [HttpGet("test")]
-        [Authorize]
-        public ActionResult<ApiResponse<object>> Test()
-        {
-            var role = User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
-            var childId = User.FindFirst("ChildId")?.Value;
-            var parentId = User.FindFirst("ParentId")?.Value;
-
-            return Ok(ApiResponse<object>.SuccessResponse(
-                new
-                {
-                    Message = "Children controller is working!",
-                    Role = role,
-                    ChildId = childId,
-                    ParentId = parentId
-                },
-                "Test successful"
-            ));
-        }
-        // Add these endpoints to your ChildrenController.cs class
-
         // ==================== CHILD DASHBOARD & PROFILE ENDPOINTS ====================
 
         /// <summary>

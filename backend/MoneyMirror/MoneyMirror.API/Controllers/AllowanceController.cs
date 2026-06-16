@@ -300,50 +300,5 @@ namespace MoneyMirror.API.Controllers
                 info.Message
             ));
         }
-
-        // ==================== TEST ENDPOINT ====================
-
-        /// <summary>
-        /// Test endpoint to verify allowance controller is working.
-        /// GET /api/allowance/test
-        /// </summary>
-        [HttpGet("test")]
-        [Authorize]
-        public ActionResult<ApiResponse<object>> Test()
-        {
-            var role = User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
-            var childId = User.FindFirst("ChildId")?.Value;
-            var parentId = User.FindFirst("ParentId")?.Value;
-
-            return Ok(ApiResponse<object>.SuccessResponse(
-                new
-                {
-                    Message = "Allowance controller is working!",
-                    Role = role,
-                    ChildId = childId,
-                    ParentId = parentId
-                },
-                "Test successful"
-            ));
-        }
-        /// <summary>
-        /// TESTING ONLY: Manually trigger the allowance credit job.
-        /// DELETE THIS BEFORE PRODUCTION!
-        /// GET /api/allowance/test-credit-job
-        /// </summary>
-        [HttpGet("test-credit-job")]
-        [Authorize(Roles = "Parent")]
-        public async Task<ActionResult<ApiResponse<object>>> TestCreditJob()
-        {
-            _logger.LogInformation("Manually triggering allowance credit job");
-
-            // Call the background job method directly
-            int credited = await _allowanceService.CreditScheduledAllowancesAsync();
-
-            return Ok(ApiResponse<object>.SuccessResponse(
-                new { AllowancesCredited = credited },
-                $"Job completed. Credited {credited} allowance(s)."
-            ));
-        }
     }
 }
