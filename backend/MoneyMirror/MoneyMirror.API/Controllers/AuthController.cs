@@ -256,26 +256,6 @@ namespace MoneyMirror.API.Controllers
         }
 
         /// <summary>
-        /// Verifies password reset code before showing password input.
-        /// This is optional - can skip and go straight to reset-password-with-code.
-        /// POST /api/auth/verify-reset-code
-        /// </summary>
-        [HttpPost("verify-reset-code")]
-        [AllowAnonymous]
-        public async Task<ActionResult<ApiResponse<object>>> VerifyResetCode(
-            [FromBody] VerifyResetCodeDto dto)
-        {
-            var (success, message) = await _authService.VerifyResetCodeAsync(dto);
-
-            if (!success)
-            {
-                return BadRequest(ApiResponse<object>.ErrorResponse(message));
-            }
-
-            return Ok(ApiResponse<object>.SuccessResponse(null, message));
-        }
-
-        /// <summary>
         /// Resets password using verified code.
         /// Automatically logs in parent after successful reset.
         /// POST /api/auth/reset-password-with-code

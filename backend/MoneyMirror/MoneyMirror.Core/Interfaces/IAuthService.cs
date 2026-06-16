@@ -46,14 +46,6 @@ namespace MoneyMirror.Core.Interfaces
         Task<(bool success, string message)> ForgotPasswordAsync(ForgotPasswordDto dto);
 
         /// <summary>
-        /// Verifies the password reset code before allowing password change.
-        /// This is an optional step - can be used to show "code is valid" message.
-        /// </summary>
-        /// <param name="dto">Email and code</param>
-        /// <returns>Tuple: (success flag, message)</returns>
-        Task<(bool success, string message)> VerifyResetCodeAsync(VerifyResetCodeDto dto);
-
-        /// <summary>
         /// Resets password using verified code.
         /// Automatically logs in parent after successful reset.
         /// </summary>

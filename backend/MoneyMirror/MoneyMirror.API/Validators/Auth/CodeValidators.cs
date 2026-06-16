@@ -38,27 +38,6 @@ namespace MoneyMirror.API.Validators.Auth
                 .WithMessage("Invalid email format");
         }
     }
-
-    public class VerifyResetCodeDtoValidator : AbstractValidator<VerifyResetCodeDto>
-    {
-        public VerifyResetCodeDtoValidator()
-        {
-            RuleFor(x => x.Email)
-                .NotEmpty()
-                .WithMessage("Email is required")
-                .EmailAddress()
-                .WithMessage("Invalid email format");
-
-            RuleFor(x => x.Code)
-                .NotEmpty()
-                .WithMessage("Reset code is required")
-                .Length(6)
-                .WithMessage("Reset code must be exactly 6 digits")
-                .Matches(@"^\d{6}$")
-                .WithMessage("Reset code must contain only numbers");
-        }
-    }
-
     public class ResetPasswordWithCodeDtoValidator : AbstractValidator<ResetPasswordWithCodeDto>
     {
         public ResetPasswordWithCodeDtoValidator()

@@ -366,10 +366,8 @@ namespace MoneyMirror.Infrastructure.Services
         // ==================== PART 2: PASSWORD RESET ====================
         // Add these methods to your AuthService.cs class
 
-        /// <summary>
         /// STEP 1: REQUEST PASSWORD RESET (Updated to send code instead of link)
         /// Sends 6-digit code to email.
-        /// </summary>
         public async Task<(bool success, string message)> ForgotPasswordAsync(ForgotPasswordDto dto)
         {
             try
@@ -421,52 +419,10 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// STEP 2: VERIFY RESET CODE (Optional - can skip and go straight to reset)
-        /// Checks if the code is valid before showing "enter new password" screen.
-        /// This gives immediate feedback to user: "code is correct, proceed".
-        /// </summary>
-        public async Task<(bool success, string message)> VerifyResetCodeAsync(VerifyResetCodeDto dto)
-        {
-            try
-            {
-                // STEP 1: Find parent
-                var parent = await _context.Parents
-                    .FirstOrDefaultAsync(p => p.Email.ToLower() == dto.Email.ToLower().Trim());
-
-                if (parent == null)
-                {
-                    _logger.LogWarning($"Code verification for non-existent email: {dto.Email}");
-                    return (false, "Invalid email or code");
-                }
-
-                // STEP 2: Verify code
-                if (parent.PasswordResetCode != dto.Code.Trim())
-                {
-                    _logger.LogWarning($"Invalid reset code for: {dto.Email}");
-                    return (false, "Invalid or incorrect code");
-                }
-
-                // STEP 3: Check expiration
-                if (CodeGenerator.IsCodeExpired(parent.PasswordResetCodeExpiry))
-                {
-                    _logger.LogWarning($"Expired reset code for: {dto.Email}");
-                    return (false, "This code has expired. Please request a new one.");
-                }
-
-                _logger.LogInformation($"Reset code verified for: {dto.Email}");
-
-                return (true, "Code is valid. You can now set your new password.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error verifying reset code: {ex.Message}");
-                return (false, "An error occurred. Please try again.");
-            }
-        }
+        
 
         /// <summary>
-        /// STEP 3: RESET PASSWORD WITH CODE
+        /// RESET PASSWORD WITH CODE
         /// Sets new password after verifying the code.
         /// Automatically logs in the user after successful reset.
         /// </summary>
