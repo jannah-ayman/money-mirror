@@ -61,9 +61,11 @@ namespace MoneyMirror.API.Controllers
             _logger.LogInformation("Child {ChildId} added {Amount} to goal {GoalId}", childId, dto.Amount, goalId);
 
             return Ok(ApiResponse<object>.SuccessResponse(
-                new { NewBalance = newBalance, NewGoalAmount = newGoalAmount },
-                "Money added to goal! Keep it up! 💪"
-            ));
+                     new { NewBalance = newBalance, NewGoalAmount = newGoalAmount },
+                     string.IsNullOrEmpty(errorMessage)
+                         ? "Money added to goal! Keep it up! 💪"
+                         : errorMessage
+                 ));
         }
 
         /// GET /api/goal/my-goals

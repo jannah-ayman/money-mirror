@@ -59,12 +59,6 @@ namespace MoneyMirror.Infrastructure.Services
                     $"You just earned the \"{achievement.Name}\" badge! Check your trophy case.",
                     "/achievements"
                 );
-                await _notificationService.NotifyAllParentsOfChildAsync(
-                    childId,
-                    "Achievement Unlocked! 🎖️",
-                    $"{child.FName} earned the \"{achievement.Name}\" badge!",
-                    $"/children/{childId}/achievements"
-                );
 
                 _logger.LogInformation("Child {ChildId} unlocked achievement: {Name}", childId, achievement.Name);
             }

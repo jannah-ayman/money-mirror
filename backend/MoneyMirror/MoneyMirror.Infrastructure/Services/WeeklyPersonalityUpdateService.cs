@@ -14,6 +14,7 @@ namespace MoneyMirror.Infrastructure.Services
         private readonly ILogger<WeeklyPersonalityUpdateService> _logger;
         private readonly HttpClient _httpClient;
         private readonly string _aiServiceUrl;
+        private readonly INotificationService _notificationService;
 
         private const int WindowDays = 30;
 
@@ -21,12 +22,14 @@ namespace MoneyMirror.Infrastructure.Services
             ApplicationDbContext context,
             ILogger<WeeklyPersonalityUpdateService> logger,
             IHttpClientFactory httpClientFactory,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            INotificationService notificationService)
         {
             _context = context;
             _logger = logger;
             _httpClient = httpClientFactory.CreateClient();
             _aiServiceUrl = configuration["AIService:Url"] ?? "http://localhost:5000";
+            _notificationService = notificationService;
         }
 
         public async Task RunWeeklyUpdateAsync()
@@ -117,7 +120,12 @@ namespace MoneyMirror.Infrastructure.Services
                     child.GoalOrientedPlannerScore = (decimal)result.Dimensions.GoalOrientedPlanner;
                     child.BargainHunterScore = (decimal)result.Dimensions.BargainHunter;
                     child.LastPersonalityUpdateDate = DateTime.UtcNow;
-
+                    await _notificationService.NotifyAllParentsOfChildAsync(
+                        child.ChildID,
+                        "Personality Updated 🧠",
+                        $"{child.FName}'s financial personality has been updated to {result.ParentName}.",
+                        $"/children/{child.ChildID}/analysis"
+                    );
                     _context.Children.Update(child);
                     updated++;
 
