@@ -264,6 +264,11 @@ namespace MoneyMirror.Infrastructure.Services
                     _context.SavingsGoals.Update(goal);
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+                    await _notificationService.CheckAndNotifyLowBalanceAsync(childId);
+                    string warningMessage = dto.Amount > actualAmount
+                        ? $"You added more than needed. Only {actualAmount:F2} EGP was taken from your balance."
+                        : string.Empty;
+
                     if (!goalJustCompleted)
                     {
                         decimal progressPercent = goal.TargetAmount > 0
@@ -281,12 +286,6 @@ namespace MoneyMirror.Infrastructure.Services
                         await _achievementService.CheckAndUnlockAsync(childId, "Goal");
                     if (goalJustCompleted)
                     {
-                        await _notificationService.NotifyChildAsync(
-                            childId,
-                            "Goal Completed! 🎉",
-                            $"Amazing! You reached your \"{goal.Title}\" goal!",
-                            $"/goals/{goal.GoalID}"
-                        );
                         await _notificationService.NotifyAllParentsOfChildAsync(
                             childId,
                             "Goal Completed! 🏆",

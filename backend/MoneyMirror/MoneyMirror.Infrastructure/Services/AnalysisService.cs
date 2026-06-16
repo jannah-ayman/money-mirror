@@ -11,6 +11,8 @@ namespace MoneyMirror.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AnalysisService> _logger;
+        private readonly INotificationService _notificationService;
+
 
         private const int AnalysisWindowDays = 14;
 
@@ -21,10 +23,11 @@ namespace MoneyMirror.Infrastructure.Services
             { "Monthly",  6 }
         };
 
-        public AnalysisService(ApplicationDbContext context, ILogger<AnalysisService> logger)
+        public AnalysisService(ApplicationDbContext context, ILogger<AnalysisService> logger, INotificationService notificationService)
         {
             _context = context;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task<(bool success, ChildAnalysisDto? analysis, string errorMessage)>
@@ -114,6 +117,15 @@ namespace MoneyMirror.Infrastructure.Services
                         triggeredAlerts.Add(card);
                     else
                         triggeredStrengths.Add(card);
+                }
+                foreach (var alert in triggeredAlerts)
+                {
+                    await _notificationService.NotifyAllParentsOfChildAsync(
+                        childId,
+                        $"Alert: {alert.Title}",
+                        alert.DynamicDetail,
+                        $"/children/{childId}/analysis"
+                    );
                 }
 
                 triggeredAlerts = triggeredAlerts.OrderBy(c => c.Priority).ToList();

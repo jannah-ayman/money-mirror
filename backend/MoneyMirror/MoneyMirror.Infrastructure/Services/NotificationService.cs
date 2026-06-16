@@ -257,5 +257,76 @@ namespace MoneyMirror.Infrastructure.Services
                 _logger.LogError(ex, "Error sending daily expense reminders");
             }
         }
+        public async Task CheckAndNotifyLowBalanceAsync(int childId)
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
+
+                var allowance = await _context.Allowances
+                    .Include(a => a.Child)
+                    .FirstOrDefaultAsync(a => a.ChildID == childId
+                                           && a.IsRecurring
+                                           && a.IsActive
+                                           && (a.Type == "Weekly" || a.Type == "Monthly"));
+
+                if (allowance == null) return;
+
+                var child = allowance.Child;
+
+                decimal totalEverHad = await _context.Transactions
+                    .Where(t => t.ChildID == childId && t.Amount > 0)
+                    .SumAsync(t => t.Amount);
+
+                if (totalEverHad <= 0) return;
+
+                decimal spentRatio = 1 - (child.CurrentBalance / totalEverHad);
+                bool conditionMet = false;
+                DateTime cycleStart;
+
+                if (allowance.Type == "Weekly")
+                {
+                    int daysRemainingInWeek = 7 - (int)now.DayOfWeek;
+                    conditionMet = spentRatio >= 0.75m && daysRemainingInWeek >= 3;
+                    cycleStart = now.Date.AddDays(-(int)now.DayOfWeek);
+                }
+                else
+                {
+                    int daysRemainingInMonth = DateTime.DaysInMonth(now.Year, now.Month) - now.Day;
+                    conditionMet = spentRatio >= 0.75m && daysRemainingInMonth >= 10;
+                    cycleStart = new DateTime(now.Year, now.Month, 1);
+                }
+
+                if (!conditionMet) return;
+
+                var parentIds = await _context.ParentChildren
+                    .Where(pc => pc.ChildID == childId)
+                    .Select(pc => pc.ParentID)
+                    .ToListAsync();
+
+                foreach (var parentId in parentIds)
+                {
+                    bool alreadyNotified = await _context.Notifications
+                        .AnyAsync(n => n.ParentID == parentId
+                                    && n.Title == $"Low Balance Alert: {child.FName}"
+                                    && n.SentDate >= cycleStart);
+
+                    if (alreadyNotified) continue;
+
+                    int percentSpent = (int)Math.Round(spentRatio * 100);
+
+                    await NotifyParentAsync(
+                        parentId,
+                        $"Low Balance Alert: {child.FName}",
+                        $"{child.FName} has spent {percentSpent}% of their total balance with {(allowance.Type == "Weekly" ? $"{7 - (int)now.DayOfWeek} days left this week" : $"{DateTime.DaysInMonth(now.Year, now.Month) - now.Day} days left this month")}.",
+                        $"/children/{child.ChildID}"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in CheckAndNotifyLowBalanceAsync for child {ChildId}", childId);
+            }
+        }
     }
 }

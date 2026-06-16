@@ -21,5 +21,6 @@ namespace MoneyMirror.Core.Interfaces
             MarkAllAsReadAsync(string targetType, int userId);
 
         Task SendDailyExpenseRemindersAsync();
+        Task CheckAndNotifyLowBalanceAsync(int childId);
     }
 }

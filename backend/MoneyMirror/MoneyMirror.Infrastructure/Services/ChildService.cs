@@ -12,19 +12,7 @@ using System.Text.Json;
 
 namespace MoneyMirror.Infrastructure.Services
 {
-    /// <summary>
-    /// Handles full child onboarding flow, authentication, and management:
-    /// - Creates child
-    /// - Links parent-child
-    /// - Saves questionnaire (with JSON serialization for multi-select fields)
-    /// - Assigns personality profile
-    /// - Generates login code
-    /// - Authenticates child with code
-    /// - Manages refresh tokens
-    /// - Handles logout
-    /// - Manages parent-child relationships
-    /// All steps run inside database transactions where appropriate.
-    /// </summary>
+   
     public class ChildService : IChildService
     {
         private readonly ApplicationDbContext _context;
@@ -51,7 +39,6 @@ namespace MoneyMirror.Infrastructure.Services
 
         /// Completes initial onboarding in ONE request.
         /// The client does NOT send ChildID.
-        /// The backend creates everything safely.
         public async Task<(bool success, QuestionnaireCompletionResponseDto? response, string errorMessage)>
         CompleteInitialProfilingAsync(int parentId, CompleteInitialProfilingDto dto)
         {
@@ -586,14 +573,11 @@ namespace MoneyMirror.Infrastructure.Services
                 return 0;
             }
         }
-        // Add these methods to your ChildService.cs class
 
         // ==================== CHILD DASHBOARD & PROFILE ====================
 
-        /// <summary>
         /// Gets the child's full profile information for "My Profile" screen.
         /// This is simple - just fetch the child and their personality type.
-        /// </summary>
         public async Task<(bool success, ChildProfileResponseDto? profile, string errorMessage)>
             GetMyProfileAsync(int childId)
         {
@@ -639,16 +623,13 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Gets the child's dashboard data for main home screen.
         /// Shows balance, personality, and counts for goals/expenses.
-        /// </summary>
         public async Task<(bool success, ChildDashboardDto? dashboard, string errorMessage)>
-            GetMyDashboardAsync(int childId)
+     GetMyDashboardAsync(int childId)
         {
             try
             {
-                // STEP 1: Find child with personality type
                 var child = await _context.Children
                     .Include(c => c.PersonalityType)
                     .FirstOrDefaultAsync(c => c.ChildID == childId);
@@ -659,25 +640,44 @@ namespace MoneyMirror.Infrastructure.Services
                     return (false, null, "Child not found");
                 }
 
-                // STEP 2: Count active goals (for future use)
-                // For now, we'll return 0 since goals aren't implemented yet
                 int activeGoalsCount = await _context.SavingsGoals
                     .CountAsync(g => g.ChildID == childId && g.Status == "Active");
 
-                // STEP 3: Build dashboard response
+                var allowance = await _context.Allowances
+                    .FirstOrDefaultAsync(a => a.ChildID == childId && a.IsRecurring && a.IsActive);
+
+                bool lowBalanceAlert = false;
+
+                if (allowance != null && allowance.Amount > 0)
+                {
+                    var now = DateTime.UtcNow;
+                    decimal spentRatio = 1 - (child.CurrentBalance / allowance.Amount);
+
+                    if (allowance.Type == "Weekly")
+                    {
+                        int daysRemainingInWeek = 7 - (int)now.DayOfWeek;
+                        lowBalanceAlert = spentRatio >= 0.75m && daysRemainingInWeek >= 3;
+                    }
+                    else if (allowance.Type == "Monthly")
+                    {
+                        int daysRemainingInMonth = DateTime.DaysInMonth(now.Year, now.Month) - now.Day;
+                        lowBalanceAlert = spentRatio >= 0.75m && daysRemainingInMonth >= 10;
+                    }
+                }
+
                 var dashboard = new ChildDashboardDto
                 {
                     FirstName = child.FName,
                     CurrentBalance = child.CurrentBalance,
-                    AvatarUrl = null, // TODO: implement avatar selection later
+                    AvatarUrl = null,
                     PersonalityName = child.PersonalityType?.ChildName ?? "Little Learner",
                     FunFacts = child.PersonalityType?.FunFacts,
-                    UnloggedExpensesCount = 0, // Not tracking this yet
-                    ActiveGoalsCount = activeGoalsCount
+                    UnloggedExpensesCount = 0,
+                    ActiveGoalsCount = activeGoalsCount,
+                    LowBalanceAlert = lowBalanceAlert
                 };
 
                 _logger.LogInformation($"Dashboard loaded for child {childId}");
-
                 return (true, dashboard, string.Empty);
             }
             catch (Exception ex)
@@ -686,25 +686,19 @@ namespace MoneyMirror.Infrastructure.Services
                 return (false, null, "An error occurred while loading your dashboard");
             }
         }
-        // Add these methods to your ChildService.cs class
-
         // ==================== PARENT MANAGEMENT OF CHILDREN ====================
 
-        /// <summary>
         /// Helper method to verify parent-child relationship.
         /// Returns true only if the parent is linked to this child.
-        /// </summary>
         private async Task<bool> IsParentLinkedToChildAsync(int parentId, int childId)
         {
             return await _context.ParentChildren
                 .AnyAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
         }
 
-        /// <summary>
         /// Updates a child's basic information.
         /// Parent can change first name, last name, and date of birth.
         /// Age and age group are recalculated automatically.
-        /// </summary>
         public async Task<(bool success, UpdateChildResponseDto? updatedChild, string errorMessage)>
             UpdateChildAsync(int parentId, int childId, UpdateChildDto dto)
         {
@@ -774,11 +768,9 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        /// <summary>
         /// Regenerates a new login code for a child.
         /// Old code becomes invalid immediately.
         /// This is useful if the code is lost or compromised.
-        /// </summary>
         public async Task<(bool success, RegenerateCodeResponseDto? codeInfo, string errorMessage)>
             RegenerateLoginCodeAsync(int parentId, int childId)
         {

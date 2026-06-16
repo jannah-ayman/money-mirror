@@ -111,7 +111,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
-
+                    await _notificationService.CheckAndNotifyLowBalanceAsync(childId);
                     await _achievementService.CheckAndUnlockAsync(childId, "Expense");
                     await _notificationService.NotifyAllParentsOfChildAsync(
                             childId,

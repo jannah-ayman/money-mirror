@@ -15,14 +15,12 @@ namespace MoneyMirror.Infrastructure.Services
         private const int WeeklySummaryCount = 7;
 
         private readonly IAchievementService _achievementService;
-        private readonly INotificationService _notificationService;
 
-        public QuizService(ApplicationDbContext context, ILogger<QuizService> logger, IAchievementService achievementService, INotificationService notificationService)
+        public QuizService(ApplicationDbContext context, ILogger<QuizService> logger, IAchievementService achievementService)
         {
             _context = context;
             _logger = logger;
             _achievementService = achievementService;
-            _notificationService = notificationService;
         }
 
         public async Task<(bool success, NextQuizQuestionDto? question, string message)>
@@ -129,12 +127,6 @@ namespace MoneyMirror.Infrastructure.Services
                 await _context.SaveChangesAsync();
 
                 await _achievementService.CheckAndUnlockAsync(childId, "Quiz");
-                await _notificationService.NotifyAllParentsOfChildAsync(
-                                childId,
-                                "Quiz Completed! 🧠",
-                                $"{child.FName} just answered a financial quiz!",
-                                $"/children/{childId}"
-                            );
                 _logger.LogInformation(
                     "Child {ChildId} answered StoryID {StoryId} with AnswerID {AnswerId}",
                     childId, answer.StoryID, dto.AnswerID);

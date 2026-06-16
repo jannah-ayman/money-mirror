@@ -273,6 +273,7 @@ RecurringJob.AddOrUpdate<INotificationService>(
     service => service.SendDailyExpenseRemindersAsync(),
     "0 16 * * *"); // Runs daily at 4:00 PM
 
+
 // ==================== RUN THE APPLICATION ====================
 Console.WriteLine("Money Mirror API is starting...");
 Console.WriteLine("Swagger documentation available at: https://localhost:7XXX/swagger");
