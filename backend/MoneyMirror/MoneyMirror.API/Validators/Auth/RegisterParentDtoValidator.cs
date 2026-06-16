@@ -60,14 +60,6 @@ namespace MoneyMirror.API.Validators.Auth
                 .WithMessage("Last name cannot exceed 100 characters")
                 .Matches(@"^[a-zA-Z\s'-]+$")
                 .WithMessage("Last name can only contain letters, spaces, hyphens, and apostrophes");
-
-            // Phone number validation (optional)
-            RuleFor(x => x.PhoneNumber)
-                .MaximumLength(20)
-                .WithMessage("Phone number cannot exceed 20 characters")
-                .Matches(@"^[\d\s\-\+\(\)]+$")
-                .WithMessage("Phone number can only contain digits, spaces, hyphens, plus signs, and parentheses")
-                .When(x => !string.IsNullOrWhiteSpace(x.PhoneNumber)); // Only validate if provided
         }
     }
 }

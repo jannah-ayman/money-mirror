@@ -69,7 +69,6 @@ namespace MoneyMirror.Infrastructure.Services
                     HashedPassword = hashedPassword,
                     FName = registerDto.FirstName.Trim(),
                     LName = registerDto.LastName.Trim(),
-                    PhoneNum = registerDto.PhoneNumber?.Trim(),
                     CreatedAt = DateTime.UtcNow,
                     IsEmailConfirmed = false,
 
@@ -599,6 +598,8 @@ namespace MoneyMirror.Infrastructure.Services
 
                 // STEP 3: Check if new email is already in use
                 string normalizedNewEmail = dto.NewEmail.ToLower().Trim();
+                if (normalizedNewEmail == parent.Email.ToLower())
+                    return (false, "This is already your current email address");
 
                 bool emailExists = await _context.Parents
                     .AnyAsync(p => p.Email.ToLower() == normalizedNewEmail
@@ -955,9 +956,6 @@ namespace MoneyMirror.Infrastructure.Services
                 // STEP 3: Update fields
                 parent.FName = updateDto.FirstName.Trim();
                 parent.LName = updateDto.LastName.Trim();
-                parent.PhoneNum = string.IsNullOrWhiteSpace(updateDto.PhoneNumber)
-                    ? null
-                    : updateDto.PhoneNumber.Trim();
 
                 // STEP 4: Save changes
                 _context.Parents.Update(parent);
@@ -1210,7 +1208,6 @@ namespace MoneyMirror.Infrastructure.Services
                     parent.Email = $"deleted_{parent.ParentID}@deleted.local";
                     parent.FName = "Deleted";
                     parent.LName = "User";
-                    parent.PhoneNum = null;
                     parent.HashedPassword = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()); // Random unusable password
 
                     // Clear all tokens
@@ -1279,7 +1276,6 @@ namespace MoneyMirror.Infrastructure.Services
                     Email = parent.Email,
                     FirstName = parent.FName,
                     LastName = parent.LName,
-                    PhoneNumber = parent.PhoneNum,
                     CreatedAt = parent.CreatedAt,
                     IsEmailConfirmed = parent.IsEmailConfirmed,
                     TotalChildren = parent.ParentChildren.Count

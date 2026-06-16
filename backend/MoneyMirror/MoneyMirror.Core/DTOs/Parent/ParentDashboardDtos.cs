@@ -12,9 +12,6 @@
         /// </summary>
         public int ParentID { get; set; }
 
-        /// <summary>
-        /// Parent's email address
-        /// </summary>
         public string Email { get; set; }
 
         /// <summary>
@@ -27,14 +24,6 @@
         /// </summary>
         public string LastName { get; set; }
 
-        /// <summary>
-        /// Parent's phone number (optional)
-        /// </summary>
-        public string? PhoneNumber { get; set; }
-
-        /// <summary>
-        /// When the account was created
-        /// </summary>
         public DateTime CreatedAt { get; set; }
 
         /// <summary>

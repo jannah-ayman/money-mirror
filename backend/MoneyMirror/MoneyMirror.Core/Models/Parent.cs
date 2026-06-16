@@ -23,9 +23,6 @@ namespace MoneyMirror.Core.Models
         [MaxLength(255)]
         public string HashedPassword { get; set; }
 
-        [MaxLength(20)]
-        public string? PhoneNum { get; set; }
-
         [Required]
         [MaxLength(100)]
         public string FName { get; set; }
