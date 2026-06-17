@@ -460,6 +460,29 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
+        public async Task<(bool success, string message, string errorMessage)>
+    UnlinkChildAsync(int parentId, int childId)
+        {
+            try
+            {
+                var link = await _context.ParentChildren
+                    .FirstOrDefaultAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
+
+                if (link == null)
+                    return (false, string.Empty, "This child is not linked to your account");
+
+                _context.ParentChildren.Remove(link);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Parent {ParentId} unlinked child {ChildId}", parentId, childId);
+                return (true, "Child unlinked successfully", string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error unlinking child {ChildId} from parent {ParentId}", childId, parentId);
+                return (false, string.Empty, "An error occurred while unlinking the child");
+            }
+        }
         /// Gets all children linked to a specific parent.
         /// Returns basic information needed for the "Manage Children" tab.
         public async Task<List<ChildSummaryDto>> GetMyChildrenAsync(int parentId)
