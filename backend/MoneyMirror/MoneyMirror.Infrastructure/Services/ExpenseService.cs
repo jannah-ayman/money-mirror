@@ -157,6 +157,35 @@ namespace MoneyMirror.Infrastructure.Services
         {
             try
             {
+                var now = DateTime.UtcNow;
+
+                // Validate dates in the future
+                if (startDate.HasValue && startDate.Value > now)
+                    return (false, null, "Start date cannot be in the future.");
+
+                if (endDate.HasValue && endDate.Value > now)
+                    return (false, null, "End date cannot be in the future.");
+
+                // Validate start date after end date
+                if (startDate.HasValue && endDate.HasValue && startDate.Value > endDate.Value)
+                    return (false, null, "Start date cannot be after end date.");
+
+                // Validate category existence
+                if (categoryId.HasValue)
+                {
+                    bool categoryExists = await _context.ExpenseCategories.AnyAsync(c => c.CategoryID == categoryId.Value);
+                    if (!categoryExists)
+                        return (false, null, "Category not found.");
+                }
+
+                // Validate mood existence
+                if (moodId.HasValue)
+                {
+                    bool moodExists = await _context.Moods.AnyAsync(m => m.MoodID == moodId.Value);
+                    if (!moodExists)
+                        return (false, null, "Mood not found.");
+                }
+
                 // STEP 1: Build query for child's expenses
                 var query = _context.Expenses
                     .Include(e => e.ExpenseCategory)
@@ -171,10 +200,11 @@ namespace MoneyMirror.Infrastructure.Services
                     query = query.Where(e => e.LogDate >= startDate.Value);
                 }
 
-                // Filter by end date
+                // Filter by end date (including the entire end day)
                 if (endDate.HasValue)
                 {
-                    query = query.Where(e => e.LogDate <= endDate.Value);
+                    var endOfDay = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                    query = query.Where(e => e.LogDate <= endOfDay);
                 }
 
                 // Filter by category
@@ -189,13 +219,13 @@ namespace MoneyMirror.Infrastructure.Services
                     query = query.Where(e => e.MoodID == moodId.Value);
                 }
 
+
                 // STEP 3: Execute query and build response
                 var expenses = await query
                     .OrderByDescending(e => e.LogDate) // Newest first
                     .Select(e => new ExpenseResponseDto
                     {
                         ExpenseID = e.ExpenseID,
-                        // ⭐ Only include ItemName if category is "Other"
                         ItemName = e.ExpenseCategory.Name.ToLower() == "other" ? e.ItemName : null,
                         CategoryName = e.ExpenseCategory.Name,
                         MoodDescription = e.Mood.Description,
@@ -247,6 +277,35 @@ namespace MoneyMirror.Infrastructure.Services
                     return (false, null, "You are not authorized to view this child's expenses");
                 }
 
+                var now = DateTime.UtcNow;
+
+                // Validate dates in the future
+                if (startDate.HasValue && startDate.Value > now)
+                    return (false, null, "Start date cannot be in the future.");
+
+                if (endDate.HasValue && endDate.Value > now)
+                    return (false, null, "End date cannot be in the future.");
+
+                // Validate start date after end date
+                if (startDate.HasValue && endDate.HasValue && startDate.Value > endDate.Value)
+                    return (false, null, "Start date cannot be after end date.");
+
+                // Validate category existence
+                if (categoryId.HasValue)
+                {
+                    bool categoryExists = await _context.ExpenseCategories.AnyAsync(c => c.CategoryID == categoryId.Value);
+                    if (!categoryExists)
+                        return (false, null, "Category not found.");
+                }
+
+                // Validate mood existence
+                if (moodId.HasValue)
+                {
+                    bool moodExists = await _context.Moods.AnyAsync(m => m.MoodID == moodId.Value);
+                    if (!moodExists)
+                        return (false, null, "Mood not found.");
+                }
+
                 // STEP 2: Build query (same as child view)
                 var query = _context.Expenses
                     .Include(e => e.ExpenseCategory)
@@ -259,9 +318,12 @@ namespace MoneyMirror.Infrastructure.Services
                     query = query.Where(e => e.LogDate >= startDate.Value);
                 }
 
+
+                // Filter by end date (including the entire end day)
                 if (endDate.HasValue)
                 {
-                    query = query.Where(e => e.LogDate <= endDate.Value);
+                    var endOfDay = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                    query = query.Where(e => e.LogDate <= endOfDay);
                 }
 
                 if (categoryId.HasValue)
@@ -280,7 +342,6 @@ namespace MoneyMirror.Infrastructure.Services
                     .Select(e => new ExpenseResponseDto
                     {
                         ExpenseID = e.ExpenseID,
-                        // ⭐ Only include ItemName if category is "Other"
                         ItemName = e.ExpenseCategory.Name.ToLower() == "other" ? e.ItemName : null,
                         CategoryName = e.ExpenseCategory.Name,
                         MoodDescription = e.Mood.Description,
@@ -309,6 +370,7 @@ namespace MoneyMirror.Infrastructure.Services
                 return (false, null, "An error occurred while retrieving expenses");
             }
         }
+
 
         // ==================== CATEGORIES AND MOODS ====================
 
