@@ -160,6 +160,39 @@ namespace MoneyMirror.API.Controllers
                 $"Bonus of {dto.Amount:F2} given successfully!"
             ));
         }
+        /// <summary>
+        /// Edits an existing bonus transaction.
+        /// PUT /api/allowance/bonus/{transactionId}
+        /// [Parent only]
+        /// </summary>
+        [HttpPut("bonus/{transactionId}")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<object>>> EditBonus(
+            int transactionId,
+            [FromBody] EditBonusDto dto)
+        {
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, newBalance, errorMessage) =
+                await _allowanceService.EditBonusAsync(parentId, transactionId, dto);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(errorMessage));
+            }
+
+            _logger.LogInformation($"Parent {parentId} edited bonus transaction {transactionId}");
+
+            return Ok(ApiResponse<object>.SuccessResponse(
+                new { NewBalance = newBalance },
+                $"Bonus adjusted successfully! Child's new balance is {newBalance:F2} EGP 💰"
+            ));
+        }
 
         /// <summary>
         /// Gets transaction history for a child.

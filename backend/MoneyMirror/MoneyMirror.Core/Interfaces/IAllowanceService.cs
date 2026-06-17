@@ -132,5 +132,14 @@ namespace MoneyMirror.Core.Interfaces
         /// </summary>
         /// <returns>Number of allowances successfully credited</returns>
         Task<int> CreditScheduledAllowancesAsync();
+        /// <summary>
+        /// Edits an existing bonus transaction for a child.
+        /// Restricts editing if the child has already spent the money.
+        /// </summary>
+        Task<(bool success, decimal newBalance, string errorMessage)> EditBonusAsync(
+            int parentId,
+            int transactionId,
+            EditBonusDto dto);
+
     }
 }

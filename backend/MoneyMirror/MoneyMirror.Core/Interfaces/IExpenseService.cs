@@ -78,5 +78,12 @@ namespace MoneyMirror.Core.Interfaces
         /// </summary>
         /// <returns>List of moods</returns>
         Task<List<MoodDto>> GetMoodsAsync();
+        /// <summary>
+        /// Updates an existing expense for a child.
+        /// Recalculates balance, registers corrective transaction if amount changed.
+        /// </summary>
+        Task<(bool success, ExpenseResponseDto? expense, decimal newBalance, string errorMessage)>
+            UpdateExpenseAsync(int childId, int expenseId, UpdateExpenseDto dto);
+
     }
 }
