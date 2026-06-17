@@ -61,13 +61,7 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
         /// Authenticates a child using their unique 6-character login code.
-        /// Returns JWT tokens and child profile information.
-        /// POST /api/children/login-with-code
-        /// </summary>
-        /// <param name="loginDto">Login code from child</param>
-        /// <returns>JWT tokens and child info, or error</returns>
         [HttpPost("login-with-code")]
         [AllowAnonymous] // Anyone can attempt to login
         public async Task<ActionResult<ApiResponse<ChildAuthResponseDto>>> LoginWithCode(
@@ -95,9 +89,6 @@ namespace MoneyMirror.API.Controllers
 
         /// Refreshes JWT tokens using a valid refresh token.
         /// Allows child to stay logged in without re-entering code.
-        /// POST /api/children/refresh-token
-        /// <param name="refreshTokenDto">Current tokens from child</param>
-        /// <returns>New JWT tokens or error</returns>
         [HttpPost("refresh-token")]
         [AllowAnonymous] // Anyone can attempt to refresh
         public async Task<ActionResult<ApiResponse<ChildAuthResponseDto>>> RefreshToken(
@@ -123,8 +114,6 @@ namespace MoneyMirror.API.Controllers
         }
 
         /// Logs out a child by revoking their refresh token.
-        /// POST /api/children/logout
-        /// <returns>Success or error message</returns>
         [HttpPost("logout")]
         [Authorize(Roles = "Child")] // Child must be logged in
         public async Task<ActionResult<ApiResponse<object>>> Logout()
@@ -158,10 +147,6 @@ namespace MoneyMirror.API.Controllers
         }
 
         /// Adds an existing child to the current parent's account using login code.
-        /// Supports shared custody - multiple parents can manage the same child.
-        /// POST /api/children/add-existing
-        /// <param name="addChildDto">Child's login code</param>
-        /// <returns>Success message or error</returns>
         [HttpPost("add-existing")]
         [Authorize(Roles = "Parent")] // Parent must be logged in
         public async Task<ActionResult<ApiResponse<object>>> AddExistingChild(
@@ -192,6 +177,23 @@ namespace MoneyMirror.API.Controllers
                 null,
                 message
             ));
+        }
+
+        [HttpDelete("{childId}/unlink")]
+        [Authorize(Roles = "Parent")]
+        public async Task<ActionResult<ApiResponse<object>>> UnlinkChild(int childId)
+        {
+            var parentIdClaim = User.FindFirst("ParentId")?.Value;
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid token claims"));
+
+            var (success, message, errorMessage) = await _childService.UnlinkChildAsync(parentId, childId);
+
+            if (!success)
+                return BadRequest(ApiResponse<object>.ErrorResponse(errorMessage));
+
+            _logger.LogInformation("Parent {ParentId} unlinked child {ChildId}", parentId, childId);
+            return Ok(ApiResponse<object>.SuccessResponse(null, message));
         }
 
         /// Gets all children linked to the current parent's account.

@@ -89,11 +89,6 @@
         /// Child's age
         /// </summary>
         public int Age { get; set; }
-
-        /// <summary>
-        /// Avatar URL (future feature)
-        /// </summary>
-        public string? AvatarUrl { get; set; }
     }
 
     /// <summary>

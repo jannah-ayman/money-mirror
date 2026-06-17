@@ -21,26 +21,18 @@ namespace MoneyMirror.Core.Interfaces
         LoginWithCodeAsync(string code);
 
         /// Refreshes JWT tokens using a valid refresh token.
-        /// Allows child to stay logged in without re-entering code.
-        /// <param name="refreshTokenDto">Current tokens from client</param>
-        /// <returns>New auth response with fresh tokens if successful, or error message</returns>
         Task<(bool success, ChildAuthResponseDto? authResponse, string errorMessage)>
         RefreshTokenAsync(ChildRefreshTokenDto refreshTokenDto);
 
         /// Revokes a child's refresh token (logout functionality).
-        /// Marks the refresh token as invalid in the database.
-        /// <param name="childId">ID of the child logging out</param>
-        /// <returns>True if successfully revoked, False otherwise</returns>
         Task<bool> RevokeRefreshTokenAsync(int childId);
 
         /// Adds an existing child to a parent's account using the child's login code.
-        /// Supports shared custody - multiple parents can manage the same child.
-        /// <param name="parentId">ID of the parent adding the child</param>
-        /// <param name="code">The child's 6-character login code</param>
-        /// <returns>Tuple: (success flag, success message, error message)</returns>
         Task<(bool success, string message, string errorMessage)>
         AddExistingChildAsync(int parentId, string code);
 
+        Task<(bool success, string message, string errorMessage)>
+        UnlinkChildAsync(int parentId, int childId);
         /// Gets all children linked to a specific parent.
         /// Returns basic information needed for the "Manage Children" tab.
         /// <param name="parentId">ID of the parent</param>

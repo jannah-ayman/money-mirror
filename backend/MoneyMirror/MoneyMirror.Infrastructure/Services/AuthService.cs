@@ -1010,7 +1010,6 @@ namespace MoneyMirror.Infrastructure.Services
             {
                 // STEP 1: Find parent
                 var parent = await _context.Parents
-                    .Include(p => p.ParentChildren) // Load relationships
                     .FirstOrDefaultAsync(p => p.ParentID == parentId);
 
                 if (parent == null)
@@ -1046,10 +1045,6 @@ namespace MoneyMirror.Infrastructure.Services
                 parent.DeletedAt = DateTime.UtcNow;
                 parent.IsPermanentlyDeleted = false;
                 parent.PermanentDeletionDate = DateTime.UtcNow.AddDays(30); // 30-day grace period
-
-                // STEP 4: Remove all ParentChild relationships
-                // Children are NOT deleted - only the relationships are removed
-                _context.ParentChildren.RemoveRange(parent.ParentChildren);
 
                 // STEP 5: Revoke refresh tokens (prevent login)
                 parent.RefreshToken = null;
@@ -1129,7 +1124,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                 _logger.LogInformation($"Parent account recovered successfully: {email}");
 
-                return (true, "Account recovered successfully! Please log in and re-link your children.");
+                return (true, "Account recovered successfully! Please log in to view your data.");
             }
             catch (Exception ex)
             {
@@ -1277,8 +1272,7 @@ namespace MoneyMirror.Infrastructure.Services
                         ChildID = pc.Child.ChildID,
                         FirstName = pc.Child.FName,
                         CurrentBalance = pc.Child.CurrentBalance,
-                        Age = pc.Child.Age,
-                        AvatarUrl = null // TODO: implement avatar later
+                        Age = pc.Child.Age
                     })
                     .ToListAsync();
 

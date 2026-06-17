@@ -31,7 +31,7 @@ namespace MoneyMirror.API.Validators.Child
 
             RuleFor(x => x.Gender)
                 .Must(gender => string.IsNullOrWhiteSpace(gender) || gender == "Boy" || gender == "Girl")
-                .WithMessage("Gender must be 'Boy', 'Girl', or left empty")
+                .WithMessage("Gender must be 'Boy', 'Girl'")
                 .When(x => !string.IsNullOrWhiteSpace(x.Gender));
             
             // ==================== Question 1: Age Group ====================
@@ -42,7 +42,7 @@ namespace MoneyMirror.API.Validators.Child
                 .LessThan(DateTime.UtcNow)
                 .WithMessage("Date of birth must be in the past")
                 .Must(BeValidChildAge)
-                .WithMessage("Child must be between 6 and 14 years old");
+                .WithMessage("Child must be between 6 and 17 years old inclusive");
 
             // ==================== Question 2: Has Allowance ====================
 
@@ -105,11 +105,7 @@ namespace MoneyMirror.API.Validators.Child
                 .WithMessage("Invalid reaction to 100 EGP selection");
         }
 
-        /// <summary>
-        /// Custom validator to ensure child is between 6 and 14 years old
-        /// </summary>
-        /// <summary>
-        /// Custom validator to ensure child is between 0 and 18 years old
+        /// Custom validator to ensure child is between 6 and 17 years old
         /// </summary>
         private bool BeValidChildAge(DateTime dob)
         {
@@ -119,7 +115,7 @@ namespace MoneyMirror.API.Validators.Child
             if (dob.Date > today.AddYears(-age))
                 age--;
 
-            return age >= 0 && age <= 18;
+            return age >= 6 && age <= 17;
         }
     }
 }

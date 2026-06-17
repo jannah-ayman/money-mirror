@@ -47,12 +47,6 @@
         /// </summary>
         public PersonalityInfoDto PersonalityInfo { get; set; }
 
-        /// <summary>
-        /// Avatar URL (for future implementation)
-        /// Example: "https://cloudinary.com/avatars/cat.png"
-        /// Null if not set yet
-        /// </summary>
-        public string? AvatarUrl { get; set; }
     }
 
     /// <summary>
