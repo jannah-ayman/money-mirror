@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace MoneyMirror.Core.DTOs.Allowance
 {
-    internal class EditBonusDto
+    public class EditBonusDto
     {
+        public decimal Amount { get; set; }
+        public string? Reason { get; set; }
     }
 }

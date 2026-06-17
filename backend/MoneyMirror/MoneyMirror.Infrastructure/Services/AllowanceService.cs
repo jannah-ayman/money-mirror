@@ -366,8 +366,10 @@ namespace MoneyMirror.Infrastructure.Services
                 var validTypes = new HashSet<string>
         {
             "All", "AllowanceAndBonus",
-            "AllowanceCredit", "BonusCredit", "Expense", "GoalTransfer", "GoalRefund"
+            "AllowanceCredit", "BonusCredit", "Expense", "GoalTransfer", "GoalRefund",
+            "ExpenseAdjustment", "BonusAdjustment"
         };
+
 
                 if (!validTypes.Contains(type))
                     return (false, null, "Invalid transaction type filter.");
@@ -445,8 +447,10 @@ namespace MoneyMirror.Infrastructure.Services
                 var validTypes = new HashSet<string>
         {
             "All", "AllowanceAndBonus",
-            "AllowanceCredit", "BonusCredit", "Expense", "GoalTransfer", "GoalRefund"
+            "AllowanceCredit", "BonusCredit", "Expense", "GoalTransfer", "GoalRefund",
+            "ExpenseAdjustment", "BonusAdjustment"
         };
+
 
                 if (!validTypes.Contains(type))
                     return (false, null, "Invalid transaction type filter.");
@@ -894,5 +898,104 @@ namespace MoneyMirror.Infrastructure.Services
                     return null;
             }
         }
+        public async Task<(bool success, decimal newBalance, string errorMessage)> EditBonusAsync(
+    int parentId,
+    int transactionId,
+    EditBonusDto dto)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // 1. Fetch the bonus transaction
+                    var bonusTx = await _context.Transactions
+                        .FirstOrDefaultAsync(t => t.TransactionID == transactionId && t.Type == "BonusCredit");
+
+                    if (bonusTx == null)
+                    {
+                        return (false, 0, "Bonus transaction not found");
+                    }
+
+                    // 2. Verify parent is linked to the child who received this bonus
+                    bool isLinked = await IsParentLinkedToChildAsync(parentId, bonusTx.ChildID);
+                    if (!isLinked)
+                    {
+                        _logger.LogWarning($"Parent {parentId} unauthorized attempt to edit bonus transaction {transactionId}");
+                        return (false, 0, "You are not authorized to edit this child's bonus");
+                    }
+
+                    // 3. Get child and check balance
+                    var child = await _context.Children.FindAsync(bonusTx.ChildID);
+                    if (child == null)
+                    {
+                        return (false, 0, "Child not found");
+                    }
+
+                    decimal oldAmount = bonusTx.Amount;
+                    decimal newAmount = dto.Amount;
+                    decimal difference = newAmount - oldAmount; // positive if increased, negative if decreased
+
+                    // Restriction: child must not have spent the money (balance check)
+                    if (difference < 0 && child.CurrentBalance + difference < 0)
+                    {
+                        return (false, 0,
+                            $"Cannot reduce bonus. Child's current balance ({child.CurrentBalance:F2} EGP) is less than the deduction amount ({-difference:F2} EGP), meaning they have already spent it.");
+                    }
+
+                    // 4. Update child's balance
+                    child.CurrentBalance += difference;
+                    _context.Children.Update(child);
+
+                    // 5. Update original transaction details
+                    bonusTx.Amount = newAmount;
+                    bonusTx.Description = dto.Reason?.Trim() ?? bonusTx.Description;
+                    _context.Transactions.Update(bonusTx);
+
+                    // 6. Record corrective transaction if amount changed
+                    if (difference != 0)
+                    {
+                        string directionDesc = difference > 0 ? "credited" : "deducted";
+                        _context.Transactions.Add(new Transaction
+                        {
+                            Type = "BonusAdjustment",
+                            Amount = difference,
+                            BalanceAfter = child.CurrentBalance,
+                            Description = $"Corrective transaction for bonus adjustment. Adjusted from {oldAmount:F2} to {newAmount:F2} EGP. {Math.Abs(difference):F2} EGP {directionDesc}.",
+                            TransactionDate = DateTime.UtcNow,
+                            ChildID = bonusTx.ChildID,
+                            ParentID = parentId,
+                            AllowanceID = null
+                        });
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    // Notify child of the adjustment
+                    string actionText = difference > 0 ? "increased" : "decreased";
+                    await _notificationService.NotifyChildAsync(
+                        bonusTx.ChildID,
+                        "Bonus Adjusted 🎁",
+                        $"Your parent adjusted your bonus. It was changed from {oldAmount:F2} to {newAmount:F2} EGP.",
+                        "/balance"
+                    );
+
+                    _logger.LogInformation($"Bonus transaction {transactionId} edited. Amount changed from {oldAmount} to {newAmount}. New child balance: {child.CurrentBalance}");
+
+                    return (true, child.CurrentBalance, string.Empty);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error editing bonus transaction {TransactionId} by parent {ParentId}", transactionId, parentId);
+                    return (false, 0, $"Error: {ex.Message}");
+                }
+            });
+        }
+
     }
 }

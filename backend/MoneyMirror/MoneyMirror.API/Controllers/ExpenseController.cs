@@ -63,6 +63,39 @@ namespace MoneyMirror.API.Controllers
                 $"Expense logged! You spent {dto.MoneyAmount:F2}. Your new balance is {newBalance:F2} 💰"
             ));
         }
+        /// <summary>
+        /// Updates an existing expense for the child.
+        /// PUT /api/expense/{expenseId}
+        /// [Child only]
+        /// </summary>
+        [HttpPut("{expenseId}")]
+        [Authorize(Roles = "Child")]
+        public async Task<ActionResult<ApiResponse<ExpenseResponseDto>>> UpdateExpense(
+            int expenseId,
+            [FromBody] UpdateExpenseDto dto)
+        {
+            var childIdClaim = User.FindFirst("ChildId")?.Value;
+
+            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
+            {
+                return BadRequest(ApiResponse<ExpenseResponseDto>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, expense, newBalance, errorMessage) =
+                await _expenseService.UpdateExpenseAsync(childId, expenseId, dto);
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<ExpenseResponseDto>.ErrorResponse(errorMessage));
+            }
+
+            _logger.LogInformation($"Child {childId} updated expense {expenseId}");
+
+            return Ok(ApiResponse<ExpenseResponseDto>.SuccessResponse(
+                expense,
+                $"Expense updated! Your new balance is {newBalance:F2} EGP 💰"
+            ));
+        }
 
         /// <summary>
         /// Gets the logged-in child's expense history.

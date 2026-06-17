@@ -417,5 +417,116 @@ namespace MoneyMirror.Infrastructure.Services
                 return new List<MoodDto>();
             }
         }
+        public async Task<(bool success, ExpenseResponseDto? expense, decimal newBalance, string errorMessage)>
+    UpdateExpenseAsync(int childId, int expenseId, UpdateExpenseDto dto)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    var child = await _context.Children.FindAsync(childId);
+                    if (child == null)
+                        return (false, null, 0, "Child not found");
+
+                    var expense = await _context.Expenses
+                        .FirstOrDefaultAsync(e => e.ExpenseID == expenseId && e.ChildID == childId);
+
+                    if (expense == null)
+                        return (false, null, child.CurrentBalance, "Expense not found");
+
+                    var category = await _context.ExpenseCategories.FindAsync(dto.CategoryID);
+                    if (category == null)
+                        return (false, null, child.CurrentBalance, "Invalid category selected");
+
+                    bool isOtherCategory = category.Name.Equals("Other", StringComparison.OrdinalIgnoreCase);
+
+                    if (isOtherCategory && string.IsNullOrWhiteSpace(dto.ItemName))
+                        return (false, null, child.CurrentBalance, "Please provide an item name when category is 'Other'");
+
+                    string? finalItemName = isOtherCategory ? dto.ItemName?.Trim() : null;
+
+                    var mood = await _context.Moods.FindAsync(dto.MoodID);
+                    if (mood == null)
+                        return (false, null, child.CurrentBalance, "Invalid mood selected");
+
+                    decimal oldAmount = expense.MoneyAmount;
+                    decimal newAmount = dto.MoneyAmount;
+                    decimal difference = oldAmount - newAmount; // Positive if refund, negative if extra spend
+
+                    // If they spent more, check if they have enough balance
+                    if (difference < 0 && child.CurrentBalance + difference < 0)
+                    {
+                        return (false, null, child.CurrentBalance,
+                            $"Insufficient balance to increase expense amount. You need {-difference:F2} EGP but only have {child.CurrentBalance:F2} EGP.");
+                    }
+
+                    // Update child's balance
+                    child.CurrentBalance += difference;
+                    _context.Children.Update(child);
+
+                    // Update expense details
+                    expense.CategoryID = dto.CategoryID;
+                    expense.MoodID = dto.MoodID;
+                    expense.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
+                    expense.ItemName = finalItemName;
+                    expense.MoneyAmount = dto.MoneyAmount;
+                    _context.Expenses.Update(expense);
+
+                    // If amount changed, record a corrective transaction
+                    if (difference != 0)
+                    {
+                        string directionDesc = difference > 0 ? "refunded" : "debited";
+                        string correctionDesc = $"Corrective transaction for expense adjustment. Expense ID: {expenseId}. Amount adjusted from {oldAmount:F2} to {newAmount:F2}. {Math.Abs(difference):F2} EGP {directionDesc} to balance.";
+
+                        _context.Transactions.Add(new Transaction
+                        {
+                            Type = "ExpenseAdjustment",
+                            Amount = difference,
+                            BalanceAfter = child.CurrentBalance,
+                            Description = correctionDesc,
+                            TransactionDate = DateTime.UtcNow,
+                            ChildID = childId,
+                            ParentID = null,
+                            AllowanceID = null
+                        });
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    await _notificationService.CheckAndNotifyLowBalanceAsync(childId);
+                    await _notificationService.NotifyAllParentsOfChildAsync(
+                        childId,
+                        "Expense Updated 📝",
+                        $"{child.FName} updated their expense. Category is now {category.Name}, amount adjusted from {oldAmount:F2} to {newAmount:F2} EGP.",
+                        $"/children/{childId}/expenses"
+                    );
+
+                    var expenseResponse = new ExpenseResponseDto
+                    {
+                        ExpenseID = expense.ExpenseID,
+                        ItemName = isOtherCategory ? finalItemName : null,
+                        CategoryName = category.Name,
+                        MoodDescription = mood.Description,
+                        Amount = expense.MoneyAmount,
+                        LogDate = expense.LogDate,
+                        Note = expense.Note
+                    };
+
+                    return (true, expenseResponse, child.CurrentBalance, string.Empty);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error updating expense {ExpenseId} for child {ChildId}", expenseId, childId);
+                    return (false, null, 0, $"Error: {ex.Message}");
+                }
+            });
+        }
+
     }
 }
