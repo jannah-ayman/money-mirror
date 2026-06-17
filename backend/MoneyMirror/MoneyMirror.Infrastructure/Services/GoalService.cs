@@ -310,7 +310,6 @@ namespace MoneyMirror.Infrastructure.Services
             try
             {
                 var now = DateTime.UtcNow;
-
                 var expiredGoals = await _context.SavingsGoals
                     .Include(g => g.Child)
                     .Where(g => g.Status == "Active"
@@ -323,25 +322,13 @@ namespace MoneyMirror.Infrastructure.Services
                 {
                     goal.Status = "Failure";
                     failedCount++;
-                    await _notificationService.NotifyChildAsync(
-                        goal.ChildID,
-                        "Challenge Expired ⏰",
-                        $"Your \"{goal.Title}\" goal has expired. Keep trying!",
-                        "/goals"
-                    );
-                    await _notificationService.NotifyAllParentsOfChildAsync(
-                        goal.ChildID,
-                        "Goal Expired",
-                        $"{goal.Child.FName}'s \"{goal.Title}\" goal expired without completion.",
-                        $"/children/{goal.ChildID}/goals"
-                    );
 
-                    // Auto-refund challenges only
-                    if (goal.IsChallenge && goal.CurrentAmount > 0)
+                    decimal refundAmount = 0;
+
+                    if (goal.CurrentAmount > 0)
                     {
                         var child = goal.Child;
-                        decimal refundAmount = goal.CurrentAmount;
-
+                        refundAmount = goal.CurrentAmount;
                         child.CurrentBalance += refundAmount;
                         goal.CurrentAmount = 0;
 
@@ -350,14 +337,39 @@ namespace MoneyMirror.Infrastructure.Services
                             Type = "GoalRefund",
                             Amount = refundAmount,
                             BalanceAfter = child.CurrentBalance,
-                            Description = $"Refund from failed challenge: {goal.Title}",
+                            Description = $"Refund from failed {(goal.IsChallenge ? "challenge" : "goal")}: {goal.Title}",
                             TransactionDate = DateTime.UtcNow,
                             ChildID = goal.ChildID,
                             ParentID = goal.ParentID
                         });
 
                         _context.Children.Update(child);
-                        _logger.LogInformation("Auto-refunded failed challenge {GoalId} — {Amount} returned to child {ChildId}", goal.GoalID, refundAmount, goal.ChildID);
+                        _logger.LogInformation("Auto-refunded failed goal {GoalId} — {Amount} returned to child {ChildId}", goal.GoalID, refundAmount, goal.ChildID);
+                    }
+
+                    string childMessage = refundAmount > 0
+                        ? $"Your \"{goal.Title}\" goal has expired. {refundAmount:F2} EGP was returned to your balance."
+                        : $"Your \"{goal.Title}\" goal has expired.";
+
+                    await _notificationService.NotifyChildAsync(
+                        goal.ChildID,
+                        "Goal Expired ⏰",
+                        childMessage,
+                        "/goals"
+                    );
+
+                    if (goal.IsChallenge)
+                    {
+                        string parentMessage = refundAmount > 0
+                            ? $"{goal.Child.FName}'s \"{goal.Title}\" goal expired without completion. {refundAmount:F2} EGP was refunded to their balance."
+                            : $"{goal.Child.FName}'s \"{goal.Title}\" goal expired without completion.";
+
+                        await _notificationService.NotifyAllParentsOfChildAsync(
+                            goal.ChildID,
+                            "Goal Expired",
+                            parentMessage,
+                            $"/children/{goal.ChildID}/goals"
+                        );
                     }
 
                     _logger.LogInformation("Goal {GoalId} marked as Failure (expired)", goal.GoalID);
@@ -370,7 +382,6 @@ namespace MoneyMirror.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error in FailExpiredGoalsAsync");
             }
-
             return failedCount;
         }
         public async Task<(bool success, string message, string errorMessage)>
@@ -576,62 +587,7 @@ namespace MoneyMirror.Infrastructure.Services
             }
 
         }
-        public async Task<(bool success, decimal newBalance, string errorMessage)>
-     RefundFailedGoalAsync(int childId, int goalId)
-        {
-            var strategy = _context.Database.CreateExecutionStrategy();
-
-            return await strategy.ExecuteAsync(async () =>
-            {
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                try
-                {
-                    var goal = await _context.SavingsGoals
-                        .FirstOrDefaultAsync(g => g.GoalID == goalId && g.ChildID == childId && !g.IsChallenge);
-
-                    if (goal == null)
-                        return (false, 0m, "Goal not found.");
-
-                    if (goal.Status != "Failure")
-                        return (false, 0m, "Only failed goals can be refunded.");
-
-                    if (goal.CurrentAmount <= 0)
-                        return (false, 0m, "No saved amount to refund.");
-
-                    var child = await _context.Children.FindAsync(childId);
-                    if (child == null)
-                        return (false, 0m, "Child not found.");
-
-                    decimal refundAmount = goal.CurrentAmount;
-                    child.CurrentBalance += refundAmount;
-                    goal.CurrentAmount = 0;
-
-                    _context.Children.Update(child);
-
-                    _context.Transactions.Add(new Transaction
-                    {
-                        Type = "GoalRefund",
-                        Amount = refundAmount,
-                        BalanceAfter = child.CurrentBalance,
-                        Description = $"Refund from failed goal: {goal.Title}",
-                        TransactionDate = DateTime.UtcNow,
-                        ChildID = childId
-                    });
-
-                    _context.SavingsGoals.Remove(goal);
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    return (true, child.CurrentBalance, string.Empty);
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(ex, "Error refunding failed goal {GoalId}", goalId);
-                    return (false, 0m, "An error occurred while refunding the goal.");
-                }
-            });
-        }
+      
 
     }
 }

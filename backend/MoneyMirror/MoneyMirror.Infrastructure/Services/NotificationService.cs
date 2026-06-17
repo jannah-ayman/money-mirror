@@ -261,43 +261,21 @@ namespace MoneyMirror.Infrastructure.Services
         {
             try
             {
-                var now = DateTime.UtcNow;
+                var child = await _context.Children
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.ChildID == childId);
+                if (child == null) return;
 
                 var allowance = await _context.Allowances
-                    .Include(a => a.Child)
-                    .FirstOrDefaultAsync(a => a.ChildID == childId
-                                           && a.IsRecurring
-                                           && a.IsActive
-                                           && (a.Type == "Weekly" || a.Type == "Monthly"));
+                    .FirstOrDefaultAsync(a => a.ChildID == childId && a.IsRecurring && a.IsActive);
+                if (allowance == null || allowance.Amount <= 0) return;
 
-                if (allowance == null) return;
+                if (child.CurrentBalance >= allowance.Amount * 0.15m) return;
 
-                var child = allowance.Child;
-
-                decimal totalEverHad = await _context.Transactions
-                    .Where(t => t.ChildID == childId && t.Amount > 0)
-                    .SumAsync(t => t.Amount);
-
-                if (totalEverHad <= 0) return;
-
-                decimal spentRatio = 1 - (child.CurrentBalance / totalEverHad);
-                bool conditionMet = false;
-                DateTime cycleStart;
-
-                if (allowance.Type == "Weekly")
-                {
-                    int daysRemainingInWeek = 7 - (int)now.DayOfWeek;
-                    conditionMet = spentRatio >= 0.75m && daysRemainingInWeek >= 3;
-                    cycleStart = now.Date.AddDays(-(int)now.DayOfWeek);
-                }
-                else
-                {
-                    int daysRemainingInMonth = DateTime.DaysInMonth(now.Year, now.Month) - now.Day;
-                    conditionMet = spentRatio >= 0.75m && daysRemainingInMonth >= 10;
-                    cycleStart = new DateTime(now.Year, now.Month, 1);
-                }
-
-                if (!conditionMet) return;
+                var now = DateTime.UtcNow;
+                DateTime cycleStart = allowance.Type == "Weekly"
+                    ? now.Date.AddDays(-(int)now.DayOfWeek)
+                    : new DateTime(now.Year, now.Month, 1);
 
                 var parentIds = await _context.ParentChildren
                     .Where(pc => pc.ChildID == childId)
@@ -313,12 +291,12 @@ namespace MoneyMirror.Infrastructure.Services
 
                     if (alreadyNotified) continue;
 
-                    int percentSpent = (int)Math.Round(spentRatio * 100);
+                    int percentRemaining = (int)Math.Round((child.CurrentBalance / allowance.Amount) * 100);
 
                     await NotifyParentAsync(
                         parentId,
                         $"Low Balance Alert: {child.FName}",
-                        $"{child.FName} has spent {percentSpent}% of their total balance with {(allowance.Type == "Weekly" ? $"{7 - (int)now.DayOfWeek} days left this week" : $"{DateTime.DaysInMonth(now.Year, now.Month) - now.Day} days left this month")}.",
+                        $"{child.FName} only has {percentRemaining}% of their {allowance.Type.ToLower()} allowance left. Current balance: {child.CurrentBalance:F2} EGP.",
                         $"/children/{child.ChildID}"
                     );
                 }

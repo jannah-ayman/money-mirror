@@ -637,7 +637,7 @@ namespace MoneyMirror.Infrastructure.Services
         /// Gets the child's dashboard data for main home screen.
         /// Shows balance, personality, and counts for goals/expenses.
         public async Task<(bool success, ChildDashboardDto? dashboard, string errorMessage)>
-     GetMyDashboardAsync(int childId)
+    GetMyDashboardAsync(int childId)
         {
             try
             {
@@ -647,32 +647,70 @@ namespace MoneyMirror.Infrastructure.Services
 
                 if (child == null)
                 {
-                    _logger.LogWarning($"Dashboard request for non-existent child {childId}");
+                    _logger.LogWarning(
+                        $"Dashboard request for non-existent child {childId}");
+
                     return (false, null, "Child not found");
                 }
 
                 int activeGoalsCount = await _context.SavingsGoals
-                    .CountAsync(g => g.ChildID == childId && g.Status == "Active");
+                    .CountAsync(g =>
+                        g.ChildID == childId &&
+                        g.Status == "Active");
 
                 var allowance = await _context.Allowances
-                    .FirstOrDefaultAsync(a => a.ChildID == childId && a.IsRecurring && a.IsActive);
+                    .FirstOrDefaultAsync(a =>
+                        a.ChildID == childId &&
+                        a.IsRecurring &&
+                        a.IsActive);
 
                 bool lowBalanceAlert = false;
 
-                if (allowance != null && allowance.Amount > 0)
+                if (allowance != null &&
+                    allowance.Amount > 0 &&
+                    (allowance.Type == "Weekly" ||
+                     allowance.Type == "Monthly"))
                 {
                     var now = DateTime.UtcNow;
-                    decimal spentRatio = 1 - (child.CurrentBalance / allowance.Amount);
+
+                    DateTime cycleStart = allowance.Type == "Weekly"
+                        ? now.Date.AddDays(-(int)now.DayOfWeek)
+                        : new DateTime(now.Year, now.Month, 1);
+
+                    // All money spent this cycle
+                    decimal spentThisCycle = await _context.Transactions
+                        .Where(t =>
+                            t.ChildID == childId &&
+                            t.Amount < 0 &&
+                            t.TransactionDate >= cycleStart)
+                        .SumAsync(t => Math.Abs(t.Amount));
+
+                    // Reconstruct starting balance
+                    decimal balanceAtCycleStart =
+                        child.CurrentBalance + spentThisCycle;
+
+                    decimal spentRatio = balanceAtCycleStart > 0
+                        ? spentThisCycle / balanceAtCycleStart
+                        : 0;
 
                     if (allowance.Type == "Weekly")
                     {
-                        int daysRemainingInWeek = 7 - (int)now.DayOfWeek;
-                        lowBalanceAlert = spentRatio >= 0.75m && daysRemainingInWeek >= 3;
+                        int daysRemainingInWeek =
+                            7 - (int)now.DayOfWeek;
+
+                        lowBalanceAlert =
+                            spentRatio >= 0.75m &&
+                            daysRemainingInWeek >= 3;
                     }
                     else if (allowance.Type == "Monthly")
                     {
-                        int daysRemainingInMonth = DateTime.DaysInMonth(now.Year, now.Month) - now.Day;
-                        lowBalanceAlert = spentRatio >= 0.75m && daysRemainingInMonth >= 10;
+                        int daysRemainingInMonth =
+                            DateTime.DaysInMonth(now.Year, now.Month)
+                            - now.Day;
+
+                        lowBalanceAlert =
+                            spentRatio >= 0.75m &&
+                            daysRemainingInMonth >= 10;
                     }
                 }
 
@@ -686,13 +724,21 @@ namespace MoneyMirror.Infrastructure.Services
                     LowBalanceAlert = lowBalanceAlert
                 };
 
-                _logger.LogInformation($"Dashboard loaded for child {childId}");
+                _logger.LogInformation(
+                    $"Dashboard loaded for child {childId}");
+
                 return (true, dashboard, string.Empty);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error getting dashboard for child {childId}: {ex.Message}");
-                return (false, null, "An error occurred while loading your dashboard");
+                _logger.LogError(
+                    $"Error getting dashboard for child {childId}: {ex.Message}");
+
+                return (
+                    false,
+                    null,
+                    "An error occurred while loading your dashboard"
+                );
             }
         }
         // ==================== PARENT MANAGEMENT OF CHILDREN ====================

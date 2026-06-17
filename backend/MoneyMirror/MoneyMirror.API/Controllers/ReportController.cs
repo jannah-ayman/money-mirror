@@ -127,6 +127,12 @@ namespace MoneyMirror.API.Controllers
             return Ok(ApiResponse<GoalReportDto>.SuccessResponse(data, "Goal report loaded."));
         }
 
+    private static readonly HashSet<string> ValidSections = new(StringComparer.OrdinalIgnoreCase)
+      {
+                        "summary", "category-breakdown", "mood-spending",
+                        "time-patterns", "top-categories", "balance-history", "goal-report"
+     };
+
         [HttpPost("{childId}/download-pdf")]
         public async Task<IActionResult> DownloadPdf(int childId, [FromBody] PdfDownloadRequestDto dto)
         {
@@ -135,6 +141,11 @@ namespace MoneyMirror.API.Controllers
 
             if (dto.Sections == null || !dto.Sections.Any())
                 return BadRequest(ApiResponse<object>.ErrorResponse("Please select at least one section."));
+
+            var invalidSections = dto.Sections.Where(s => !ValidSections.Contains(s)).ToList();
+            if (invalidSections.Any())
+                return BadRequest(ApiResponse<object>.ErrorResponse(
+                    $"Invalid section(s): {string.Join(", ", invalidSections)}. Valid sections: {string.Join(", ", ValidSections)}"));
 
             var (success, pdfBytes, error) = await _reportService.GeneratePdfAsync(parentId.Value, childId, dto);
             if (!success) return BadRequest(ApiResponse<object>.ErrorResponse(error));
