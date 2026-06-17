@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using MoneyMirror.Core.DTOs.Quiz;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Infrastructure.Data;
+using MoneyMirror.Core.Helpers;
+
 
 namespace MoneyMirror.Infrastructure.Services
 {
@@ -33,7 +35,7 @@ namespace MoneyMirror.Infrastructure.Services
                     return (false, null, "Child not found");
 
                 // Check daily limit
-                var todayUtc = DateTime.UtcNow.Date;
+                var todayUtc = DateTimeHelper.EgyptNow.Date;
                 int todayCount = await _context.QuizLogs
                     .CountAsync(q => q.ChildID == childId && q.CompletedDate.Date == todayUtc);
 
@@ -116,7 +118,7 @@ namespace MoneyMirror.Infrastructure.Services
                     ChildID = childId,
                     StoryID = answer.StoryID,
                     AnswerID = dto.AnswerID,
-                    CompletedDate = DateTime.UtcNow
+                    CompletedDate = DateTimeHelper.EgyptNow
                 };
 
                 _context.QuizLogs.Add(log);

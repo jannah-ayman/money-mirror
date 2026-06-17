@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MoneyMirror.Core.DTOs.Insight;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Infrastructure.Data;
+using MoneyMirror.Core.Helpers;
 
 namespace MoneyMirror.Infrastructure.Services
 {
@@ -165,7 +166,7 @@ namespace MoneyMirror.Infrastructure.Services
                 response.Insights.Add(goalInsight);
 
                 // ---- Spending trend (this month vs last month) ----
-                var now = DateTime.UtcNow;
+                var now = DateTimeHelper.EgyptNow;
                 var startOfThisMonth = new DateTime(now.Year, now.Month, 1);
                 var startOfLastMonth = startOfThisMonth.AddMonths(-1);
 
@@ -354,7 +355,7 @@ namespace MoneyMirror.Infrastructure.Services
         }
         private FunFactDto BuildBiggestPurchaseFunFact(List<Core.Models.Expense> expenses)
         {
-            var now = DateTime.UtcNow;
+            var now = DateTimeHelper.EgyptNow;
             var startOfThisMonth = new DateTime(now.Year, now.Month, 1);
 
             var thisMonthExpenses = expenses.Where(e => e.LogDate >= startOfThisMonth).ToList();
@@ -397,8 +398,8 @@ namespace MoneyMirror.Infrastructure.Services
 
             int completedThisMonth = goals.Count(g =>
                 g.Status == "Success" &&
-                g.StartDate.Year == DateTime.UtcNow.Year &&
-                g.StartDate.Month == DateTime.UtcNow.Month);
+                g.StartDate.Year == DateTimeHelper.EgyptNow.Year &&
+                g.StartDate.Month == DateTimeHelper.EgyptNow.Month);
 
             var activeGoal = goals
                 .Where(g => g.Status == "Active")

@@ -4,6 +4,8 @@ using MoneyMirror.Core.DTOs.Goals;
 using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Core.Models;
 using MoneyMirror.Infrastructure.Data;
+using MoneyMirror.Core.Helpers;
+
 
 namespace MoneyMirror.Infrastructure.Services
 {
@@ -198,7 +200,8 @@ namespace MoneyMirror.Infrastructure.Services
                     if (goal.Status != "Active")
                         return (false, 0m, 0m, "You can only add money to active goals.");
 
-                    if (goal.EndDate.HasValue && goal.EndDate.Value.Date < DateTime.UtcNow.Date)
+                    if (goal.EndDate.HasValue && goal.EndDate.Value.Date < DateTimeHelper.EgyptNow.Date)
+
                         return (false, 0m, 0m, "This goal has expired and can no longer receive money.");
 
                     var child = await _context.Children.FindAsync(childId);
@@ -226,7 +229,7 @@ namespace MoneyMirror.Infrastructure.Services
                         Amount = -actualAmount,
                         BalanceAfter = child.CurrentBalance,
                         Description = $"Added to goal: {goal.Title}",
-                        TransactionDate = DateTime.UtcNow,
+                        TransactionDate = DateTimeHelper.EgyptNow,
                         ChildID = childId
                     });
 
@@ -247,7 +250,7 @@ namespace MoneyMirror.Infrastructure.Services
                                 Amount = goal.RewardValue.Value,
                                 BalanceAfter = child.CurrentBalance,
                                 Description = $"Challenge reward: {goal.Title} 🎉",
-                                TransactionDate = DateTime.UtcNow,
+                                TransactionDate = DateTimeHelper.EgyptNow,
                                 ChildID = childId,
                                 ParentID = goal.ParentID
                             });
@@ -293,7 +296,8 @@ namespace MoneyMirror.Infrastructure.Services
                             $"/children/{childId}/goals"
                         );
                     }
-                    return (true, child.CurrentBalance, goal.CurrentAmount, string.Empty);
+                    return (true, child.CurrentBalance, goal.CurrentAmount, warningMessage);
+
                 }
                 catch (Exception ex)
                 {

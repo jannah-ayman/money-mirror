@@ -5,6 +5,7 @@ using MoneyMirror.Core.Interfaces;
 using MoneyMirror.Infrastructure.Data;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using MoneyMirror.Core.Helpers;
 
 namespace MoneyMirror.Infrastructure.Services
 {
@@ -47,7 +48,7 @@ namespace MoneyMirror.Infrastructure.Services
             {
                 try
                 {
-                    var windowStart = DateTime.UtcNow.AddDays(-WindowDays);
+                    var windowStart = DateTimeHelper.EgyptNow.AddDays(-WindowDays);
 
                     // Load behavioral data
                     var expenses = await _context.Expenses
@@ -119,7 +120,7 @@ namespace MoneyMirror.Infrastructure.Services
                     child.PrudentSaverScore = (decimal)result.Dimensions.PrudentSaver;
                     child.GoalOrientedPlannerScore = (decimal)result.Dimensions.GoalOrientedPlanner;
                     child.BargainHunterScore = (decimal)result.Dimensions.BargainHunter;
-                    child.LastPersonalityUpdateDate = DateTime.UtcNow;
+                    child.LastPersonalityUpdateDate = DateTimeHelper.EgyptNow;
                     await _notificationService.NotifyAllParentsOfChildAsync(
                         child.ChildID,
                         "Personality Updated 🧠",

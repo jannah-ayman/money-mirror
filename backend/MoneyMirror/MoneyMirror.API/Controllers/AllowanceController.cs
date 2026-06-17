@@ -333,5 +333,46 @@ namespace MoneyMirror.API.Controllers
                 info.Message
             ));
         }
+        /// <summary>
+        /// Gets the logged-in child's transaction history.
+        /// GET /api/allowance/my-transactions?startDate=2026-01-01&endDate=2026-01-31&type=All
+        /// [Child only]
+        /// </summary>
+        [HttpGet("my-transactions")]
+        [Authorize(Roles = "Child")]
+        public async Task<ActionResult<ApiResponse<TransactionHistoryDto>>> GetMyTransactions(
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] string type = "All")
+        {
+            var childIdClaim = User.FindFirst("ChildId")?.Value;
+
+            if (childIdClaim == null || !int.TryParse(childIdClaim, out int childId))
+            {
+                return BadRequest(ApiResponse<TransactionHistoryDto>.ErrorResponse("Invalid token claims"));
+            }
+
+            var (success, history, errorMessage) = await _allowanceService.GetMyTransactionsAsync(
+                childId,
+                startDate,
+                endDate,
+                type
+            );
+
+            if (!success)
+            {
+                return BadRequest(ApiResponse<TransactionHistoryDto>.ErrorResponse(errorMessage));
+            }
+
+            string message = history.TotalCount == 0
+                ? "You don't have any transactions yet"
+                : $"You have {history.TotalCount} transaction(s)";
+
+            return Ok(ApiResponse<TransactionHistoryDto>.SuccessResponse(
+                history,
+                message
+            ));
+        }
+
     }
 }
