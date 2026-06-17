@@ -270,15 +270,15 @@ namespace MoneyMirror.API.Controllers
             ));
         }
 
-        /// <summary>
         /// Gets the logged-in child's transaction history.
-        /// GET /api/allowance/my-transactions?startDate=2026-01-01
-        /// [Child only]
-        /// </summary>
+        /// GET /api/allowance/my-transactions?startDate=2026-01-01&endDate=2026-01-31&type=All
+
         [HttpGet("my-transactions")]
         [Authorize(Roles = "Child")]
         public async Task<ActionResult<ApiResponse<TransactionHistoryDto>>> GetMyTransactions(
-            [FromQuery] DateTime? startDate = null)
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] string type = "All")
         {
             var childIdClaim = User.FindFirst("ChildId")?.Value;
 
@@ -287,7 +287,12 @@ namespace MoneyMirror.API.Controllers
                 return BadRequest(ApiResponse<TransactionHistoryDto>.ErrorResponse("Invalid token claims"));
             }
 
-            var (success, history, errorMessage) = await _allowanceService.GetMyTransactionsAsync(childId, startDate);
+            var (success, history, errorMessage) = await _allowanceService.GetMyTransactionsAsync(
+                childId,
+                startDate,
+                endDate,
+                type
+            );
 
             if (!success)
             {
@@ -300,6 +305,7 @@ namespace MoneyMirror.API.Controllers
 
             return Ok(ApiResponse<TransactionHistoryDto>.SuccessResponse(
                 history,
+
                 message
             ));
         }
