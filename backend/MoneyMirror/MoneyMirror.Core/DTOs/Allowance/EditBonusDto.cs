@@ -1,10 +1,11 @@
+<<<<<<< HEAD
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MoneyMirror.Core.DTOs.Allowance
+﻿namespace MoneyMirror.Core.DTOs.Allowance
 {
     public class EditBonusDto
     {
