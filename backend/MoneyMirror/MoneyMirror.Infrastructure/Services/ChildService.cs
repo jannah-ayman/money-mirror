@@ -615,7 +615,6 @@ namespace MoneyMirror.Infrastructure.Services
                     Age = child.Age,
                     Gender = child.Gender,
                     CurrentBalance = child.CurrentBalance,
-                    AvatarUrl = null, // TODO: implement avatar selection later
                     PersonalityInfo = new PersonalityInfoDto
                     {
                         ChildName = child.PersonalityType?.ChildName ?? "Little Learner",
@@ -681,7 +680,6 @@ namespace MoneyMirror.Infrastructure.Services
                 {
                     FirstName = child.FName,
                     CurrentBalance = child.CurrentBalance,
-                    AvatarUrl = null,
                     PersonalityName = child.PersonalityType?.ChildName ?? "Little Learner",
                     FunFacts = child.PersonalityType?.FunFacts,
                     ActiveGoalsCount = activeGoalsCount,

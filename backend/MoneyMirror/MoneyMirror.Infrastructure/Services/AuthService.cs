@@ -1272,8 +1272,7 @@ namespace MoneyMirror.Infrastructure.Services
                         ChildID = pc.Child.ChildID,
                         FirstName = pc.Child.FName,
                         CurrentBalance = pc.Child.CurrentBalance,
-                        Age = pc.Child.Age,
-                        AvatarUrl = null 
+                        Age = pc.Child.Age
                     })
                     .ToListAsync();
 
