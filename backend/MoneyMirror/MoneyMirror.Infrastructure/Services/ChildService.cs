@@ -55,7 +55,7 @@ namespace MoneyMirror.Infrastructure.Services
                     {
                         FName = dto.ChildFirstName,
                         LName = dto.ChildLastName,
-                        DOB = dto.DOB,
+                        DOB = dto.DOB.Date,
                         Age = AgeHelper.CalculateAge(dto.DOB),
                         Gender = string.IsNullOrWhiteSpace(dto.Gender) ? null : dto.Gender.Trim(),
                         LoginCode = await GenerateUniqueLoginCodeAsync(),
@@ -559,10 +559,10 @@ namespace MoneyMirror.Infrastructure.Services
             {
                 var children = await _context.Children.ToListAsync();
                 int updatedCount = 0;
-
+                var today = DateTime.UtcNow.Date;
                 foreach (var child in children)
                 {
-                    int currentAge = AgeHelper.CalculateAge(child.DOB);
+                    int currentAge = AgeHelper.CalculateAge(child.DOB.Date);
 
                     if (child.Age != currentAge)
                     {
@@ -780,7 +780,7 @@ namespace MoneyMirror.Infrastructure.Services
                 // STEP 3: Update the fields
                 child.FName = dto.FirstName.Trim();
                 child.LName = dto.LastName.Trim();
-                child.DOB = dto.DateOfBirth;
+                child.DOB = dto.DateOfBirth.Date;
 
                 // STEP 4: Recalculate age and age group automatically
                 child.Age = AgeHelper.CalculateAge(dto.DateOfBirth);
