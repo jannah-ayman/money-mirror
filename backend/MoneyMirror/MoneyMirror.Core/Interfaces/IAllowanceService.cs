@@ -107,8 +107,10 @@ namespace MoneyMirror.Core.Interfaces
         /// <param name="startDate">Optional: Filter transactions from this date</param>
         /// <returns>Tuple: (success flag, transaction history, error message)</returns>
         Task<(bool success, TransactionHistoryDto? history, string errorMessage)> GetMyTransactionsAsync(
-            int childId,
-            DateTime? startDate = null);
+    int childId,
+    DateTime? startDate = null,
+    DateTime? endDate = null,
+    string type = "All");
 
         // ==================== CHILD ALLOWANCE INFO ====================
 

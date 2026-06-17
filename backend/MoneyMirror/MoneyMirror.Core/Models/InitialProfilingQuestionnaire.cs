@@ -21,7 +21,7 @@ namespace MoneyMirror.Core.Models
 
         // ==================== Question 1: How old is your child? ====================
 
-        // Child's age group category (Age_6_8, Age_9_11, Age_12_14)
+        // Child's age group category (Age_6_8, Age_9_11, Age_12_14, Older_Than_14)
         [Required]
         public ChildAgeGroup ChildAgeGroup { get; set; }
 
