@@ -17,8 +17,8 @@ namespace MoneyMirror.API.Validators.Child
                 .WithMessage("Login code is required")
                 .Length(6)
                 .WithMessage("Login code must be exactly 6 characters")
-                .Matches(@"^[A-Z0-9]+$")
-                .WithMessage("Login code must contain only uppercase letters and numbers");
+                .Matches(@"^[A-Za-z0-9]+$")
+                .WithMessage("Login code must contain only letters and numbers");
         }
     }
 }

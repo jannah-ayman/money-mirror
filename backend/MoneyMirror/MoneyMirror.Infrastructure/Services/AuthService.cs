@@ -1273,7 +1273,7 @@ namespace MoneyMirror.Infrastructure.Services
                         FirstName = pc.Child.FName,
                         CurrentBalance = pc.Child.CurrentBalance,
                         Age = pc.Child.Age,
-                        AvatarUrl = null // TODO: implement avatar later
+                        AvatarUrl = null 
                     })
                     .ToListAsync();
 

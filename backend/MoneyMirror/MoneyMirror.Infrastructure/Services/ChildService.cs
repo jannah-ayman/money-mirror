@@ -522,17 +522,6 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
 
-        // HELPER METHODS
-        //private int CalculateAge(DateTime dob)
-        //{
-        //    var today = DateTime.UtcNow;
-        //    var age = today.Year - dob.Year;
-
-        //    if (dob.Date > today.AddYears(-age))
-        //        age--;
-
-        //    return age;
-        //}
 
         public async Task<string> GenerateUniqueLoginCodeAsync()
         {
@@ -695,7 +684,6 @@ namespace MoneyMirror.Infrastructure.Services
                     AvatarUrl = null,
                     PersonalityName = child.PersonalityType?.ChildName ?? "Little Learner",
                     FunFacts = child.PersonalityType?.FunFacts,
-                    UnloggedExpensesCount = 0,
                     ActiveGoalsCount = activeGoalsCount,
                     LowBalanceAlert = lowBalanceAlert
                 };

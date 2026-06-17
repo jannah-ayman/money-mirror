@@ -38,7 +38,6 @@ namespace MoneyMirror.Core.Helpers
 
             return age switch
             {
-                < 6 => ChildAgeGroup.Younger_Than_6,
                 >= 6 and <= 8 => ChildAgeGroup.Age_6_8,
                 >= 9 and <= 11 => ChildAgeGroup.Age_9_11,
                 >= 12 and <= 14 => ChildAgeGroup.Age_12_14,
@@ -48,14 +47,10 @@ namespace MoneyMirror.Core.Helpers
 
         /// <summary>
         /// Gets a child-friendly display name for an age group.
-        /// </summary>
-        /// <param name="ageGroup">Age group enum</param>
-        /// <returns>Display name</returns>
         public static string GetAgeGroupDisplayName(ChildAgeGroup ageGroup)
         {
             return ageGroup switch
             {
-                ChildAgeGroup.Younger_Than_6 => "Under 6 years old",
                 ChildAgeGroup.Age_6_8 => "6-8 years old",
                 ChildAgeGroup.Age_9_11 => "9-11 years old",
                 ChildAgeGroup.Age_12_14 => "12-14 years old",

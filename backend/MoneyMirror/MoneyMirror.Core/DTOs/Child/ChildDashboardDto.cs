@@ -5,7 +5,6 @@
     public string? AvatarUrl { get; set; }
     public string PersonalityName { get; set; }
     public string? FunFacts { get; set; }
-    public int UnloggedExpensesCount { get; set; }
     public int ActiveGoalsCount { get; set; }
     public bool LowBalanceAlert { get; set; } 
 }
