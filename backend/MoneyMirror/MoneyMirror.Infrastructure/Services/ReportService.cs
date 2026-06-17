@@ -26,32 +26,29 @@ namespace MoneyMirror.Infrastructure.Services
         // ==================== 1. SUMMARY ====================
 
         public async Task<(bool success, SpendingSummaryDto? data, string errorMessage)>
-            GetSpendingSummaryAsync(int parentId, int childId, DateTime? startDate, DateTime? endDate)
+      GetSpendingSummaryAsync(int parentId, int childId, DateTime? startDate, DateTime? endDate)
         {
             try
             {
                 if (!await IsParentLinkedToChildAsync(parentId, childId))
                     return (false, null, "Not authorized for this child.");
 
+                if (startDate.HasValue && endDate.HasValue && startDate.Value > endDate.Value)
+                    return (false, null, "Start date cannot be after end date.");
+
                 var query = _context.Expenses
                     .Include(e => e.ExpenseCategory)
                     .Where(e => e.ChildID == childId);
-
                 if (startDate.HasValue) query = query.Where(e => e.LogDate >= startDate.Value);
                 if (endDate.HasValue) query = query.Where(e => e.LogDate <= endDate.Value);
-
                 var expenses = await query.ToListAsync();
-
                 if (!expenses.Any())
                     return (true, new SpendingSummaryDto { StartDate = startDate, EndDate = endDate }, string.Empty);
-
                 var totalSpent = expenses.Sum(e => e.MoneyAmount);
                 var biggest = expenses.OrderByDescending(e => e.MoneyAmount).First();
-
                 int days = startDate.HasValue && endDate.HasValue
                     ? Math.Max(1, (endDate.Value - startDate.Value).Days + 1)
                     : Math.Max(1, (expenses.Max(e => e.LogDate) - expenses.Min(e => e.LogDate)).Days + 1);
-
                 return (true, new SpendingSummaryDto
                 {
                     TotalSpent = totalSpent,
