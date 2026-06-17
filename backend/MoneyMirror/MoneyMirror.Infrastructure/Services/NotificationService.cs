@@ -295,7 +295,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                     await NotifyParentAsync(
                         parentId,
-                        $"Low Balance Alert: {child.FName}",
+                         $"Low Balance Alert: {child.FName}",
                         $"{child.FName} only has {percentRemaining}% of their {allowance.Type.ToLower()} allowance left. Current balance: {child.CurrentBalance:F2} EGP.",
                         $"/children/{child.ChildID}"
                     );
