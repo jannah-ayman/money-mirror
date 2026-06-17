@@ -180,7 +180,7 @@ namespace MoneyMirror.Infrastructure.Services
             }
         }
         public async Task<(bool success, decimal newBalance, decimal newGoalAmount, string errorMessage)>
-            AddMoneyToGoalAsync(int childId, int goalId, AddMoneyToGoalDto dto)
+     AddMoneyToGoalAsync(int childId, int goalId, AddMoneyToGoalDto dto)
         {
             var strategy = _context.Database.CreateExecutionStrategy();
 
@@ -265,6 +265,7 @@ namespace MoneyMirror.Infrastructure.Services
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
                     await _notificationService.CheckAndNotifyLowBalanceAsync(childId);
+
                     string warningMessage = dto.Amount > actualAmount
                         ? $"You added more than needed. Only {actualAmount:F2} EGP was taken from your balance."
                         : string.Empty;
@@ -282,8 +283,10 @@ namespace MoneyMirror.Infrastructure.Services
                             $"/children/{childId}/goals"
                         );
                     }
+
                     if (goalJustCompleted)
                         await _achievementService.CheckAndUnlockAsync(childId, "Goal");
+
                     if (goalJustCompleted)
                     {
                         await _notificationService.NotifyAllParentsOfChildAsync(
@@ -293,7 +296,8 @@ namespace MoneyMirror.Infrastructure.Services
                             $"/children/{childId}/goals"
                         );
                     }
-                    return (true, child.CurrentBalance, goal.CurrentAmount, string.Empty);
+
+                    return (true, child.CurrentBalance, goal.CurrentAmount, warningMessage);
                 }
                 catch (Exception ex)
                 {
