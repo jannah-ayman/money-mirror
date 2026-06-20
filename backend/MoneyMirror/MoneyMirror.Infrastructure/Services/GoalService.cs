@@ -33,14 +33,18 @@ namespace MoneyMirror.Infrastructure.Services
             TargetAmount = g.TargetAmount,
             CurrentAmount = g.CurrentAmount,
             ProgressPercent = g.TargetAmount > 0
-                ? Math.Round((g.CurrentAmount / g.TargetAmount) * 100, 1)
-                : 0,
+               
+             ? Math.Round(((g.Status == "Failure" ? g.SavedAmountBeforeRefund : g.CurrentAmount) / g.TargetAmount) * 100, 1)
+              : 0,
             StartDate = g.StartDate,
             EndDate = g.EndDate,
             IsChallenge = g.IsChallenge,
             Status = g.Status,
-            RewardValue = g.RewardValue
+            RewardValue = g.RewardValue,
+            SavedAmountBeforeRefund = g.SavedAmountBeforeRefund
         };
+
+
 
         public async Task<(bool success, GoalResponseDto? goal, string errorMessage)>
             CreatePersonalGoalAsync(int childId, CreatePersonalGoalDto dto)
@@ -333,6 +337,7 @@ namespace MoneyMirror.Infrastructure.Services
                     {
                         var child = goal.Child;
                         refundAmount = goal.CurrentAmount;
+                        goal.SavedAmountBeforeRefund = goal.CurrentAmount;
                         child.CurrentBalance += refundAmount;
                         goal.CurrentAmount = 0;
 
