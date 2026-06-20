@@ -214,7 +214,7 @@ namespace MoneyMirror.Infrastructure.Services
         // ==================== 5. TOP CATEGORIES ====================
 
         public async Task<(bool success, TopCategoriesDto? data, string errorMessage)>
-            GetTopCategoriesAsync(int parentId, int childId, DateTime? startDate, DateTime? endDate, int topN = 3)
+            GetTopCategoriesAsync(int parentId, int childId, DateTime? startDate, DateTime? endDate)
         {
             try
             {
@@ -234,7 +234,6 @@ namespace MoneyMirror.Infrastructure.Services
                     .GroupBy(e => e.ExpenseCategory?.Name ?? "Uncategorized")
                     .Select(g => new { Name = g.Key, Total = g.Sum(e => e.MoneyAmount), Count = g.Count() })
                     .OrderByDescending(g => g.Total)
-                    .Take(topN)
                     .ToList();
 
                 var topAmount = grouped.FirstOrDefault()?.Total ?? 1;
@@ -404,7 +403,7 @@ namespace MoneyMirror.Infrastructure.Services
                     (_, timePattern, _) = await GetTimePatternAsync(parentId, childId, dto.StartDate, dto.EndDate);
 
                 if (sections.Contains("top-categories"))
-                    (_, topCategories, _) = await GetTopCategoriesAsync(parentId, childId, dto.StartDate, dto.EndDate, dto.TopN);
+                    (_, topCategories, _) = await GetTopCategoriesAsync(parentId, childId, dto.StartDate, dto.EndDate);
 
                 if (sections.Contains("balance-history"))
                     (_, balanceHistory, _) = await GetBalanceHistoryAsync(parentId, childId, dto.StartDate, dto.EndDate);

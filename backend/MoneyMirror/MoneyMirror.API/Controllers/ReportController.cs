@@ -85,13 +85,12 @@ namespace MoneyMirror.API.Controllers
         public async Task<ActionResult<ApiResponse<TopCategoriesDto>>> GetTopCategories(
             int childId,
             [FromQuery] DateTime? startDate,
-            [FromQuery] DateTime? endDate,
-            [FromQuery] int topN = 3)
+            [FromQuery] DateTime? endDate)
         {
             var parentId = GetParentId();
             if (parentId == null) return BadRequest(ApiResponse<TopCategoriesDto>.ErrorResponse("Invalid token."));
 
-            var (success, data, error) = await _reportService.GetTopCategoriesAsync(parentId.Value, childId, startDate, endDate, topN);
+            var (success, data, error) = await _reportService.GetTopCategoriesAsync(parentId.Value, childId, startDate, endDate);
             if (!success) return BadRequest(ApiResponse<TopCategoriesDto>.ErrorResponse(error));
 
             return Ok(ApiResponse<TopCategoriesDto>.SuccessResponse(data, "Top categories loaded."));

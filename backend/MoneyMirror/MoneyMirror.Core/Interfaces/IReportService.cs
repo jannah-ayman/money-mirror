@@ -17,7 +17,7 @@ namespace MoneyMirror.Core.Interfaces
             GetTimePatternAsync(int parentId, int childId, DateTime? startDate, DateTime? endDate);
 
         Task<(bool success, TopCategoriesDto? data, string errorMessage)>
-            GetTopCategoriesAsync(int parentId, int childId, DateTime? startDate, DateTime? endDate, int topN = 3);
+            GetTopCategoriesAsync(int parentId, int childId, DateTime? startDate, DateTime? endDate);
 
         Task<(bool success, BalanceHistoryDto? data, string errorMessage)>
             GetBalanceHistoryAsync(int parentId, int childId, DateTime? startDate, DateTime? endDate);
