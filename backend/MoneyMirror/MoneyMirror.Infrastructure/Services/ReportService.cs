@@ -51,6 +51,7 @@ namespace MoneyMirror.Infrastructure.Services
                     : Math.Max(1, (expenses.Max(e => e.LogDate) - expenses.Min(e => e.LogDate)).Days + 1);
                 return (true, new SpendingSummaryDto
                 {
+                    Description = "Overview of total spending, average daily spend, and biggest purchase for the period.",
                     TotalSpent = totalSpent,
                     TotalExpenseCount = expenses.Count,
                     AverageDailySpend = Math.Round(totalSpent / days, 2),
@@ -101,7 +102,7 @@ namespace MoneyMirror.Infrastructure.Services
                     .OrderByDescending(c => c.TotalAmount)
                     .ToList();
 
-                return (true, new CategoryBreakdownDto { GrandTotal = grandTotal, Categories = categories }, string.Empty);
+                return (true, new CategoryBreakdownDto { Description = "Spending broken down by category, showing amount and share of total for each.", GrandTotal = grandTotal, Categories = categories }, string.Empty);
             }
             catch (Exception ex)
             {
@@ -144,7 +145,7 @@ namespace MoneyMirror.Infrastructure.Services
                     .OrderByDescending(m => m.TotalAmount)
                     .ToList();
 
-                return (true, new MoodSpendingDto { GrandTotal = grandTotal, Moods = moods }, string.Empty);
+                return (true, new MoodSpendingDto { Description = "Spending broken down by the child's mood at the time of purchase.", GrandTotal = grandTotal, Moods = moods }, string.Empty);
             }
             catch (Exception ex)
             {
@@ -197,6 +198,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                 return (true, new TimePatternDto
                 {
+                    Description = "Comparison of weekday vs weekend spending and a day-by-day breakdown.",
                     WeekdayTotal = weekdayTotal,
                     WeekendTotal = weekendTotal,
                     WeekdayPercentage = grandTotal > 0 ? Math.Round((weekdayTotal / grandTotal) * 100, 1) : 0,
@@ -207,51 +209,6 @@ namespace MoneyMirror.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in GetTimePatternAsync for child {ChildId}", childId);
-                return (false, null, "An error occurred.");
-            }
-        }
-
-        // ==================== 5. TOP CATEGORIES ====================
-
-        public async Task<(bool success, TopCategoriesDto? data, string errorMessage)>
-            GetTopCategoriesAsync(int parentId, int childId, DateTime? startDate, DateTime? endDate)
-        {
-            try
-            {
-                if (!await IsParentLinkedToChildAsync(parentId, childId))
-                    return (false, null, "Not authorized for this child.");
-
-                var query = _context.Expenses
-                    .Include(e => e.ExpenseCategory)
-                    .Where(e => e.ChildID == childId);
-
-                if (startDate.HasValue) query = query.Where(e => e.LogDate >= startDate.Value);
-                if (endDate.HasValue) query = query.Where(e => e.LogDate <= endDate.Value);
-
-                var expenses = await query.ToListAsync();
-
-                var grouped = expenses
-                    .GroupBy(e => e.ExpenseCategory?.Name ?? "Uncategorized")
-                    .Select(g => new { Name = g.Key, Total = g.Sum(e => e.MoneyAmount), Count = g.Count() })
-                    .OrderByDescending(g => g.Total)
-                    .ToList();
-
-                var topAmount = grouped.FirstOrDefault()?.Total ?? 1;
-
-                var result = grouped.Select((g, i) => new TopCategoryItemDto
-                {
-                    Rank = i + 1,
-                    CategoryName = g.Name,
-                    TotalAmount = g.Total,
-                    ExpenseCount = g.Count,
-                    PercentageOfTop = Math.Round((g.Total / topAmount) * 100, 1)
-                }).ToList();
-
-                return (true, new TopCategoriesDto { Categories = result }, string.Empty);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetTopCategoriesAsync for child {ChildId}", childId);
                 return (false, null, "An error occurred.");
             }
         }
@@ -301,6 +258,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                 return (true, new BalanceHistoryDto
                 {
+                    Description = "Balance changes over time from allowances, bonuses, expenses, and goal transfers.",
                     OpeningBalance = openingBalance,
                     ClosingBalance = closingBalance,
                     Points = points
@@ -348,6 +306,7 @@ namespace MoneyMirror.Infrastructure.Services
 
                 return (true, new GoalReportDto
                 {
+                    Description = "Summary of savings goals created, active, completed, and failed in the period.",
                     TotalCreated = goals.Count,
                     TotalCompleted = completed.Count,
                     TotalFailed = goals.Count(g => g.Status == "Failure"),
@@ -386,7 +345,6 @@ namespace MoneyMirror.Infrastructure.Services
                 CategoryBreakdownDto? categoryBreakdown = null;
                 MoodSpendingDto? moodSpending = null;
                 TimePatternDto? timePattern = null;
-                TopCategoriesDto? topCategories = null;
                 BalanceHistoryDto? balanceHistory = null;
                 GoalReportDto? goalReport = null;
 
@@ -401,9 +359,6 @@ namespace MoneyMirror.Infrastructure.Services
 
                 if (sections.Contains("time-patterns"))
                     (_, timePattern, _) = await GetTimePatternAsync(parentId, childId, dto.StartDate, dto.EndDate);
-
-                if (sections.Contains("top-categories"))
-                    (_, topCategories, _) = await GetTopCategoriesAsync(parentId, childId, dto.StartDate, dto.EndDate);
 
                 if (sections.Contains("balance-history"))
                     (_, balanceHistory, _) = await GetBalanceHistoryAsync(parentId, childId, dto.StartDate, dto.EndDate);
@@ -507,26 +462,6 @@ namespace MoneyMirror.Infrastructure.Services
                                     AddTableHeader(table, "Day", "Amount (EGP)", "Count");
                                     foreach (var d in timePattern.DailyBreakdown)
                                         AddTableRow(table, d.DayName, $"{d.TotalAmount:F2}", d.ExpenseCount.ToString());
-                                });
-                                col.Item().PaddingVertical(12).LineHorizontal(1).LineColor("#EEEEEE");
-                            }
-
-                            // --- Top Categories ---
-                            if (topCategories != null)
-                            {
-                                col.Item().Text("Top Categories").FontSize(14).Bold();
-                                col.Item().PaddingTop(6).Table(table =>
-                                {
-                                    table.ColumnsDefinition(c =>
-                                    {
-                                        c.ConstantColumn(30);
-                                        c.RelativeColumn(3);
-                                        c.RelativeColumn(2);
-                                        c.RelativeColumn(1);
-                                    });
-                                    AddTableHeader(table, "#", "Category", "Amount (EGP)", "Count");
-                                    foreach (var item in topCategories.Categories)
-                                        AddTableRow(table, item.Rank.ToString(), item.CategoryName, $"{item.TotalAmount:F2}", item.ExpenseCount.ToString());
                                 });
                                 col.Item().PaddingVertical(12).LineHorizontal(1).LineColor("#EEEEEE");
                             }

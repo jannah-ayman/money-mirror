@@ -36,6 +36,21 @@ namespace MoneyMirror.API.Controllers
             return Ok(ApiResponse<SpendingSummaryDto>.SuccessResponse(data, "Summary loaded."));
         }
 
+        [HttpGet("{childId}/balance-history")]
+        public async Task<ActionResult<ApiResponse<BalanceHistoryDto>>> GetBalanceHistory(
+            int childId,
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+            var parentId = GetParentId();
+            if (parentId == null) return BadRequest(ApiResponse<BalanceHistoryDto>.ErrorResponse("Invalid token."));
+
+            var (success, data, error) = await _reportService.GetBalanceHistoryAsync(parentId.Value, childId, startDate, endDate);
+            if (!success) return BadRequest(ApiResponse<BalanceHistoryDto>.ErrorResponse(error));
+
+            return Ok(ApiResponse<BalanceHistoryDto>.SuccessResponse(data, "Balance history loaded."));
+        }
+
         [HttpGet("{childId}/category-breakdown")]
         public async Task<ActionResult<ApiResponse<CategoryBreakdownDto>>> GetCategoryBreakdown(
             int childId,
@@ -79,36 +94,6 @@ namespace MoneyMirror.API.Controllers
             if (!success) return BadRequest(ApiResponse<TimePatternDto>.ErrorResponse(error));
 
             return Ok(ApiResponse<TimePatternDto>.SuccessResponse(data, "Time patterns loaded."));
-        }
-
-        [HttpGet("{childId}/top-categories")]
-        public async Task<ActionResult<ApiResponse<TopCategoriesDto>>> GetTopCategories(
-            int childId,
-            [FromQuery] DateTime? startDate,
-            [FromQuery] DateTime? endDate)
-        {
-            var parentId = GetParentId();
-            if (parentId == null) return BadRequest(ApiResponse<TopCategoriesDto>.ErrorResponse("Invalid token."));
-
-            var (success, data, error) = await _reportService.GetTopCategoriesAsync(parentId.Value, childId, startDate, endDate);
-            if (!success) return BadRequest(ApiResponse<TopCategoriesDto>.ErrorResponse(error));
-
-            return Ok(ApiResponse<TopCategoriesDto>.SuccessResponse(data, "Top categories loaded."));
-        }
-
-        [HttpGet("{childId}/balance-history")]
-        public async Task<ActionResult<ApiResponse<BalanceHistoryDto>>> GetBalanceHistory(
-            int childId,
-            [FromQuery] DateTime? startDate,
-            [FromQuery] DateTime? endDate)
-        {
-            var parentId = GetParentId();
-            if (parentId == null) return BadRequest(ApiResponse<BalanceHistoryDto>.ErrorResponse("Invalid token."));
-
-            var (success, data, error) = await _reportService.GetBalanceHistoryAsync(parentId.Value, childId, startDate, endDate);
-            if (!success) return BadRequest(ApiResponse<BalanceHistoryDto>.ErrorResponse(error));
-
-            return Ok(ApiResponse<BalanceHistoryDto>.SuccessResponse(data, "Balance history loaded."));
         }
 
         [HttpGet("{childId}/goal-report")]

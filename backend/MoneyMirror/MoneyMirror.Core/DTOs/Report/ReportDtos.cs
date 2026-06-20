@@ -17,6 +17,7 @@
         public decimal AverageDailySpend { get; set; }
         public decimal BiggestSingleExpense { get; set; }
         public string? BiggestExpenseCategory { get; set; }
+        public string Description { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
     }
@@ -33,6 +34,7 @@
 
     public class CategoryBreakdownDto
     {
+        public string Description { get; set; }
         public decimal GrandTotal { get; set; }
         public List<CategoryBreakdownItemDto> Categories { get; set; }
     }
@@ -49,6 +51,7 @@
 
     public class MoodSpendingDto
     {
+        public string Description { get; set; }
         public decimal GrandTotal { get; set; }
         public List<MoodSpendingItemDto> Moods { get; set; }
     }
@@ -64,27 +67,12 @@
 
     public class TimePatternDto
     {
+        public string Description { get; set; }
         public decimal WeekdayTotal { get; set; }
         public decimal WeekendTotal { get; set; }
         public decimal WeekdayPercentage { get; set; }
         public decimal WeekendPercentage { get; set; }
         public List<DayOfWeekSpendingDto> DailyBreakdown { get; set; }
-    }
-
-    // ==================== 5. TOP CATEGORIES ====================
-
-    public class TopCategoryItemDto
-    {
-        public int Rank { get; set; }
-        public string CategoryName { get; set; }
-        public decimal TotalAmount { get; set; }
-        public decimal PercentageOfTop { get; set; } // relative to #1 spender
-        public int ExpenseCount { get; set; }
-    }
-
-    public class TopCategoriesDto
-    {
-        public List<TopCategoryItemDto> Categories { get; set; }
     }
 
     // ==================== 6. BALANCE HISTORY ====================
@@ -100,6 +88,7 @@
 
     public class BalanceHistoryDto
     {
+        public string Description { get; set; }
         public decimal OpeningBalance { get; set; }   // balance before first transaction in range
         public decimal ClosingBalance { get; set; }   // balance after last transaction in range
         public List<BalanceHistoryPointDto> Points { get; set; }
@@ -117,6 +106,7 @@
 
     public class GoalReportDto
     {
+        public string Description { get; set; }
         public int TotalCreated { get; set; }
         public int TotalCompleted { get; set; }
         public int TotalFailed { get; set; }
@@ -136,6 +126,5 @@
         public List<string> Sections { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-       
     }
 }
