@@ -67,11 +67,9 @@ namespace MoneyMirror.Infrastructure.Services
 
                 if (nextQuestion == null)
                     return (true, null, "You've completed all available quizzes! More coming soon.");
-
                 var dto = new NextQuizQuestionDto
                 {
                     StoryID = nextQuestion.StoryID,
-                    Title = nextQuestion.Title,
                     QuestionText = nextQuestion.QuestionText,
                     Answers = nextQuestion.Answers.Select(a => new QuizAnswerOptionDto
                     {

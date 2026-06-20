@@ -12,10 +12,6 @@ namespace MoneyMirror.Core.Models
         public int StoryID { get; set; }
 
         [Required]
-        [MaxLength(200)]
-        public string Title { get; set; }
-
-        [Required]
         [MaxLength(2000)]
         public string QuestionText { get; set; }
 
