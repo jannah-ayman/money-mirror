@@ -88,7 +88,7 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         public async Task<(bool success, SubmitQuizAnswerResponseDto? response, string errorMessage)>
-    SubmitAnswerAsync(int childId, SubmitQuizAnswerDto dto)
+     SubmitAnswerAsync(int childId, SubmitQuizAnswerDto dto)
         {
             try
             {
@@ -102,6 +102,28 @@ namespace MoneyMirror.Infrastructure.Services
 
                 if (answer == null)
                     return (false, null, "Invalid answer");
+
+                // ✅ Get the next question the child should be answering
+                var answeredStoryIds = await _context.QuizLogs
+                    .Where(q => q.ChildID == childId)
+                    .Select(q => q.StoryID)
+                    .Distinct()
+                    .ToListAsync();
+
+                var currentStory = await _context.StoryQuizTemplates
+                    .Where(s =>
+                        s.TargetAgeMin <= child.Age &&
+                        s.TargetAgeMax >= child.Age &&
+                        !answeredStoryIds.Contains(s.StoryID))
+                    .OrderBy(s => s.StoryID)
+                    .FirstOrDefaultAsync();
+
+                if (currentStory == null)
+                    return (false, null, "No available question found");
+
+                // ✅ Reject if the answer doesn't belong to the current story
+                if (answer.StoryID != currentStory.StoryID)
+                    return (false, null, "This answer does not belong to the current question");
 
                 bool alreadyAnswered = await _context.QuizLogs
                     .AnyAsync(q => q.ChildID == childId && q.StoryID == answer.StoryID);
@@ -118,13 +140,12 @@ namespace MoneyMirror.Infrastructure.Services
                 };
 
                 _context.QuizLogs.Add(log);
-
                 child.QuizCount++;
                 _context.Children.Update(child);
-
                 await _context.SaveChangesAsync();
 
                 await _achievementService.CheckAndUnlockAsync(childId, "Quiz");
+
                 _logger.LogInformation(
                     "Child {ChildId} answered StoryID {StoryId} with AnswerID {AnswerId}",
                     childId, answer.StoryID, dto.AnswerID);
