@@ -32,6 +32,7 @@
         public bool IsChallenge { get; set; }
         public string Status { get; set; }
         public decimal? RewardValue { get; set; }
+        public decimal SavedAmountBeforeRefund { get; set; }
     }
     public class EditPersonalGoalDto
     {
