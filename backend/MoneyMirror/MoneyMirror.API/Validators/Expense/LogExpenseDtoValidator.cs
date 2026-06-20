@@ -35,9 +35,10 @@ namespace MoneyMirror.API.Validators.Expense
                 .WithMessage("Note cannot exceed 500 characters")
                 .When(x => !string.IsNullOrWhiteSpace(x.Note));
 
-            // ⭐ REMOVED: Item name basic validation
-            // We'll check "Other" category requirement in the service layer
-            // because we need to query the database to know which category is "Other"
+            // Validate LogDate is not in the future if provided
+            RuleFor(x => x.LogDate)
+             .Must(date => !date.HasValue || date.Value.Date <= DateTime.UtcNow.Date)
+               .WithMessage("Log date cannot be in the future.");
         }
     }
 }

@@ -38,6 +38,14 @@ namespace MoneyMirror.Infrastructure.Services
             return await _context.ParentChildren
                 .AnyAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
         }
+      
+        /// Resolves the log date of an expense: uses the requested date at midnight UTC if provided, 
+        /// otherwise defaults to the current UTC time.
+       private DateTime ResolveLogDate(DateTime? requestedDate)
+        {
+            return requestedDate.HasValue ? requestedDate.Value.Date : DateTime.UtcNow;
+        }
+
 
         // ==================== EXPENSE LOGGING ====================
 
@@ -80,7 +88,7 @@ namespace MoneyMirror.Infrastructure.Services
                     {
                         ItemName = finalItemName,
                         MoneyAmount = dto.MoneyAmount,
-                        LogDate = DateTime.UtcNow,
+                        LogDate = ResolveLogDate(dto.LogDate),
                         Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
                         ChildID = childId,
                         CategoryID = dto.CategoryID,
@@ -474,6 +482,7 @@ namespace MoneyMirror.Infrastructure.Services
                     expense.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
                     expense.ItemName = finalItemName;
                     expense.MoneyAmount = dto.MoneyAmount;
+                    expense.LogDate = ResolveLogDate(dto.LogDate);
                     _context.Expenses.Update(expense);
 
                     // If amount changed, record a corrective transaction
