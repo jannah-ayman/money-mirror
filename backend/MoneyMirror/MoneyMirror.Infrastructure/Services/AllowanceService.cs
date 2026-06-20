@@ -238,7 +238,7 @@ namespace MoneyMirror.Infrastructure.Services
                         Type = "BonusCredit",
                         Amount = dto.Amount,
                         BalanceAfter = child.CurrentBalance,
-                        Description = dto.Reason?.Trim(), // Trims out accidental whitespace if they just typed spaces
+                        Description = string.IsNullOrWhiteSpace(dto.Reason) ? "Bonus from parent" : dto.Reason.Trim(), // Trims out accidental whitespace if they just typed spaces
                         TransactionDate = DateTime.UtcNow,
                         ChildID = childId,
                         ParentID = parentId,
