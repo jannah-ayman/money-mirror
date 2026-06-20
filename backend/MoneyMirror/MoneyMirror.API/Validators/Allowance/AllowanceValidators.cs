@@ -73,7 +73,8 @@ namespace MoneyMirror.API.Validators.Allowance
             // ==================== Reason Validation ====================
             RuleFor(x => x.Reason)
                 .MaximumLength(500)
-                .WithMessage("Reason cannot exceed 500 characters");
+                .WithMessage("Reason cannot exceed 500 characters")
+                .When(x => !string.IsNullOrWhiteSpace(x.Reason));
         }
     }
 }
