@@ -77,10 +77,5 @@ namespace MoneyMirror.Core.Models
         /// </summary>
         public virtual ICollection<Child> Children { get; set; } = new List<Child>();
 
-        /// <summary>
-        /// Collection of quiz logs that led to this personality type classification.
-        /// Used to analyze which quiz responses correlate with each personality type.
-        /// </summary>
-        public virtual ICollection<QuizLog> QuizLogs { get; set; } = new List<QuizLog>();
     }
 }
