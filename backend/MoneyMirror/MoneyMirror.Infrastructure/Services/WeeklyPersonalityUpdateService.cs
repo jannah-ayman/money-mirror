@@ -49,7 +49,6 @@ namespace MoneyMirror.Infrastructure.Services
                 {
                     var windowStart = DateTime.UtcNow.AddDays(-WindowDays);
 
-                    // Load behavioral data
                     var expenses = await _context.Expenses
                         .Include(e => e.ExpenseCategory)
                         .Include(e => e.Mood)
@@ -72,7 +71,6 @@ namespace MoneyMirror.Infrastructure.Services
                         .Where(q => q.ChildID == child.ChildID && q.CompletedDate >= windowStart)
                         .ToListAsync();
 
-                    // Build payload
                     var previousScores = new
                     {
                         impulsive_spender = (double)(child.ImpulsiveSpenderScore ?? 0),
@@ -83,7 +81,6 @@ namespace MoneyMirror.Infrastructure.Services
 
                     var payload = BuildPayload(child.ChildID, expenses, allGoals, completedGoals, allowance, quizLogs, previousScores);
 
-                    // Call Python
                     var response = await _httpClient.PostAsJsonAsync(
                         $"{_aiServiceUrl}/api/personality/weekly-update", payload);
 
@@ -104,7 +101,6 @@ namespace MoneyMirror.Infrastructure.Services
                         continue;
                     }
 
-                    // Update personality type
                     var personalityType = await _context.PersonalityTypes
                         .FirstOrDefaultAsync(pt => pt.ParentName == result.ParentName);
 
@@ -114,20 +110,21 @@ namespace MoneyMirror.Infrastructure.Services
                         child.IsPersonalityFinalized = true;
                     }
 
-                    // Store dimension scores
                     child.ImpulsiveSpenderScore = (decimal)result.Dimensions.ImpulsiveSpender;
                     child.PrudentSaverScore = (decimal)result.Dimensions.PrudentSaver;
                     child.GoalOrientedPlannerScore = (decimal)result.Dimensions.GoalOrientedPlanner;
                     child.BargainHunterScore = (decimal)result.Dimensions.BargainHunter;
                     child.LastPersonalityUpdateDate = DateTime.UtcNow;
+
+                    _context.Children.Update(child);
+                    updated++;
+
                     await _notificationService.NotifyAllParentsOfChildAsync(
                         child.ChildID,
                         "Personality Updated 🧠",
                         $"{child.FName}'s financial personality has been updated to {result.ParentName}.",
                         $"/children/{child.ChildID}/analysis"
                     );
-                    _context.Children.Update(child);
-                    updated++;
 
                     _logger.LogInformation(
                         "Child {ChildId} updated: {PersonalityType} (I:{I} S:{S} P:{P} B:{B})",
@@ -149,7 +146,16 @@ namespace MoneyMirror.Infrastructure.Services
                 updated, failed);
         }
 
-        private static object BuildPayload(
+        private static string MapPersonalityNameToKey(string parentName) => parentName switch
+        {
+            "Impulsive Spender" => "IMPULSIVE_SPENDER",
+            "Prudent Saver" => "PRUDENT_SAVER",
+            "Goal-Oriented Planner" => "GOAL_ORIENTED_PLANNER",
+            "Bargain Hunter" => "BARGAIN_HUNTER",
+            _ => null
+        };
+
+        private object BuildPayload(
             int childId,
             List<Core.Models.Expense> expenses,
             List<Core.Models.SavingsGoal> allGoals,
@@ -184,19 +190,12 @@ namespace MoneyMirror.Infrastructure.Services
                 .Select(g => g.Key)
                 .ToList();
 
-            var quizScores = new { impulsive = 0, saver = 0, planner = 0, bargain = 0 };
-            int imp = 0, sav = 0, pla = 0, bar = 0;
-
-            foreach (var log in quizLogs)
-            {
-                switch (log.QuizAnswer?.PersonalityType?.ParentName)
-                {
-                    case "Impulsive Spender": imp++; break;
-                    case "Prudent Saver": sav++; break;
-                    case "Goal-Oriented Planner": pla++; break;
-                    case "Bargain Hunter": bar++; break;
-                }
-            }
+            var quizAnswers = quizLogs
+                .OrderBy(q => q.CompletedDate)
+                .Select(q => MapPersonalityNameToKey(q.QuizAnswer?.PersonalityType?.ParentName))
+                .Where(key => key != null)
+                .Select(key => new { personality = key })
+                .ToList();
 
             return new
             {
@@ -208,12 +207,10 @@ namespace MoneyMirror.Infrastructure.Services
                 goal_completion_rate = goalCompletionRate,
                 mood_spending = moodSpending,
                 top_categories = topCategories,
-                quiz_scores = new { impulsive = imp, saver = sav, planner = pla, bargain = bar },
-                previous_scores = previousScores  // ADD THIS
+                quiz_answers = quizAnswers,
+                previous_scores = previousScores
             };
         }
-
-        // ==================== RESPONSE CLASSES ====================
 
         private class WeeklyUpdateResponse
         {
