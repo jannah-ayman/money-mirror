@@ -72,9 +72,6 @@ namespace MoneyMirror.Infrastructure.Data
 
         /// Moods table - predefined mood emojis for expense logging
         public DbSet<Mood> Moods { get; set; }
-
-        /// Advice table - AI-generated personalized financial tips
-        public DbSet<Advice> Advices { get; set; }
         public DbSet<AnalysisAdviceTemplate> AnalysisAdviceTemplates { get; set; }
 
         /// Transactions table - records all financial movements (allowances, bonuses, expenses)
@@ -409,29 +406,6 @@ namespace MoneyMirror.Infrastructure.Data
                       .HasDefaultValueSql("GETUTCDATE()");
             });
 
-
-
-            // ==================== ADVICE ENTITY CONFIGURATION ====================
-
-            modelBuilder.Entity<Advice>(entity =>
-            {
-                // Index for querying unread advice
-                entity.HasIndex(a => new { a.ChildID, a.IsRead })
-                      .HasDatabaseName("IX_Advice_Child_IsRead");
-
-                // Relationship with Child
-                entity.HasOne(a => a.Child)
-                      .WithMany(c => c.Advices)
-                      .HasForeignKey(a => a.ChildID)
-                      .OnDelete(DeleteBehavior.Cascade); // Delete advice if child deleted
-
-                // Default values
-                entity.Property(a => a.IsRead)
-                      .HasDefaultValue(false);
-
-                entity.Property(a => a.GeneratedDate)
-                      .HasDefaultValueSql("GETUTCDATE()");
-            });
             modelBuilder.Entity<AnalysisAdviceTemplate>().HasData(
                 // ==================== ALERTS ====================
                 new AnalysisAdviceTemplate
