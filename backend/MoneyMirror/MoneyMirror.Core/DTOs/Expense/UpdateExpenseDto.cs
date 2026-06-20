@@ -13,5 +13,6 @@ namespace MoneyMirror.Core.DTOs.Expense
         public int MoodID { get; set; }
         public decimal MoneyAmount { get; set; }
         public string? Note { get; set; }
+        public DateTime? LogDate { get; set; }
     }
 }

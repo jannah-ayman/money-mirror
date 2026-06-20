@@ -25,6 +25,10 @@ namespace MoneyMirror.API.Validators.Expense
                 .MaximumLength(500)
                 .WithMessage("Note cannot exceed 500 characters")
                 .When(x => !string.IsNullOrWhiteSpace(x.Note));
+            
+            RuleFor(x => x.LogDate)
+            .Must(date => !date.HasValue || date.Value.Date <= DateTime.UtcNow.Date)
+            .WithMessage("Log date cannot be in the future.");
         }
     }
 }
