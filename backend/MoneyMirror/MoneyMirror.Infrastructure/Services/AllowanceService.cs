@@ -228,6 +228,13 @@ namespace MoneyMirror.Infrastructure.Services
                         return (false, 0, "Child not found");
                     }
 
+                    var parentChildLink = await _context.ParentChildren
+                        .FirstOrDefaultAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
+
+                    string giverLabel = parentChildLink != null
+                        ? parentChildLink.Role.ToString()
+                        : "Your parent";
+
                     // STEP 3: Update child's balance
                     child.CurrentBalance += dto.Amount;
                     _context.Children.Update(child);
@@ -254,8 +261,8 @@ namespace MoneyMirror.Infrastructure.Services
                         childId,
                         "Bonus Received! 🎁",
                         string.IsNullOrWhiteSpace(dto.Reason)
-                            ? $"Your parent just gave you {dto.Amount:F2} EGP bonus!"
-                            : $"Your parent just gave you {dto.Amount:F2} EGP bonus: {dto.Reason}",
+                            ? $"{giverLabel} just gave you {dto.Amount:F2} EGP bonus!"
+                            : $"{giverLabel} just gave you {dto.Amount:F2} EGP bonus: {dto.Reason}",
                         "/balance"
                     );
                     _logger.LogInformation($"Bonus of {dto.Amount} given to child {childId} by parent {parentId}. New balance: {child.CurrentBalance}");
@@ -348,54 +355,30 @@ namespace MoneyMirror.Infrastructure.Services
 
         // ==================== TRANSACTION HISTORY (PARENT VIEW) ====================
         public async Task<(bool success, TransactionHistoryDto? history, string errorMessage)> GetTransactionHistoryAsync(
-    int parentId,
-    int childId,
-    DateTime? startDate = null,
-    DateTime? endDate = null,
-    string type = "All")
+             int parentId,
+             int childId,
+             DateTime? startDate = null,
+             DateTime? endDate = null,
+             string type = "All")
         {
             try
             {
                 bool isLinked = await IsParentLinkedToChildAsync(parentId, childId);
+
                 if (!isLinked)
                 {
                     _logger.LogWarning($"Parent {parentId} attempted to view transactions for non-linked child {childId}");
                     return (false, null, "You are not authorized to view this child's transactions");
                 }
 
-                var validTypes = new HashSet<string>
-        {
-            "All", "AllowanceAndBonus",
-            "AllowanceCredit", "BonusCredit", "Expense", "GoalTransfer", "GoalRefund",
-            "ExpenseAdjustment", "BonusAdjustment"
-        };
-
-
-                if (!validTypes.Contains(type))
-                    return (false, null, "Invalid transaction type filter.");
-
-                var now = DateTime.UtcNow;
-
-                if (startDate.HasValue && startDate.Value > now)
-                    return (false, null, "Start date cannot be in the future.");
-
-                if (endDate.HasValue && endDate.Value > now)
-                    return (false, null, "End date cannot be in the future.");
-
-                if (startDate.HasValue && endDate.HasValue && startDate.Value > endDate.Value)
-                    return (false, null, "Start date cannot be after end date.");
-
-                var query = _context.Transactions.Where(t => t.ChildID == childId);
+                var query = _context.Transactions
+                    .Where(t => t.ChildID == childId);
 
                 if (startDate.HasValue)
                     query = query.Where(t => t.TransactionDate >= startDate.Value);
 
                 if (endDate.HasValue)
-                {
-                    // FIX: Include the entire end day up to 23:59:59
-                    var endOfDay = endDate.Value.Date.AddDays(1).AddTicks(-1);
-                    query = query.Where(t => t.TransactionDate <= endOfDay);
-                }
+                    query = query.Where(t => t.TransactionDate <= endDate.Value);
 
                 if (type == "AllowanceAndBonus")
                     query = query.Where(t => t.Type == "AllowanceCredit" || t.Type == "BonusCredit");
@@ -415,7 +398,9 @@ namespace MoneyMirror.Infrastructure.Services
                     })
                     .ToListAsync();
 
-                var totalCredits = transactions.Where(t => t.Amount > 0).Sum(t => t.Amount);
+                var totalCredits = transactions
+                    .Where(t => t.Amount > 0)
+                    .Sum(t => t.Amount);
 
                 var history = new TransactionHistoryDto
                 {
@@ -436,69 +421,51 @@ namespace MoneyMirror.Infrastructure.Services
         // ==================== TRANSACTION HISTORY (CHILD VIEW) ====================
 
         public async Task<(bool success, TransactionHistoryDto? history, string errorMessage)> GetMyTransactionsAsync(
-            int childId,
-            DateTime? startDate = null,
-            DateTime? endDate = null, // ADDED: Match parent functionality
-            string type = "All")       // ADDED: Match parent functionality
+               int childId,
+               DateTime? startDate = null,
+               int? givenByParentId = null)
         {
             try
             {
-                // ADDED: Input validations matching the parent rules
-                var validTypes = new HashSet<string>
-        {
-            "All", "AllowanceAndBonus",
-            "AllowanceCredit", "BonusCredit", "Expense", "GoalTransfer", "GoalRefund",
-            "ExpenseAdjustment", "BonusAdjustment"
-        };
-
-
-                if (!validTypes.Contains(type))
-                    return (false, null, "Invalid transaction type filter.");
-
-                var now = DateTime.UtcNow;
-
-                if (startDate.HasValue && startDate.Value > now)
-                    return (false, null, "Start date cannot be in the future.");
-
-                if (endDate.HasValue && endDate.Value > now)
-                    return (false, null, "End date cannot be in the future.");
-
-                if (startDate.HasValue && endDate.HasValue && startDate.Value > endDate.Value)
-                    return (false, null, "Start date cannot be after end date.");
-
-                // Build query
-                var query = _context.Transactions.Where(t => t.ChildID == childId);
+                var query = _context.Transactions
+                    .Include(t => t.Parent)
+                    .Where(t => t.ChildID == childId);
 
                 if (startDate.HasValue)
                     query = query.Where(t => t.TransactionDate >= startDate.Value);
 
-                if (endDate.HasValue)
-                {
-                    // FIX: Include the entire end day
-                    var endOfDay = endDate.Value.Date.AddDays(1).AddTicks(-1);
-                    query = query.Where(t => t.TransactionDate <= endOfDay);
-                }
+                if (givenByParentId.HasValue)
+                    query = query.Where(t => t.ParentID == givenByParentId.Value);
 
-                if (type == "AllowanceAndBonus")
-                    query = query.Where(t => t.Type == "AllowanceCredit" || t.Type == "BonusCredit");
-                else if (type != "All")
-                    query = query.Where(t => t.Type == type);
-
-                // Execute query
-                var transactions = await query
+                var rawTransactions = await query
                     .OrderByDescending(t => t.TransactionDate)
-                    .Select(t => new TransactionDto
-                    {
-                        TransactionId = t.TransactionID,
-                        Type = t.Type,
-                        Amount = t.Amount,
-                        BalanceAfter = t.BalanceAfter,
-                        Description = t.Description,
-                        TransactionDate = t.TransactionDate
-                    })
                     .ToListAsync();
 
-                var totalCredits = transactions.Where(t => t.Amount > 0).Sum(t => t.Amount);
+                var parentIds = rawTransactions
+                    .Where(t => t.ParentID.HasValue)
+                    .Select(t => t.ParentID!.Value)
+                    .Distinct()
+                    .ToList();
+
+                var roleLookup = await _context.ParentChildren
+                    .Where(pc => pc.ChildID == childId && parentIds.Contains(pc.ParentID))
+                    .ToDictionaryAsync(pc => pc.ParentID, pc => pc.Role.ToString());
+
+                var transactions = rawTransactions.Select(t => new TransactionDto
+                {
+                    TransactionId = t.TransactionID,
+                    Type = t.Type,
+                    Amount = t.Amount,
+                    BalanceAfter = t.BalanceAfter,
+                    Description = t.Description,
+                    TransactionDate = t.TransactionDate,
+                    GivenByName = t.Parent != null ? $"{t.Parent.FName} {t.Parent.LName}" : null,
+                    GivenByRole = t.ParentID.HasValue && roleLookup.TryGetValue(t.ParentID.Value, out var role) ? role : null
+                }).ToList();
+
+                var totalCredits = transactions
+                    .Where(t => t.Amount > 0)
+                    .Sum(t => t.Amount);
 
                 var history = new TransactionHistoryDto
                 {
@@ -759,12 +726,10 @@ namespace MoneyMirror.Infrastructure.Services
         /// </summary>
         private async Task CreditAllowanceAsync(Allowance allowance)
         {
-            // ✅ Use EF's execution strategy (works with EnableRetryOnFailure)
             var strategy = _context.Database.CreateExecutionStrategy();
 
             await strategy.ExecuteAsync(async () =>
             {
-                // Now we can safely use a transaction inside the strategy
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
                 try
@@ -796,12 +761,23 @@ namespace MoneyMirror.Infrastructure.Services
                     // STEP 4: Save and commit
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+
+                    // ===== INSERT BLOCK 1 HERE =====
+                    var parentChildLink = await _context.ParentChildren
+                        .FirstOrDefaultAsync(pc => pc.ParentID == allowance.ParentID && pc.ChildID == allowance.ChildID);
+
+                    string giverLabel = parentChildLink != null
+                        ? parentChildLink.Role.ToString()
+                        : "Your parent";
+
                     await _notificationService.NotifyChildAsync(
                             allowance.ChildID,
                             "Allowance Received! 🎉",
-                            $"You just received {allowance.Amount:F2} EGP! Check your balance.",
+                            $"You just received {allowance.Amount:F2} EGP from {giverLabel}! Check your balance.",
                             "/balance"
                         );
+                    // ===== END BLOCK 1 — REMOVE the old NotifyChildAsync call that was here =====
+
                     await _notificationService.NotifyAllParentsOfChildAsync(
                         allowance.ChildID,
                         "Allowance Sent 💰",
@@ -815,7 +791,7 @@ namespace MoneyMirror.Infrastructure.Services
                 {
                     await transaction.RollbackAsync();
                     _logger.LogError($"❌ Error crediting allowance {allowance.AllowanceID}: {ex.Message}");
-                    throw; // Re-throw so the strategy knows it failed
+                    throw;
                 }
             });
         }

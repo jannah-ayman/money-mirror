@@ -33,7 +33,10 @@ namespace MoneyMirror.API.Validators.Child
                 .Must(gender => string.IsNullOrWhiteSpace(gender) || gender == "Boy" || gender == "Girl")
                 .WithMessage("Gender must be 'Boy', 'Girl'")
                 .When(x => !string.IsNullOrWhiteSpace(x.Gender));
-            
+            RuleFor(x => x.Role)
+                .IsInEnum()
+                .WithMessage("Please select your relationship to the child");
+
             // ==================== Question 1: Age Group ====================
 
             RuleFor(x => x.DOB)

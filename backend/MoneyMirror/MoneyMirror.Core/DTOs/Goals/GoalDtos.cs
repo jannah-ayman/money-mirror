@@ -33,6 +33,11 @@
         public string Status { get; set; }
         public decimal? RewardValue { get; set; }
         public decimal SavedAmountBeforeRefund { get; set; }
+        /// Name of the parent who set this challenge (null for personal goals).
+        public string? SetByName { get; set; }
+
+        /// Role of the parent who set this challenge (null for personal goals).
+        public string? SetByRole { get; set; }
     }
     public class EditPersonalGoalDto
     {

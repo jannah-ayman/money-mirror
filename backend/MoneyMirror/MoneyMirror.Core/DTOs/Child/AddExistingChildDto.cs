@@ -1,3 +1,5 @@
+using MoneyMirror.Core.Enums;
+
 namespace MoneyMirror.Core.DTOs.Child
 {
     /// <summary>
@@ -14,5 +16,8 @@ namespace MoneyMirror.Core.DTOs.Child
         /// Example: "ABC123"
         /// </summary>
         public string Code { get; set; }
+
+        /// Relationship of this parent to the child being added.
+        public ParentRole Role { get; set; }
     }
 }
