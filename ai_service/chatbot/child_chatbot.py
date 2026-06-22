@@ -47,19 +47,25 @@ from .child_filter import (
 
 from .prompt_builders import build_child_prompt
 from .provider_manager import get_response
+def child_chatbot_reply(
+        message,
+        history,
+        age,
+        personality_type,
+        personality_child_name,
+        current_balance,
+        allowance_amount,
+        allowance_type,
+        top_spending_category,
+        top_mood_when_spending,
+        total_spent_last_30_days,
+        active_goal_title,
+        active_goal_progress_percent,
+        quiz_count):
 
-
-def child_chatbot_reply(message, personality_type, age, savings_goal):
-
-    # -------------------------
-    # 1. Safety filter (STRICT)
-    # -------------------------
     if not is_safe_child_message(message):
         return blocked_child_response()
 
-    # -------------------------
-    # 2. Domain handling (SOFT REDIRECT instead of blocking)
-    # -------------------------
     if not is_money_mirror_related(message):
         message = (
             "The child asked something outside the money topic. "
@@ -68,24 +74,25 @@ def child_chatbot_reply(message, personality_type, age, savings_goal):
             f"Original message: {message}"
         )
 
-    # -------------------------
-    # 3. Build prompt
-    # -------------------------
     prompt = build_child_prompt(
-        message,
-        personality_type,
-        age,
-        savings_goal
+        message=message,
+        history=history,
+        age=age,
+        personality_type=personality_type,
+        personality_child_name=personality_child_name,
+        current_balance=current_balance,
+        allowance_amount=allowance_amount,
+        allowance_type=allowance_type,
+        top_spending_category=top_spending_category,
+        top_mood_when_spending=top_mood_when_spending,
+        total_spent_last_30_days=total_spent_last_30_days,
+        active_goal_title=active_goal_title,
+        active_goal_progress_percent=active_goal_progress_percent,
+        quiz_count=quiz_count
     )
 
-    # -------------------------
-    # 4. Get AI response
-    # -------------------------
     response = get_response(prompt)
 
-    # -------------------------
-    # 5. Safety fallback (ONLY if AI fails)
-    # -------------------------
     if not response or len(response.strip()) < 10:
         return blocked_child_response()
 

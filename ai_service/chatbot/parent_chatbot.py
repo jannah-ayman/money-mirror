@@ -6,40 +6,42 @@ from .parent_filter import (
 from .prompt_builders import build_parent_prompt
 from .provider_manager import get_response
 
-
 def parent_chatbot_reply(
-    message,
-    parent_name,
-    child_name,
-    personality_type,
-    traits,
-    recommendations,
-    alerts,
-    strengths,
-    recent_activity
-):
+        message,
+        history,
+        parent_first_name,
+        child_first_name,
+        child_age,
+        personality_parent_name,
+        personality_type,
+        traits,
+        static_recommendations,
+        behavioral_dimensions,
+        recent_activity,
+        alerts,
+        strengths):
 
-    # 1. Safety filter
     if not is_safe_parent_message(message):
         return blocked_parent_response()
 
-    # 2. Build prompt
     prompt = build_parent_prompt(
-        message,
-        parent_name,
-        child_name,
-        personality_type,
-        traits,
-        recommendations,
-        alerts,
-        strengths,
-        recent_activity
+        message=message,
+        history=history,
+        parent_first_name=parent_first_name,
+        child_first_name=child_first_name,
+        child_age=child_age,
+        personality_parent_name=personality_parent_name,
+        personality_type=personality_type,
+        traits=traits,
+        static_recommendations=static_recommendations,
+        behavioral_dimensions=behavioral_dimensions,
+        recent_activity=recent_activity,
+        alerts=alerts,
+        strengths=strengths
     )
 
-    # 3. Get AI response
     response = get_response(prompt)
 
-    # 4. Output safety check
     if not response or len(response.strip()) < 10:
         return blocked_parent_response()
 
