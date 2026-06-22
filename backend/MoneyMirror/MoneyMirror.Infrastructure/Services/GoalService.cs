@@ -41,7 +41,8 @@ namespace MoneyMirror.Infrastructure.Services
             Status = g.Status,
             RewardValue = g.RewardValue,
             SetByName = setByName,
-            SetByRole = setByRole
+            SetByRole = setByRole,
+            SavedAmountBeforeRefund = g.SavedAmountBeforeRefund
         };
 
 
