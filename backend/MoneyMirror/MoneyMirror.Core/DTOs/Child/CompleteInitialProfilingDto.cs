@@ -23,6 +23,8 @@ namespace MoneyMirror.Core.DTOs.Child
         public DateTime DOB { get; set; }
 
         public string? Gender { get; set; }
+        /// Relationship of the parent submitting this questionnaire to the child.
+        public ParentRole Role { get; set; }
 
         // ==================== Question 2: Does your child receive a regular allowance or income? ====================
 

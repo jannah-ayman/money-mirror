@@ -203,10 +203,10 @@ namespace MoneyMirror.API.Controllers
         [HttpGet("{childId}/transactions")]
         [Authorize(Roles = "Parent")]
         public async Task<ActionResult<ApiResponse<TransactionHistoryDto>>> GetTransactionHistory(
-            int childId,
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
-            [FromQuery] string type = "All")
+             int childId,
+             [FromQuery] DateTime? startDate = null,
+             [FromQuery] DateTime? endDate = null,
+             [FromQuery] string type = "All")
         {
             var parentIdClaim = User.FindFirst("ParentId")?.Value;
 
@@ -276,9 +276,8 @@ namespace MoneyMirror.API.Controllers
         [HttpGet("my-transactions")]
         [Authorize(Roles = "Child")]
         public async Task<ActionResult<ApiResponse<TransactionHistoryDto>>> GetMyTransactions(
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
-            [FromQuery] string type = "All")
+             [FromQuery] DateTime? startDate = null,
+             [FromQuery] int? givenByParentId = null)
         {
             var childIdClaim = User.FindFirst("ChildId")?.Value;
 
@@ -287,12 +286,7 @@ namespace MoneyMirror.API.Controllers
                 return BadRequest(ApiResponse<TransactionHistoryDto>.ErrorResponse("Invalid token claims"));
             }
 
-            var (success, history, errorMessage) = await _allowanceService.GetMyTransactionsAsync(
-                childId,
-                startDate,
-                endDate,
-                type
-            );
+            var (success, history, errorMessage) = await _allowanceService.GetMyTransactionsAsync(childId, startDate, givenByParentId);
 
             if (!success)
             {
@@ -305,7 +299,6 @@ namespace MoneyMirror.API.Controllers
 
             return Ok(ApiResponse<TransactionHistoryDto>.SuccessResponse(
                 history,
-
                 message
             ));
         }

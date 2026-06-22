@@ -1,4 +1,5 @@
 using MoneyMirror.Core.DTOs.Child;
+using MoneyMirror.Core.Enums;
 
 namespace MoneyMirror.Core.Interfaces
 {
@@ -29,7 +30,7 @@ namespace MoneyMirror.Core.Interfaces
 
         /// Adds an existing child to a parent's account using the child's login code.
         Task<(bool success, string message, string errorMessage)>
-        AddExistingChildAsync(int parentId, string code);
+         AddExistingChildAsync(int parentId, string code, ParentRole role);
 
         Task<(bool success, string message, string errorMessage)>
         UnlinkChildAsync(int parentId, int childId);

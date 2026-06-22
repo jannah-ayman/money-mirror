@@ -164,7 +164,7 @@ namespace MoneyMirror.API.Controllers
 
             // Call service to add child
             var (success, message, errorMessage) =
-                await _childService.AddExistingChildAsync(parentId, addChildDto.Code);
+              await _childService.AddExistingChildAsync(parentId, addChildDto.Code, addChildDto.Role);
 
             if (!success)
             {

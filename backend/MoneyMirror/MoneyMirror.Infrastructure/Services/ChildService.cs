@@ -75,7 +75,8 @@ namespace MoneyMirror.Infrastructure.Services
                     _context.ParentChildren.Add(new ParentChild
                     {
                         ParentID = parentId,
-                        ChildID = child.ChildID
+                        ChildID = child.ChildID,
+                         Role = dto.Role
                     });
 
                     // STEP 3: SAVE QUESTIONNAIRE (same as before)
@@ -412,14 +413,12 @@ namespace MoneyMirror.Infrastructure.Services
         /// Adds an existing child to a parent's account using the child's login code.
         /// Supports shared custody - multiple parents can manage the same child.
         public async Task<(bool success, string message, string errorMessage)>
-            AddExistingChildAsync(int parentId, string code)
+            AddExistingChildAsync(int parentId, string code, ParentRole role)
         {
             try
             {
-                // Normalize code (uppercase, trim)
                 var normalizedCode = code.ToUpper().Trim();
 
-                // STEP 1: Find child by login code
                 var child = await _context.Children
                     .FirstOrDefaultAsync(c => c.LoginCode == normalizedCode);
 
@@ -429,7 +428,6 @@ namespace MoneyMirror.Infrastructure.Services
                     return (false, string.Empty, "Invalid code");
                 }
 
-                // STEP 2: Check if this parent-child relationship already exists
                 var existingRelationship = await _context.ParentChildren
                     .AnyAsync(pc => pc.ParentID == parentId && pc.ChildID == child.ChildID);
 
@@ -439,11 +437,11 @@ namespace MoneyMirror.Infrastructure.Services
                     return (false, string.Empty, "This child is already linked to your account");
                 }
 
-                // STEP 3: Create parent-child relationship
                 _context.ParentChildren.Add(new ParentChild
                 {
                     ParentID = parentId,
-                    ChildID = child.ChildID
+                    ChildID = child.ChildID,
+                    Role = role
                 });
 
                 await _context.SaveChangesAsync();

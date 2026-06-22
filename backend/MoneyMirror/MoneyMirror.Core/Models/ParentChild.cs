@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MoneyMirror.Core.Enums;
 
 namespace MoneyMirror.Core.Models
 {
@@ -17,6 +18,10 @@ namespace MoneyMirror.Core.Models
 
         [Required]
         public int ParentID { get; set; }
+
+        /// Relationship of this parent to this specific child.
+        [Required]
+        public ParentRole Role { get; set; }
 
         // ==================== NAVIGATION PROPERTIES ====================
 

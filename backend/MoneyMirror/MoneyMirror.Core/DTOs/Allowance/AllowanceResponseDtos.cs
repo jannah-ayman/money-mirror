@@ -117,6 +117,11 @@
         /// When this transaction occurred.
         /// </summary>
         public DateTime TransactionDate { get; set; }
+        /// Name of the parent who gave this (null if not parent-initiated, e.g. expenses).
+        public string? GivenByName { get; set; }
+
+        /// Role of the parent who gave this (e.g. "Father", "Mother").
+        public string? GivenByRole { get; set; }
     }
 
     /// <summary>

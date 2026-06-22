@@ -26,22 +26,22 @@ namespace MoneyMirror.Infrastructure.Services
         private async Task<bool> IsParentLinkedToChildAsync(int parentId, int childId) =>
             await _context.ParentChildren.AnyAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
 
-        private static GoalResponseDto MapToDto(SavingsGoal g) => new()
+        private static GoalResponseDto MapToDto(SavingsGoal g, string? setByName = null, string? setByRole = null) => new()
         {
             GoalID = g.GoalID,
             Title = g.Title,
             TargetAmount = g.TargetAmount,
             CurrentAmount = g.CurrentAmount,
             ProgressPercent = g.TargetAmount > 0
-               
-             ? Math.Round(((g.Status == "Failure" ? g.SavedAmountBeforeRefund : g.CurrentAmount) / g.TargetAmount) * 100, 1)
-              : 0,
+                ? Math.Round((g.CurrentAmount / g.TargetAmount) * 100, 1)
+                : 0,
             StartDate = g.StartDate,
             EndDate = g.EndDate,
             IsChallenge = g.IsChallenge,
             Status = g.Status,
             RewardValue = g.RewardValue,
-            SavedAmountBeforeRefund = g.SavedAmountBeforeRefund
+            SetByName = setByName,
+            SetByRole = setByRole
         };
 
 
@@ -121,12 +121,22 @@ namespace MoneyMirror.Infrastructure.Services
 
                 _context.SavingsGoals.Add(goal);
                 await _context.SaveChangesAsync();
+
+                // ===== INSERT BLOCK 2 HERE =====
+                var parentChildLink = await _context.ParentChildren
+                    .FirstOrDefaultAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
+
+                string giverLabel = parentChildLink != null
+                    ? parentChildLink.Role.ToString()
+                    : "Your parent";
+
                 await _notificationService.NotifyChildAsync(
                     childId,
                     "New Challenge! 🏅",
-                    $"Your parent set you a new challenge: \"{goal.Title}\". Can you do it?",
+                    $"{giverLabel} set you a new challenge: \"{goal.Title}\". Can you do it?",
                     $"/goals/{goal.GoalID}"
                 );
+                // ===== END BLOCK 2 — REMOVE the old NotifyChildAsync call that was here =====
 
                 _logger.LogInformation("Parent {ParentId} created challenge for child {ChildId}: {Title}", parentId, childId, goal.Title);
 
@@ -138,7 +148,6 @@ namespace MoneyMirror.Infrastructure.Services
                 return (false, null, "An error occurred while creating the challenge.");
             }
         }
-
         public async Task<(bool success, List<GoalResponseDto> goals, string errorMessage)>
             GetMyGoalsAsync(int childId)
         {
@@ -148,10 +157,19 @@ namespace MoneyMirror.Infrastructure.Services
                     .Where(g => g.ChildID == childId)
                     .OrderByDescending(g => g.Status == "Active")
                     .ThenByDescending(g => g.StartDate)
-                    .Select(g => MapToDto(g))
                     .ToListAsync();
 
-                return (true, goals, string.Empty);
+                var lookup = await BuildParentLookupAsync(childId, goals);
+
+                var result = goals.Select(g =>
+                {
+                    (string Name, string Role)? info = g.ParentID.HasValue && lookup.TryGetValue(g.ParentID.Value, out var v)
+                        ? v
+                        : null;
+                    return MapToDto(g, info?.Name, info?.Role);
+                }).ToList();
+
+                return (true, result, string.Empty);
             }
             catch (Exception ex)
             {
@@ -161,7 +179,7 @@ namespace MoneyMirror.Infrastructure.Services
         }
 
         public async Task<(bool success, List<GoalResponseDto> goals, string errorMessage)>
-            GetChildGoalsAsync(int parentId, int childId)
+             GetChildGoalsAsync(int parentId, int childId)
         {
             try
             {
@@ -172,10 +190,11 @@ namespace MoneyMirror.Infrastructure.Services
                     .Where(g => g.ChildID == childId)
                     .OrderByDescending(g => g.Status == "Active")
                     .ThenByDescending(g => g.StartDate)
-                    .Select(g => MapToDto(g))
                     .ToListAsync();
 
-                return (true, goals, string.Empty);
+                var result = goals.Select(g => MapToDto(g)).ToList();
+
+                return (true, result, string.Empty);
             }
             catch (Exception ex)
             {
@@ -255,6 +274,20 @@ namespace MoneyMirror.Infrastructure.Services
                                 ChildID = childId,
                                 ParentID = goal.ParentID
                             });
+
+                            var parentChildLink = await _context.ParentChildren
+                                .FirstOrDefaultAsync(pc => pc.ParentID == goal.ParentID && pc.ChildID == childId);
+
+                            string giverLabel = parentChildLink != null
+                                ? parentChildLink.Role.ToString()
+                                : "Your parent";
+
+                            await _notificationService.NotifyChildAsync(
+                                childId,
+                                "Reward Earned! 🎁",
+                                $"You completed \"{goal.Title}\" and earned a {goal.RewardValue.Value:F2} EGP reward from {giverLabel}!",
+                                "/balance"
+                            );
 
                             _logger.LogInformation("Challenge reward of {Reward} credited to child {ChildId}", goal.RewardValue.Value, childId);
                         }
@@ -596,7 +629,25 @@ namespace MoneyMirror.Infrastructure.Services
             }
 
         }
-      
 
+        private async Task<Dictionary<int, (string Name, string Role)>> BuildParentLookupAsync(int childId, List<SavingsGoal> goals)
+        {
+            var parentIds = goals
+                .Where(g => g.ParentID.HasValue)
+                .Select(g => g.ParentID!.Value)
+                .Distinct()
+                .ToList();
+
+            if (!parentIds.Any())
+                return new Dictionary<int, (string, string)>();
+
+            return await _context.ParentChildren
+                .Where(pc => pc.ChildID == childId && parentIds.Contains(pc.ParentID))
+                .Include(pc => pc.Parent)
+                .ToDictionaryAsync(
+                    pc => pc.ParentID,
+                    pc => ($"{pc.Parent.FName} {pc.Parent.LName}", pc.Role.ToString())
+                );
+        }
     }
 }
