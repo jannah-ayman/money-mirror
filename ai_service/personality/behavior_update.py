@@ -1,215 +1,81 @@
+# Future behavior-based personality adjustment logic
 def update_behavior_scores(
     current_scores: dict,
     behavior_data: dict
 ) -> dict:
     """
-    Update personality scores
-    using monthly behavioral data.
+    Adjust personality scores over time
+    based on child financial behavior.
     """
 
     updated_scores = current_scores.copy()
 
-    allowance_type = behavior_data.get(
-        "allowance_type",
-        ""
-    )
-
+    
+    # Spending frequency
+    
     spending_frequency = behavior_data.get(
         "spending_frequency",
         0
     )
 
-    total_spend = behavior_data.get(
-        "total_spend",
-        0.0
-    )
+    if spending_frequency >= 10:
+        updated_scores["IMPULSIVE_SPENDER"] += 2
+    elif spending_frequency <= 3:
+        updated_scores["PRUDENT_SAVER"] += 1
 
-    average_spend = behavior_data.get(
-        "average_spend_per_transaction",
-        0.0
-    )
-
+    
+    # Savings progress
+    
     savings_ratio = behavior_data.get(
         "savings_ratio",
-        0.0
-    )
-
-    goal_completion_rate = behavior_data.get(
-        "goal_completion_rate",
-        0.0
-    )
-
-    mood_spending = behavior_data.get(
-        "mood_spending",
-        {}
-    )
-
-    top_categories = behavior_data.get(
-        "top_categories",
-        []
-    )
-
-    # ----------------------------------
-    # Spending frequency
-    # ----------------------------------
-
-    if allowance_type == "Monthly":
-
-        if spending_frequency >= 12:
-            updated_scores[
-                "IMPULSIVE_SPENDER"
-            ] += 4
-
-        elif spending_frequency <= 4:
-            updated_scores[
-                "PRUDENT_SAVER"
-            ] += 2
-
-    elif allowance_type == "Weekly":
-
-        if spending_frequency >= 16:
-            updated_scores[
-                "IMPULSIVE_SPENDER"
-            ] += 3
-
-        elif spending_frequency <= 6:
-            updated_scores[
-                "PRUDENT_SAVER"
-            ] += 2
-
-    elif allowance_type == "Daily":
-
-        if spending_frequency >= 25:
-            updated_scores[
-                "IMPULSIVE_SPENDER"
-            ] += 2
-
-    # ----------------------------------
-    # Average transaction value
-    # ----------------------------------
-
-    if average_spend >= 100:
-        updated_scores[
-            "IMPULSIVE_SPENDER"
-        ] += 2
-
-    elif average_spend <= 20:
-        updated_scores[
-            "PRUDENT_SAVER"
-        ] += 1
-
-    # ----------------------------------
-    # Savings ratio
-    # ----------------------------------
-
-    if savings_ratio >= 0.70:
-
-        updated_scores[
-            "PRUDENT_SAVER"
-        ] += 5
-
-        updated_scores[
-            "GOAL_ORIENTED_PLANNER"
-        ] += 3
-
-    elif savings_ratio >= 0.40:
-
-        updated_scores[
-            "PRUDENT_SAVER"
-        ] += 3
-
-        updated_scores[
-            "GOAL_ORIENTED_PLANNER"
-        ] += 2
-
-    elif savings_ratio <= 0.15:
-
-        updated_scores[
-            "IMPULSIVE_SPENDER"
-        ] += 4
-
-    # ----------------------------------
-    # Goal completion
-    # ----------------------------------
-
-    if goal_completion_rate >= 0.80:
-
-        updated_scores[
-            "GOAL_ORIENTED_PLANNER"
-        ] += 5
-
-    elif goal_completion_rate >= 0.50:
-
-        updated_scores[
-            "GOAL_ORIENTED_PLANNER"
-        ] += 3
-
-    # ----------------------------------
-    # Emotional spending
-    # ----------------------------------
-
-    happy_ratio = mood_spending.get(
-        "Happy",
         0
     )
 
-    excited_ratio = mood_spending.get(
-        "Excited",
+    if savings_ratio >= 0.5:
+        updated_scores["PRUDENT_SAVER"] += 3
+        updated_scores["GOAL_ORIENTED_PLANNER"] += 2
+    elif savings_ratio < 0.2:
+        updated_scores["IMPULSIVE_SPENDER"] += 2
+
+    
+    # Mood after spending
+    
+    regret_count = behavior_data.get(
+        "regretful_moods",
         0
     )
 
-    if (
-        happy_ratio +
-        excited_ratio
-    ) >= 0.70:
+    happy_spending = behavior_data.get(
+        "happy_spending_moods",
+        0
+    )
 
-        updated_scores[
-            "IMPULSIVE_SPENDER"
-        ] += 3
+    if regret_count >= 3:
+        updated_scores["PRUDENT_SAVER"] += 2
 
-    # ----------------------------------
-    # Categories
-    # ----------------------------------
+    if happy_spending >= 5:
+        updated_scores["IMPULSIVE_SPENDER"] += 2
 
-    bargain_categories = {
-        "Clothes / Fashion",
-        "Shopping",
-        "Accessories"
-    }
+    
+    # Goal tracking
+    
+    goals_completed = behavior_data.get(
+        "goals_completed",
+        0
+    )
 
-    planner_categories = {
-        "Education",
-        "Books",
-        "Courses"
-    }
+    if goals_completed >= 2:
+        updated_scores["GOAL_ORIENTED_PLANNER"] += 3
 
-    if any(
-        category in bargain_categories
-        for category in top_categories
-    ):
-        updated_scores[
-            "BARGAIN_HUNTER"
-        ] += 2
+    
+    # Bargain behavior
+ 
+    discount_usage = behavior_data.get(
+        "discount_usage",
+        0
+    )
 
-    if any(
-        category in planner_categories
-        for category in top_categories
-    ):
-        updated_scores[
-            "GOAL_ORIENTED_PLANNER"
-        ] += 2
-
-    # ----------------------------------
-    # High spend + low saving
-    # ----------------------------------
-
-    if (
-        total_spend > 0
-        and spending_frequency > 0
-        and savings_ratio < 0.15
-    ):
-        updated_scores[
-            "IMPULSIVE_SPENDER"
-        ] += 2
+    if discount_usage >= 3:
+        updated_scores["BARGAIN_HUNTER"] += 3
 
     return updated_scores
