@@ -84,6 +84,7 @@ builder.Services.AddScoped<IWeeklyPersonalityUpdateService, WeeklyPersonalityUpd
 builder.Services.AddSignalR();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IQuizImportService, QuizImportService>();
+builder.Services.AddScoped<IChatbotService, ChatbotService>();
 
 // ==================== JWT AUTHENTICATION CONFIGURATION ====================
 // Read JWT settings from appsettings.json
