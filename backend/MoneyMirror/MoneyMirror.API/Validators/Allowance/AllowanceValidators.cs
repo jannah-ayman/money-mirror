@@ -67,8 +67,8 @@ namespace MoneyMirror.API.Validators.Allowance
             RuleFor(x => x.Amount)
                 .GreaterThan(0)
                 .WithMessage("Bonus amount must be greater than zero")
-                .LessThanOrEqualTo(50000)
-                .WithMessage("Bonus amount cannot exceed 50,000");
+                .LessThanOrEqualTo(5000)
+                .WithMessage("Bonus amount cannot exceed 5000");
 
             // ==================== Reason Validation ====================
             RuleFor(x => x.Reason)

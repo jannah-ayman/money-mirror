@@ -39,7 +39,7 @@ namespace MoneyMirror.API.Validators.Goals
 
             RuleFor(x => x.RewardValue)
                 .GreaterThan(0).WithMessage("Reward must be greater than zero.")
-                .LessThanOrEqualTo(50000).WithMessage("Reward cannot exceed 50,000.")
+                .LessThanOrEqualTo(5000).WithMessage("Reward cannot exceed 5000.")
                 .When(x => x.RewardValue.HasValue && x.RewardValue.Value > 0);
         }
     }
@@ -49,7 +49,7 @@ namespace MoneyMirror.API.Validators.Goals
         {
             RuleFor(x => x.Amount)
                 .GreaterThan(0).WithMessage("Amount must be greater than zero.")
-                .LessThanOrEqualTo(100000).WithMessage("Amount cannot exceed 100,000.");
+                .LessThanOrEqualTo(10000).WithMessage("Amount cannot exceed 10,000.");
         }
     }
     public class EditPersonalGoalDtoValidator : AbstractValidator<EditPersonalGoalDto>
@@ -76,12 +76,12 @@ namespace MoneyMirror.API.Validators.Goals
 
             RuleFor(x => x.TargetAmount)
                 .GreaterThan(0).WithMessage("Target amount must be greater than zero.")
-                .LessThanOrEqualTo(100000).WithMessage("Target amount cannot exceed 100,000.")
+                .LessThanOrEqualTo(10000).WithMessage("Target amount cannot exceed 10,000.")
                 .When(x => x.TargetAmount.HasValue && x.TargetAmount.Value > 0);
 
             RuleFor(x => x.RewardValue)
                 .GreaterThan(0).WithMessage("Reward must be greater than zero.")
-                .LessThanOrEqualTo(50000).WithMessage("Reward cannot exceed 50,000.")
+                .LessThanOrEqualTo(5000).WithMessage("Reward cannot exceed 5000.")
                 .When(x => x.RewardValue.HasValue && x.RewardValue.Value > 0);
         }
     }
