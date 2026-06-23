@@ -18,51 +18,38 @@ namespace MoneyMirror.Core.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int NotificationID { get; set; }
 
-        /// <summary>
-        /// Target audience for this notification.
         /// Values: "Parent" or "Child"
         /// Determines tone and complexity of message.
-        /// </summary>
         [Required]
         [MaxLength(20)]
         public string TargetType { get; set; }
 
-        /// <summary>
         /// Short title/subject of the notification.
         /// Example: "Goal Reached!", "Spending Alert", "New Quiz Available"
-        /// </summary>
         [Required]
         [MaxLength(200)]
         public string Title { get; set; }
 
-        /// <summary>
         /// Full message content of the notification.
         /// Should be age-appropriate and engaging for children,
         /// informative and actionable for parents.
-        /// </summary>
         [Required]
         [MaxLength(1000)]
         public string Message { get; set; }
 
-        /// <summary>
         /// Timestamp when the notification was sent.
         /// Used for sorting notifications by recency.
-        /// </summary>
         [Required]
         public DateTime SentDate { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
         /// Indicates whether the user has read/acknowledged this notification.
         /// False = unread, True = read
-        /// </summary>
         [Required]
         public bool IsRead { get; set; } = false;
 
-        /// <summary>
         /// Optional deep link to relevant section of the app.
         /// Example: "/child/goals/123" to navigate to a specific goal
         /// Null if notification doesn't require navigation.
-        /// </summary>
         [MaxLength(500)]
         public string? Link { get; set; }
 

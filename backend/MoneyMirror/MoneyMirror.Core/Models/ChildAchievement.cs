@@ -12,27 +12,15 @@ namespace MoneyMirror.Core.Models
     /// </summary>
     public class ChildAchievement
     {
-        /// <summary>
-        /// Timestamp when the child earned this achievement.
-        /// Used to display "Earned on [date]" in trophy case.
-        /// Also used for achievement streak tracking and analytics.
-        /// </summary>
+        
         [Required]
         public DateTime EarnedDate { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// Foreign key to Child table.
-        /// Part of composite primary key.
-        /// The child who earned this achievement.
-        /// </summary>
+       
         [Required]
         public int ChildID { get; set; }
 
-        /// <summary>
-        /// Foreign key to AchievementType table.
-        /// Part of composite primary key.
-        /// The type of achievement/badge that was earned.
-        /// </summary>
+       
         [Required]
         public int AchievementTypeID { get; set; }
 
