@@ -368,3 +368,16 @@ Character images are served by the backend from `/wwwroot/images/characters/`. R
 - For the chatbot endpoints, send the last 3 messages as `history` (trimmed on your side before sending).
 - Character images are relative paths — prepend the API base URL to construct the full image URL.
 - SignalR requires the JWT token to be passed during hub connection for group assignment to work.
+
+---
+ 
+## Contributors
+ 
+| Name | Role | GitHub |
+|---|---|---|
+| Jannah Ayman | Backend | [github.com/](https://github.com/jannah-ayman) |
+| Nancy Saad | Backend | [github.com/](https://github.com/nancyabdelbaryy) |
+| Rawan Sotohy | AI | [github.com/](https://github.com/Rawan-Sotohy) |
+| Rahma Tarek | AI  | [github.com/](https://github.com/Rahma-Tarek52004) |
+| Doha Emad | Frontend | [github.com/](https://github.com/Doha-2004) |
+| Arwa Hassan | Frontend  | [github.com/](https://github.com/ArwaHassan2312) |
