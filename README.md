@@ -375,9 +375,9 @@ Character images are served by the backend from `/wwwroot/images/characters/`. R
  
 | Name | Role | GitHub |
 |---|---|---|
-| Jannah Ayman | Backend | [github.com/](https://github.com/jannah-ayman) |
-| Nancy Saad | Backend | [github.com/](https://github.com/nancyabdelbaryy) |
-| Rawan Sotohy | AI | [github.com/](https://github.com/Rawan-Sotohy) |
-| Rahma Tarek | AI  | [github.com/](https://github.com/Rahma-Tarek52004) |
-| Doha Emad | Frontend | [github.com/](https://github.com/Doha-2004) |
-| Arwa Hassan | Frontend  | [github.com/](https://github.com/ArwaHassan2312) |
+| Jannah Ayman | Backend | [github.com/jannah-ayman](https://github.com/jannah-ayman) |
+| Nancy Saad | Backend | [github.com/nancyabdelbaryy](https://github.com/nancyabdelbaryy) |
+| Rawan Sotohy | AI | [github.com/Rawan-Sotohy](https://github.com/Rawan-Sotohy) |
+| Rahma Tarek | AI | [github.com/Rahma-Tarek52004](https://github.com/Rahma-Tarek52004) |
+| Doha Emad | Frontend | [github.com/Doha-2004](https://github.com/Doha-2004) |
+| Arwa Hassan | Frontend | [github.com/ArwaHassan2312](https://github.com/ArwaHassan2312) |
