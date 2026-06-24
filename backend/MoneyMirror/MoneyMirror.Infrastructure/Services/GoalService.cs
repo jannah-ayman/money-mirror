@@ -125,11 +125,13 @@ namespace MoneyMirror.Infrastructure.Services
 
                 // ===== INSERT BLOCK 2 HERE =====
                 var parentChildLink = await _context.ParentChildren
-                    .FirstOrDefaultAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
+                .Include(pc => pc.Parent)
+                .FirstOrDefaultAsync(pc => pc.ParentID == parentId && pc.ChildID == childId);
 
-                string giverLabel = parentChildLink != null
-                    ? parentChildLink.Role.ToString()
-                    : "Your parent";
+                string giverLabel = parentChildLink == null ? "Your parent"
+                    : (parentChildLink.Role == Core.Enums.ParentRole.Dad || parentChildLink.Role == Core.Enums.ParentRole.Mum)
+                        ? parentChildLink.Role.ToString()
+                        : parentChildLink.Parent != null ? parentChildLink.Parent.FName : "Your parent";
 
                 await _notificationService.NotifyChildAsync(
                     childId,
@@ -277,11 +279,13 @@ namespace MoneyMirror.Infrastructure.Services
                             });
 
                             var parentChildLink = await _context.ParentChildren
-                                .FirstOrDefaultAsync(pc => pc.ParentID == goal.ParentID && pc.ChildID == childId);
+                             .Include(pc => pc.Parent)
+                             .FirstOrDefaultAsync(pc => pc.ParentID == goal.ParentID && pc.ChildID == childId);
 
-                            string giverLabel = parentChildLink != null
-                                ? parentChildLink.Role.ToString()
-                                : "Your parent";
+                            string giverLabel = parentChildLink == null ? "Your parent"
+                                : (parentChildLink.Role == Core.Enums.ParentRole.Dad || parentChildLink.Role == Core.Enums.ParentRole.Mum)
+                                    ? parentChildLink.Role.ToString()
+                                    : parentChildLink.Parent != null ? parentChildLink.Parent.FName : "Your parent";
 
                             await _notificationService.NotifyChildAsync(
                                 childId,
