@@ -4,7 +4,7 @@ A mobile financial literacy application for children and parents. Parents monito
 
 ---
 
-## Team Structure
+## Tech Stack
 
 | Layer | Tech |
 |---|---|
@@ -307,34 +307,6 @@ Scheduled jobs run automatically:
 | Weekly personality update | Saturday 4 AM | Recalculates personality scores via AI |
 
 Monitor and trigger jobs manually at `/hangfire`.
-
----
-
-## Personality Types
-
-| Key | Parent Label | Child Label |
-|---|---|---|
-| `IMPULSIVE_SPENDER` | Impulsive Spender | Speedy Spender |
-| `PRUDENT_SAVER` | Prudent Saver | Treasure Keeper |
-| `GOAL_ORIENTED_PLANNER` | Goal-Oriented Planner | Dream Builder |
-| `BARGAIN_HUNTER` | Bargain Hunter | Deal Detective |
-
-Children start with "Pending Analysis" and get a real personality assigned after the initial questionnaire (via AI) and weekly thereafter.
-
----
-
-## Characters
-
-Four space-themed characters children can choose from:
-
-| ID | Name | Description |
-|---|---|---|
-| 1 | Nova | Cool astronaut who loves street style and music |
-| 2 | Cosmo | Ninja superhero astronaut always ready for action |
-| 3 | Luna | Graceful ballerina astronaut in a pink skirt |
-| 4 | Stella | Laid-back astronaut in a hoodie who loves bubblegum |
-
-Character images are served by the backend from `/wwwroot/images/characters/`. Request the right image per screen using `POST /api/character/state` with a `screenContext` value (`Dashboard`, `Expenses`, `Goals`, `Profile`, `Badges`, `Quiz`).
 
 ---
 
