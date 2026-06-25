@@ -2,9 +2,14 @@ from .parent_filter import (
     is_safe_parent_message,
     blocked_parent_response
 )
-
 from .prompt_builders import build_parent_prompt
 from .provider_manager import get_response
+
+
+def detect_language(text):
+    arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
+    return "ar" if arabic_chars > len(text) * 0.3 else "en"
+
 
 def parent_chatbot_reply(
         message,
@@ -24,6 +29,8 @@ def parent_chatbot_reply(
     if not is_safe_parent_message(message):
         return blocked_parent_response()
 
+    language = detect_language(message)
+
     prompt = build_parent_prompt(
         message=message,
         history=history,
@@ -37,7 +44,8 @@ def parent_chatbot_reply(
         behavioral_dimensions=behavioral_dimensions,
         recent_activity=recent_activity,
         alerts=alerts,
-        strengths=strengths
+        strengths=strengths,
+        language=language
     )
 
     response = get_response(prompt)

@@ -1,6 +1,5 @@
 from .personality_map import get_child_personality_label
 
-
 def build_child_prompt(
         message,
         history,
@@ -15,15 +14,25 @@ def build_child_prompt(
         total_spent_last_30_days,
         active_goal_title,
         active_goal_progress_percent,
-        quiz_count):
+        quiz_count,
+        language="en"):
     
     history_text = ""
     if history:
         for msg in history:
             role_label = "Child" if msg["role"] == "user" else "Assistant"
             history_text += f"{role_label}: {msg['content']}\n"
+
+    if language == "ar":
+        lang_instruction = "أجب فقط باللغة العربية الفصحى البسيطة المناسبة لعمر الطفل. لا تخلط بين العربية والإنجليزية أبداً."
+    else:
+        lang_instruction = "Respond in English only."
+
     return f"""
 You are Money Mirror's friendly financial assistant for children.
+
+LANGUAGE RULES:
+{lang_instruction}
 
 RULES:
 - Only answer questions related to money, saving, spending, and financial habits.
@@ -70,21 +79,31 @@ def build_parent_prompt(
         behavioral_dimensions,
         recent_activity,
         alerts,
-        strengths):
+        strengths,
+        language="en"):
+
     history_text = ""
     if history:
         for msg in history:
             role_label = "Parent" if msg["role"] == "user" else "Assistant"
             history_text += f"{role_label}: {msg['content']}\n"
+
+    if language == "ar":
+        lang_instruction = "أجب فقط باللغة العربية الفصحى. لا تخلط بين العربية والإنجليزية أبداً."
+    else:
+        lang_instruction = "Respond in English only."
+
     return f"""
 You are Money Mirror's parenting financial coach.
 
+LANGUAGE RULES:
+{lang_instruction}
+
 RULES:
-- Keep your response to 3-5 lines maximum. Be concise and direct.
-- Give 1-2 clear, actionable recommendations or advice based on the child's actual data provided below.
-- Reference the child's data, specific numbers or behaviors briefly when relevant.
-- Do not use bullet points or headers unless the parent explicitly asks.
-- Be practical and empathetic.
+- Provide clear, practical, and empathetic advice.
+- Base your advice on the child's actual data provided below.
+- Reference specific numbers and behaviors when relevant.
+- Keep answers focused and actionable.
 
 PARENT: {parent_first_name}
 CHILD: {child_first_name} (Age {child_age})

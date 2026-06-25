@@ -1,52 +1,18 @@
-# from .child_filter import (
-#     is_safe_child_message,
-#     is_money_mirror_related,
-#     blocked_child_response,
-#     unrelated_question_response
-# )
-
-# from .prompt_builders import build_child_prompt
-# from .provider_manager import get_response
-
-
-# def child_chatbot_reply(message, personality_type, age, savings_goal):
-
-#     # 1. Safety filter
-#     if not is_safe_child_message(message):
-#         return blocked_child_response()
-
-#     # 2. Domain filter (Money Mirror only)
-#     if not is_money_mirror_related(message):
-#         return unrelated_question_response()
-
-#     # 3. Build prompt
-#     prompt = build_child_prompt(
-#         message,
-#         personality_type,
-#         age,
-#         savings_goal
-#     )
-
-#     # 4. Get AI response
-#     response = get_response(prompt)
-
-#     # 5. Safety check on output
-#     if not response or len(response.strip()) < 10:
-#         return blocked_child_response()
-
-#     return response
-
-
-
 from .child_filter import (
     is_safe_child_message,
     is_money_mirror_related,
     blocked_child_response,
     unrelated_question_response
 )
-
 from .prompt_builders import build_child_prompt
 from .provider_manager import get_response
+
+
+def detect_language(text):
+    arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
+    return "ar" if arabic_chars > len(text) * 0.3 else "en"
+
+
 def child_chatbot_reply(
         message,
         history,
@@ -65,6 +31,8 @@ def child_chatbot_reply(
 
     if not is_safe_child_message(message):
         return blocked_child_response()
+
+    language = detect_language(message)
 
     if not is_money_mirror_related(message):
         message = (
@@ -88,7 +56,8 @@ def child_chatbot_reply(
         total_spent_last_30_days=total_spent_last_30_days,
         active_goal_title=active_goal_title,
         active_goal_progress_percent=active_goal_progress_percent,
-        quiz_count=quiz_count
+        quiz_count=quiz_count,
+        language=language
     )
 
     response = get_response(prompt)
