@@ -24,7 +24,7 @@ def build_child_prompt(
             history_text += f"{role_label}: {msg['content']}\n"
 
     if language == "ar":
-        lang_instruction = "أجب فقط باللغة العربية الفصحى البسيطة المناسبة لعمر الطفل. لا تخلط بين العربية والإنجليزية أبداً."
+        lang_instruction = "أجب فقط باللغة العربية الفصحى. لا تخلط بين العربية والإنجليزية أو أي لغة أخرى أبداً. استخدم الأرقام العربية أو الغربية فقط. ممنوع استخدام أي حروف صينية أو يابانية أو كورية أو أي لغة غير عربية."
     else:
         lang_instruction = "Respond in English only."
 
@@ -89,7 +89,7 @@ def build_parent_prompt(
             history_text += f"{role_label}: {msg['content']}\n"
 
     if language == "ar":
-        lang_instruction = "أجب فقط باللغة العربية الفصحى. لا تخلط بين العربية والإنجليزية أبداً."
+        lang_instruction = "أجب فقط باللغة العربية الفصحى. لا تخلط بين العربية والإنجليزية أو أي لغة أخرى أبداً. استخدم الأرقام العربية أو الغربية فقط. ممنوع استخدام أي حروف صينية أو يابانية أو كورية أو أي لغة غير عربية."
     else:
         lang_instruction = "Respond in English only."
 
