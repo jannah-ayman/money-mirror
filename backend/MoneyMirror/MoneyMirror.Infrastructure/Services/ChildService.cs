@@ -938,14 +938,14 @@ namespace MoneyMirror.Infrastructure.Services
                     string childName = $"{child.FName} {child.LName}";
 
                     // STEP 3: Delete all related data
-                    // Entity Framework will handle cascading deletes based on your
-                    // OnDelete settings in ApplicationDbContext.cs
+                    var transactions = await _context.Transactions
+                        .Where(t => t.ChildID == childId)
+                        .ToListAsync();
+                    _context.Transactions.RemoveRange(transactions);
 
-                    // Remove ParentChild relationships first
                     _context.ParentChildren.RemoveRange(child.ParentChildren);
-
-                    // Remove the child (cascading deletes handle the rest)
                     _context.Children.Remove(child);
+
 
                     // STEP 4: Save and commit
                     await _context.SaveChangesAsync();
